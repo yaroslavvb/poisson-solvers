@@ -1,0 +1,17 @@
+title: poisson-solvers
+description: >-
+  Preconditioned conjugate gradient study on the 2D Poisson equation:
+  Mathematica + Python implementations, a toy Neural Preconditioning Operator
+  (arXiv:2502.01337), and randomized Nystrom preconditioning (arXiv:2110.02820).
+theme: jekyll-theme-cayman
+
+# GitHub Pages enables jekyll-optional-front-matter, jekyll-relative-links,
+# jekyll-readme-index, jekyll-default-layout, and jekyll-titles-from-headings
+# by default, which is what renders reports/*.md (no front matter) as HTML
+# pages with working inter-report links.
+
+exclude:
+  - .venv
+  - uv.lock
+  - pyproject.toml
+  - .python-version
