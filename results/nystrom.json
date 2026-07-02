@@ -1,0 +1,34 @@
+{
+  "problem": {
+    "n": 32,
+    "size": 1024,
+    "mu": 0.0,
+    "tol": 1e-10,
+    "rhs": "grf_rhs(32, alpha=2.0, tau=3.0, seed=42)"
+  },
+  "kappa_unpreconditioned": 440.6885603835139,
+  "unpreconditioned_iterations": 116,
+  "ranks": {
+    "16": {
+      "iterations": 123,
+      "kappa_precond": 439.6190370210043,
+      "kappa_optimal_rank_ell": 428.9135327211912
+    },
+    "64": {
+      "iterations": 123,
+      "kappa_precond": 434.52001228470095,
+      "kappa_optimal_rank_ell": 395.6677778587745
+    },
+    "128": {
+      "iterations": 122,
+      "kappa_precond": 426.58289389382105,
+      "kappa_optimal_rank_ell": 359.60831041381897
+    },
+    "256": {
+      "iterations": 119,
+      "kappa_precond": 407.4573286678597,
+      "kappa_optimal_rank_ell": 298.40950087387205
+    }
+  },
+  "note": "The 2-D Laplacian's spectrum decays slowly from the top (adversarial for Nystrom, cf. arXiv:2110.02820 which targets fast-decay/regularized problems), so kappa improves only as lam_{rank+1}/lam_min and speedups are modest, growing with rank."
+}
