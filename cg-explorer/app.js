@@ -322,7 +322,7 @@ const SOLVERS = [
 const state = {
   selected: 'cg',
   precond: false,
-  frameIdx: {},   // per run key
+  iter: 0,        // single global iteration value, shared across methods and the toggle
   playing: false,
   timer: null,
   runs: {},       // run key -> {resHist, frames, iters, converged, ranges, dec}
@@ -431,16 +431,23 @@ const $ = id => document.getElementById(id);
 
 function currentSolver() { return SOLVERS.find(s => s.id === state.selected); }
 function currentRun() { return state.runs[runKey(currentSolver())]; }
+
+// frame of `run` closest to the global iteration value
+function nearestFrameIdx(run, iter) {
+  let best = 0, bd = Infinity;
+  for (let i = 0; i < run.frames.length; i++) {
+    const d = Math.abs(run.frames[i].iter - iter);
+    if (d < bd) { bd = d; best = i; }
+  }
+  return best;
+}
 function currentFrame() {
   const run = currentRun();
-  const key = runKey(currentSolver());
-  const idx = Math.min(state.frameIdx[key] || 0, run.frames.length - 1);
-  return run.frames[idx];
+  return run.frames[nearestFrameIdx(run, state.iter)];
 }
 
 function draw() {
   const sv = currentSolver(), run = currentRun(), f = currentFrame();
-  const key = runKey(sv);
   const stepLabel = ' — step ' + f.iter.toLocaleString('en-US');
   drawPlot($('plotU'), {
     title: 'Temperature u' + stepLabel, xLabel: 'x', yLabel: 'u',
@@ -477,9 +484,8 @@ function draw() {
     series, marker: { x: Math.max(1, f.iter), y: f.relres },
   });
 
-  const idx = Math.min(state.frameIdx[key] || 0, run.frames.length - 1);
   $('slider').max = run.frames.length - 1;
-  $('slider').value = idx;
+  $('slider').value = nearestFrameIdx(run, state.iter);
   $('stepLabel').innerHTML = 'iteration <b>' + f.iter.toLocaleString('en-US') + '</b> / ' +
     run.iters.toLocaleString('en-US') + ' &nbsp;·&nbsp; rel. residual <b>' + f.relres.toExponential(2) + '</b>';
 }
@@ -515,14 +521,13 @@ function togglePlay() {
   if (state.playing) { stopPlay(); return; }
   state.playing = true;
   $('playBtn').textContent = '❚❚ pause';
-  const key = runKey(currentSolver());
-  if ((state.frameIdx[key] || 0) >= currentRun().frames.length - 1) state.frameIdx[key] = 0;
+  if (nearestFrameIdx(currentRun(), state.iter) >= currentRun().frames.length - 1) state.iter = 0;
   const perTick = Math.max(1, Math.round(currentRun().frames.length / 120)); // ~8 s per full animation
   state.timer = setInterval(() => {
-    const k = runKey(currentSolver());
-    let idx = (state.frameIdx[k] || 0) + perTick;
-    if (idx >= currentRun().frames.length - 1) { idx = currentRun().frames.length - 1; stopPlay(); }
-    state.frameIdx[k] = idx;
+    const run = currentRun();
+    let idx = nearestFrameIdx(run, state.iter) + perTick;
+    if (idx >= run.frames.length - 1) { idx = run.frames.length - 1; stopPlay(); }
+    state.iter = run.frames[idx].iter;
     draw();
   }, 70);
 }
@@ -599,7 +604,6 @@ async function init() {
     run.ranges = frameRanges(run);
     run.dec = decimate(run.resHist);
     state.runs[key] = run;
-    state.frameIdx[key] = 0;
   }
 
   // merge axis ranges across each solver's plain/preconditioned pair, and fix
@@ -638,28 +642,14 @@ async function init() {
   for (const s of SOLVERS) $('btn-' + s.id).addEventListener('click', () => { stopPlay(); selectSolver(s.id); });
   $('slider').addEventListener('input', e => {
     stopPlay();
-    state.frameIdx[runKey(currentSolver())] = +e.target.value;
+    const run = currentRun();
+    state.iter = run.frames[Math.min(+e.target.value, run.frames.length - 1)].iter;
     draw();
   });
   $('playBtn').addEventListener('click', togglePlay);
-  $('npoToggle').addEventListener('change', e => {
-    stopPlay();
-    // keep the step selector on the same iteration across the toggle, so the
-    // with/without-preconditioner states are directly comparable
-    const sv = currentSolver();
-    const oldRun = state.runs[runKey(sv)];
-    const oldIdx = Math.min(state.frameIdx[runKey(sv)] || 0, oldRun.frames.length - 1);
-    const iter = oldRun.frames[oldIdx].iter;
-    state.precond = e.target.checked;
-    const newRun = state.runs[runKey(sv)];
-    let best = 0, bd = Infinity;
-    for (let i = 0; i < newRun.frames.length; i++) {
-      const d = Math.abs(newRun.frames[i].iter - iter);
-      if (d < bd) { bd = d; best = i; }
-    }
-    state.frameIdx[runKey(sv)] = best;
-    refresh();
-  });
+  // the global iteration value is untouched by the toggle and by method
+  // switches, so the view stays on the same step for direct comparison
+  $('npoToggle').addEventListener('change', e => { stopPlay(); state.precond = e.target.checked; refresh(); });
   $('impulseSlider').addEventListener('input', drawImpulse);
   window.addEventListener('resize', () => { draw(); drawImpulse(); drawGains(); });
 

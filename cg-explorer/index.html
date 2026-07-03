@@ -128,9 +128,9 @@
   <p>Current temperature u (with the exact solution dashed), current residual r = b &minus; Au, the computed step &Delta;u
   applied at this iteration, and the convergence tracker (log-log; red marker = current step; all methods overlaid,
   the selected one highlighted). Axes are frozen over the whole history and shared across the preconditioner toggle,
-  and toggling keeps the step selector on the same iteration — so the with/without states are directly comparable.
-  The computed-step panel shows most directly what the preconditioner changes: raw residual-shaped corrections
-  become global, solution-shaped ones.</p>
+  and the step selector holds a single global iteration value across methods and the toggle — switching anything keeps
+  the view on the same step, so any two states are directly comparable. The computed-step panel shows most directly
+  what the preconditioner changes: raw residual-shaped corrections become global, solution-shaped ones.</p>
 
   <h2>The methods</h2>
   <ul>
