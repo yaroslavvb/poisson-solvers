@@ -1,13 +1,16 @@
-/* Iterative solvers explorer — 1D Poisson problem.
+/* Iterative solvers explorer — 1D steady-state heat conduction.
  *
- * JavaScript port of the Mathematica CG dashboard (mathematica/cg_dashboard_1d.wls):
- * same problem (n=256 1D Dirichlet Laplacian /h^2, unit point sources at nodes 1 and 256,
- * tol 1e-2 on ||r||/||b||), same 2x2 layout (solution u, residual r, step taken du,
- * convergence tracker with current-step marker), same frozen axis ranges computed
- * over the whole iteration history. Adds classical solvers: Jacobi, Richardson,
- * SOR (adjustable omega), gradient descent (steepest descent) — and a second,
- * low-frequency source term ("two charged slabs") for which the classical
- * O(kappa) vs O(sqrt(kappa)) hierarchy shows up at full strength.
+ * Problem: -u''(x) = f on (0,1), u(0)=u(1)=0, discretized as
+ * A = tridiag(-1,2,-1)/h^2 on n=256 interior cells. A heater injects +1 into
+ * the first cell and a chiller extracts -1 from the last cell, so the exact
+ * temperature profile is (nearly) a straight ramp from hot to cold.
+ *
+ * Solvers: conjugate gradient, SOR (optimal omega), gradient descent
+ * (steepest descent; with a fixed step this family includes Richardson and,
+ * for this constant-diagonal A, plain Jacobi), and CG with a toy neural
+ * preconditioner (arXiv:2502.01337) whose 737 weights ship in npo_weights.js
+ * and run right here in the browser (flexible CG, since the network is
+ * nonlinear).
  */
 'use strict';
 
@@ -15,25 +18,29 @@
 const n = 256;
 const h = 1 / (n + 1);
 const h2 = h * h;
-const TOL = 1e-2;
-const MAXIT = 300000;
+const TOL = 1e-4;
+const MAXIT = 100000;
 const MAXFRAMES = 480;
+
+// heater / chiller source
+const b = new Float64Array(n);
+b[0] = 1.0;
+b[n - 1] = -1.0;
 
 // interior grid coordinates x_i = (i+1) h in (0,1)
 const X = new Float64Array(n);
 for (let i = 0; i < n; i++) X[i] = (i + 1) * h;
 
-// spectrum of A = tridiag(-1,2,-1)/h^2: lam_k = (2 - 2 cos(k pi/(n+1)))/h^2
+// spectrum of A: lam_k = (2 - 2 cos(k pi/(n+1)))/h^2
 const theta = Math.PI / (n + 1);
 const lamMin = (2 - 2 * Math.cos(theta)) / h2;
 const lamMax = (2 + 2 * Math.cos(theta)) / h2;
 const kappa = lamMax / lamMin;
-const omegaJacobi = h2 / 2;            // D^{-1}; equals optimal Richardson 2/(lamMin+lamMax)
-const omegaRich = 1 / lamMax;          // conservative fixed step (for contrast with Jacobi)
-const omegaSorOpt = 2 / (1 + Math.sin(theta));
+const omegaSor = 2 / (1 + Math.sin(theta)); // optimal SOR relaxation
 
 function dot(u, v) { let s = 0; for (let i = 0; i < u.length; i++) s += u[i] * v[i]; return s; }
 function nrm(u) { return Math.sqrt(dot(u, u)); }
+const bNorm = nrm(b);
 
 // A v with A = tridiag(-1, 2, -1)/h^2 (Dirichlet: v_0 = v_{n+1} = 0)
 function applyA(v, out) {
@@ -42,40 +49,81 @@ function applyA(v, out) {
   }
 }
 
-// right-hand side: mutable, two source configurations
-const b = new Float64Array(n);
-let bNorm = 1;
-let xExact = new Float64Array(n);
-
-function setRHS(kind) {
-  b.fill(0);
-  if (kind === 'points') {
-    // faithful to the Mathematica original (b[[128]] = 0.0 there is a no-op)
-    b[0] = 1.0;
-    b[127] = 0.0;
-    b[255] = -1.0;
-  } else { // 'slabs': +1 on (0.2,0.4), -1 on (0.6,0.8) — low-frequency content
-    for (let i = 0; i < n; i++) {
-      if (X[i] > 0.2 && X[i] < 0.4) b[i] = 1.0;
-      else if (X[i] > 0.6 && X[i] < 0.8) b[i] = -1.0;
-    }
-  }
-  bNorm = nrm(b);
-  xExact = exactSolve();
-}
-
 // exact solution via Thomas algorithm on tridiag(-1,2,-1) x = h^2 b
 function exactSolve() {
   const c = new Float64Array(n), d = new Float64Array(n), x = new Float64Array(n);
   c[0] = -1 / 2; d[0] = h2 * b[0] / 2;
   for (let i = 1; i < n; i++) {
-    const m = 2 + c[i - 1]; // 2 - (-1)*c[i-1] with sub-diagonal -1
+    const m = 2 + c[i - 1];
     c[i] = -1 / m;
     d[i] = (h2 * b[i] + d[i - 1]) / m;
   }
   x[n - 1] = d[n - 1];
   for (let i = n - 2; i >= 0; i--) x[i] = d[i] - c[i] * x[i + 1];
   return x;
+}
+const xExact = exactSolve();
+
+// ---------------- Toy neural preconditioner (weights from npo_weights.js) ----------------
+// Two-scale conv net (fine stencil + coarse-grid branch, a multigrid miniature)
+// trained offline against h^2*A with the condition/residual losses of
+// arXiv:2502.01337. (F)CG is invariant to positive scaling of the
+// preconditioner, so the h^2 scale needs no correction. The unit-norm wrapper
+// makes the operator positively homogeneous. Pooling / upsample conventions
+// mirror python/neural/train_npo_1d.py line-for-line.
+function conv1d(input, weights, bias, k, len) { // input: array of channels (Float64Array)
+  const p = (k - 1) / 2, cin = input.length, cout = weights.length;
+  const out = [];
+  for (let co = 0; co < cout; co++) {
+    const o = new Float64Array(len).fill(bias[co]);
+    for (let ci = 0; ci < cin; ci++) {
+      const w = weights[co][ci], v = input[ci];
+      for (let i = 0; i < len; i++) {
+        let s = 0;
+        for (let j = 0; j < k; j++) {
+          const idx = i + j - p;
+          if (idx >= 0 && idx < len) s += w[j] * v[idx];
+        }
+        o[i] += s;
+      }
+    }
+    out.push(o);
+  }
+  return out;
+}
+
+function runStack(layers, input, len) {
+  let act = [input];
+  for (let li = 0; li < layers.length; li++) {
+    act = conv1d(act, layers[li].w, layers[li].b, layers[li].k, len);
+    if (li < layers.length - 1) for (const ch of act) for (let i = 0; i < len; i++) ch[i] = Math.max(0, ch[i]);
+  }
+  return act[0];
+}
+
+function applyNPO(r) {
+  const nr = nrm(r);
+  if (nr === 0) return new Float64Array(n);
+  const rn = Float64Array.from(r, v => v / nr);
+  const nc = NPO_WEIGHTS.nc, pool = n / nc;
+  const fine = runStack(NPO_WEIGHTS.fine, rn, n);
+  const pooled = new Float64Array(nc);
+  for (let j = 0; j < nc; j++) {
+    let s = 0;
+    for (let i = 0; i < pool; i++) s += rn[j * pool + i];
+    pooled[j] = s / pool;
+  }
+  const coarse = runStack(NPO_WEIGHTS.coarse, pooled, nc);
+  const z = new Float64Array(n);
+  for (let i = 0; i < n; i++) { // align-corners=false linear upsample of the coarse branch
+    const pos = (i + 0.5) * nc / n - 0.5;
+    let j0 = Math.floor(pos);
+    let w = Math.min(1, Math.max(0, pos - j0));
+    const a = coarse[Math.min(nc - 1, Math.max(0, j0))];
+    const bb = coarse[Math.min(nc - 1, Math.max(0, j0 + 1))];
+    z[i] = (fine[i] + (1 - w) * a + w * bb) * nr;
+  }
+  return z;
 }
 
 // ---------------- Solver steppers ----------------
@@ -96,36 +144,54 @@ function makeCG() {
   } };
 }
 
-function makeSteepest() {
+// CG with the neural preconditioner: flexible CG (Polak-Ribiere beta), since
+// the ReLU network is nonlinear and plain PCG's conjugacy assumptions fail.
+// Descent safeguard (mirrors train_npo_1d.py): if the net's output is not a
+// descent direction, fall back to the raw residual for that step.
+function safeguardedNPO(r) {
+  const z = applyNPO(r);
+  if (dot(r, z) <= 1e-14 * nrm(r) * nrm(z)) return Float64Array.from(r);
+  return z;
+}
+
+function makeNeuralCG() {
+  const x = new Float64Array(n), r = Float64Array.from(b);
+  const Ap = new Float64Array(n), dx = new Float64Array(n);
+  let z = safeguardedNPO(r), p = Float64Array.from(z), rz = dot(r, z);
+  return { x, r, dx, step() {
+    applyA(p, Ap);
+    const alpha = rz / dot(p, Ap);
+    for (let i = 0; i < n; i++) { dx[i] = alpha * p[i]; x[i] += dx[i]; r[i] -= alpha * Ap[i]; }
+    const rel = nrm(r) / bNorm;
+    z = safeguardedNPO(r);
+    let zdr = 0; // z . (r_new - r_old) = z . (-alpha * Ap)
+    for (let i = 0; i < n; i++) zdr -= z[i] * alpha * Ap[i];
+    const beta = zdr / rz;
+    rz = dot(r, z);
+    for (let i = 0; i < n; i++) p[i] = z[i] + beta * p[i];
+    return rel;
+  } };
+}
+
+function makeGradient() { // steepest descent with exact line search
   const x = new Float64Array(n), r = Float64Array.from(b);
   const Ar = new Float64Array(n), dx = new Float64Array(n);
   return { x, r, dx, step() {
     applyA(r, Ar);
-    const alpha = dot(r, r) / dot(r, Ar); // exact line search along -grad = r
+    const alpha = dot(r, r) / dot(r, Ar);
     for (let i = 0; i < n; i++) { dx[i] = alpha * r[i]; x[i] += dx[i]; }
     for (let i = 0; i < n; i++) r[i] -= alpha * Ar[i];
     return nrm(r) / bNorm;
   } };
 }
 
-// x <- x + c r covers both Jacobi (c = h^2/2 = D^{-1}) and Richardson (c = omega)
-function makeFixedStep(c) {
-  const x = new Float64Array(n), r = Float64Array.from(b);
-  const Ar = new Float64Array(n), dx = new Float64Array(n);
-  return { x, r, dx, step() {
-    applyA(r, Ar);
-    for (let i = 0; i < n; i++) { dx[i] = c * r[i]; x[i] += dx[i]; }
-    for (let i = 0; i < n; i++) r[i] -= c * Ar[i];
-    return nrm(r) / bNorm;
-  } };
-}
-
-function makeSOR(w) {
+function makeSOR() {
+  const w = omegaSor;
   const x = new Float64Array(n), r = Float64Array.from(b);
   const xprev = new Float64Array(n), Ax = new Float64Array(n), dx = new Float64Array(n);
   return { x, r, dx, step() {
     xprev.set(x);
-    for (let i = 0; i < n; i++) { // forward sweep; row: (2x_i - x_{i-1} - x_{i+1})/h^2 = b_i
+    for (let i = 0; i < n; i++) { // forward sweep
       const left = i > 0 ? x[i - 1] : 0, right = i < n - 1 ? x[i + 1] : 0;
       const gs = (h2 * b[i] + left + right) / 2;
       x[i] = (1 - w) * x[i] + w * gs;
@@ -159,7 +225,7 @@ function runSolver(make) {
   return { resHist, frames, iters, converged };
 }
 
-// frozen axis ranges, as in the Mathematica dashboard
+// frozen axis ranges over the whole history, so nothing rescales while scrubbing
 function padRange(lo, hi) { const s = Math.max(1e-6, hi - lo); return [lo - 0.05 * s, hi + 0.05 * s]; }
 function symRange(lo, hi) { const m = Math.max(Math.abs(lo), Math.abs(hi), 1e-6); return [-1.05 * m, 1.05 * m]; }
 
@@ -172,7 +238,6 @@ function frameRanges(run) {
       const d = Math.abs(f.dx[i]); if (d > dM) dM = d;
     }
   }
-  // include the exact solution in the u range so the dashed overlay never clips
   for (let i = 0; i < n; i++) { const v = xExact[i]; if (v < xLo) xLo = v; if (v > xHi) xHi = v; }
   return { u: padRange(xLo, xHi), r: symRange(-rM, rM), dx: symRange(-dM, dM) };
 }
@@ -183,42 +248,31 @@ function relErrVsExact(x) {
   return Math.sqrt(num / den);
 }
 
-// decimated convergence polylines (linear-x and log-x sampling)
-function decimate(resHist) {
-  const L = resHist.length;
-  const lin = { ks: [], rs: [] };
-  const st = Math.max(1, Math.ceil(L / 1600));
-  for (let k = 0; k < L; k += st) { lin.ks.push(k); lin.rs.push(resHist[k]); }
-  if (lin.ks[lin.ks.length - 1] !== L - 1) { lin.ks.push(L - 1); lin.rs.push(resHist[L - 1]); }
-  const lg = { ks: [], rs: [] };
-  const N = 900, e1 = Math.log10(Math.max(2, L - 1));
+function decimate(resHist) { // log-x sampled polyline for the tracker (starts at k=1)
+  const L = resHist.length, ks = [], rs = [];
+  const NPTS = 900, e1 = Math.log10(Math.max(2, L - 1));
   let prev = 0;
-  for (let j = 0; j <= N; j++) {
-    const k = Math.min(L - 1, Math.round(Math.pow(10, (j / N) * e1)));
-    if (k !== prev || j === 0) { lg.ks.push(Math.max(1, k)); lg.rs.push(resHist[Math.max(1, k)]); prev = k; }
+  for (let j = 0; j <= NPTS; j++) {
+    const k = Math.max(1, Math.min(L - 1, Math.round(Math.pow(10, (j / NPTS) * e1))));
+    if (k !== prev) { ks.push(k); rs.push(resHist[k]); prev = k; }
   }
-  return { lin, lg };
+  return { ks, rs };
 }
 
 // ---------------- Solver registry ----------------
 const SOLVERS = [
-  { id: 'cg', name: 'Conjugate gradient', color: '#1f77b4', make: () => makeCG, params: () => 'no preconditioner' },
-  { id: 'sor', name: 'SOR', color: '#9467bd', make: () => () => makeSOR(state.sorOmega), params: () => 'ω = ' + state.sorOmega.toFixed(4) + (Math.abs(state.sorOmega - omegaSorOpt) < 5e-4 ? ' (optimal)' : '') },
-  { id: 'jacobi', name: 'Jacobi', color: '#d62728', make: () => () => makeFixedStep(omegaJacobi), params: () => 'x ← x + D⁻¹r,  D⁻¹ = (h²/2)I' },
-  { id: 'rich', name: 'Richardson', color: '#ff7f0e', make: () => () => makeFixedStep(omegaRich), params: () => 'ω = 1/λmax = ' + omegaRich.toExponential(2) },
-  { id: 'sd', name: 'Gradient descent', color: '#2ca02c', make: () => makeSteepest, params: () => 'steepest descent, exact line search' },
+  { id: 'cg', name: 'Conjugate gradient', color: '#1f77b4', make: makeCG, params: 'no preconditioner' },
+  { id: 'npo', name: 'CG + neural preconditioner', color: '#d62728', make: makeNeuralCG, params: 'toy NPO (737 weights), flexible CG' },
+  { id: 'sor', name: 'SOR', color: '#9467bd', make: makeSOR, params: 'ω = ' + omegaSor.toFixed(4) + ' (optimal)' },
+  { id: 'grad', name: 'Gradient descent', color: '#2ca02c', make: makeGradient, params: 'steepest descent, exact line search' },
 ];
 
 const state = {
   selected: 'cg',
-  rhs: 'points',
-  sorOmega: Math.round(omegaSorOpt * 1000) / 1000,
-  frameIdx: {},   // per solver id
+  frameIdx: {},
   playing: false,
   timer: null,
-  speed: 4,       // frames per tick
-  trackerLogX: true,
-  runs: {},       // id -> {resHist, frames, iters, converged, ranges, dec}
+  runs: {},
 };
 
 // ---------------- Plotting ----------------
@@ -282,10 +336,9 @@ function drawPlot(canvas, o) {
     ctx.beginPath();
     let started = false;
     for (let i = 0; i < s.xs.length; i++) {
-      const vx = s.xs[i]; let vy = s.ys[i];
+      let vy = s.ys[i];
       if (o.yLog) vy = Math.max(vy, 1e-16);
-      if (o.xLog && vx <= 0) continue;
-      const Xp = px(vx), Yp = py(vy);
+      const Xp = px(s.xs[i]), Yp = py(vy);
       if (!started) { ctx.moveTo(Xp, Yp); started = true; } else ctx.lineTo(Xp, Yp);
     }
     ctx.stroke();
@@ -293,8 +346,7 @@ function drawPlot(canvas, o) {
   }
   if (o.marker) {
     ctx.fillStyle = o.marker.color || '#e11';
-    const mx = o.xLog ? Math.max(o.marker.x, o.xMin) : o.marker.x;
-    ctx.beginPath(); ctx.arc(px(mx), py(Math.max(o.marker.y, o.yLog ? 1e-16 : -Infinity)), 5, 0, 2 * Math.PI); ctx.fill();
+    ctx.beginPath(); ctx.arc(px(o.marker.x), py(Math.max(o.marker.y, o.yLog ? 1e-16 : -Infinity)), 5, 0, 2 * Math.PI); ctx.fill();
   }
   ctx.restore();
 
@@ -327,7 +379,7 @@ function draw() {
   const sv = SOLVERS.find(s => s.id === state.selected);
   const stepLabel = ' — step ' + f.iter.toLocaleString('en-US');
   drawPlot($('plotU'), {
-    title: 'Solved field u' + stepLabel, xLabel: 'x', yLabel: 'u',
+    title: 'Temperature u' + stepLabel, xLabel: 'x', yLabel: 'u',
     xMin: 0, xMax: 1, yMin: run.ranges.u[0], yMax: run.ranges.u[1],
     series: [
       { xs: X, ys: xExact, color: '#b6b6be', width: 1.4, dash: [5, 4] },
@@ -345,7 +397,6 @@ function draw() {
     series: [{ xs: X, ys: f.dx, color: '#1c7c33', width: 1.7 }],
   });
 
-  // convergence tracker: all solvers, selected highlighted
   let minRel = 1, maxIter = 1;
   const series = [];
   for (const s of SOLVERS) {
@@ -353,33 +404,30 @@ function draw() {
     if (!r) continue;
     minRel = Math.min(minRel, r.resHist[r.resHist.length - 1]);
     maxIter = Math.max(maxIter, r.iters);
-    const d = state.trackerLogX ? r.dec.lg : r.dec.lin;
     const sel = s.id === state.selected;
-    series.push({ xs: d.ks, ys: d.rs, color: s.color, width: sel ? 2.6 : 1.3, alpha: sel ? 1 : 0.45 });
+    series.push({ xs: r.dec.ks, ys: r.dec.rs, color: s.color, width: sel ? 2.6 : 1.3, alpha: sel ? 1 : 0.45 });
   }
   drawPlot($('plotC'), {
     title: 'Convergence tracker (all solvers)', xLabel: 'iteration step', yLabel: 'relative residual',
-    xMin: state.trackerLogX ? 1 : 0, xMax: Math.max(2, maxIter), yMin: Math.max(minRel * 0.5, 1e-16), yMax: 1.6,
-    xLog: state.trackerLogX, yLog: true,
-    series, marker: { x: Math.max(f.iter, state.trackerLogX ? 1 : 0), y: f.relres },
+    xMin: 1, xMax: Math.max(2, maxIter), yMin: Math.max(minRel * 0.5, 3e-6), yMax: 1.6,
+    xLog: true, yLog: true,
+    series, marker: { x: Math.max(1, f.iter), y: f.relres },
   });
 
   const idx = Math.min(state.frameIdx[state.selected] || 0, run.frames.length - 1);
   $('slider').max = run.frames.length - 1;
   $('slider').value = idx;
   $('stepLabel').innerHTML = 'iteration <b>' + f.iter.toLocaleString('en-US') + '</b> / ' +
-    run.iters.toLocaleString('en-US') + ' &nbsp;·&nbsp; rel. residual <b>' + f.relres.toExponential(2) + '</b>' +
-    (run.converged ? '' : ' &nbsp;·&nbsp; <span style="color:#c02424">did not reach tol in ' + MAXIT.toLocaleString('en-US') + ' iterations</span>');
+    run.iters.toLocaleString('en-US') + ' &nbsp;·&nbsp; rel. residual <b>' + f.relres.toExponential(2) + '</b>';
 }
 
 function rebuildTable() {
   const rows = SOLVERS.map(s => {
     const r = state.runs[s.id];
     const last = r.frames[r.frames.length - 1];
-    const it = r.converged ? r.iters.toLocaleString('en-US') : '&gt; ' + MAXIT.toLocaleString('en-US') + ' (no convergence)';
     const sel = s.id === state.selected ? ' style="background:#f2f6ff"' : '';
     return '<tr' + sel + '><td><span class="dot" style="background:' + s.color + '"></span>' + s.name + '</td>' +
-      '<td>' + s.params() + '</td><td class="num">' + it + '</td>' +
+      '<td>' + s.params + '</td><td class="num">' + r.iters.toLocaleString('en-US') + '</td>' +
       '<td class="num">' + r.resHist[r.resHist.length - 1].toExponential(2) + '</td>' +
       '<td class="num">' + (100 * relErrVsExact(last.x)).toFixed(1) + '%</td></tr>';
   }).join('');
@@ -389,7 +437,6 @@ function rebuildTable() {
 function selectSolver(id) {
   state.selected = id;
   for (const s of SOLVERS) $('btn-' + s.id).classList.toggle('active', s.id === id);
-  $('sorControls').style.display = id === 'sor' ? 'flex' : 'none';
   rebuildTable();
   draw();
 }
@@ -405,76 +452,38 @@ function togglePlay() {
   $('playBtn').textContent = '❚❚ pause';
   const run = currentRun();
   if ((state.frameIdx[state.selected] || 0) >= run.frames.length - 1) state.frameIdx[state.selected] = 0;
+  const perTick = Math.max(1, Math.round(run.frames.length / 120)); // ~8 s per full animation
   state.timer = setInterval(() => {
     const r = currentRun();
-    let idx = (state.frameIdx[state.selected] || 0) + state.speed;
+    let idx = (state.frameIdx[state.selected] || 0) + perTick;
     if (idx >= r.frames.length - 1) { idx = r.frames.length - 1; stopPlay(); }
     state.frameIdx[state.selected] = idx;
     draw();
   }, 70);
 }
 
-function computeSolver(s) {
-  const run = runSolver(s.make());
-  run.ranges = frameRanges(run);
-  run.dec = decimate(run.resHist);
-  state.runs[s.id] = run;
-  state.frameIdx[s.id] = 0;
-}
-
-async function computeAll() {
+async function init() {
   const status = $('status');
   for (const s of SOLVERS) {
-    status.textContent = 'computing ' + s.name + ' history…';
-    await new Promise(r => setTimeout(r, 15)); // let the status paint
-    computeSolver(s);
+    status.textContent = 'computing ' + s.name + '…';
+    await new Promise(r => setTimeout(r, 15));
+    const run = runSolver(s.make);
+    run.ranges = frameRanges(run);
+    run.dec = decimate(run.resHist);
+    state.runs[s.id] = run;
+    state.frameIdx[s.id] = 0;
   }
   status.textContent = '';
-}
-
-async function init() {
-  setRHS(state.rhs);
-  await computeAll();
   $('dashboard').style.display = '';
 
-  // problem facts
   $('facts').innerHTML =
-    'n = ' + n + ', h = 1/' + (n + 1) +
-    ', κ(A) = λ<sub>max</sub>/λ<sub>min</sub> = ' + Math.round(kappa).toLocaleString('en-US') +
-    ', tol = 10⁻², SOR ω<sub>opt</sub> = 2/(1+sin πh) ≈ ' + omegaSorOpt.toFixed(4);
+    'n = ' + n + ' cells, h = 1/' + (n + 1) +
+    ', κ(A) = ' + Math.round(kappa).toLocaleString('en-US') +
+    ', stop at ‖r‖/‖b‖ ≤ 10⁻⁴';
 
-  // controls
   for (const s of SOLVERS) $('btn-' + s.id).addEventListener('click', () => { stopPlay(); selectSolver(s.id); });
   $('slider').addEventListener('input', e => { stopPlay(); state.frameIdx[state.selected] = +e.target.value; draw(); });
   $('playBtn').addEventListener('click', togglePlay);
-  $('speedSel').addEventListener('change', e => { state.speed = +e.target.value; });
-  $('xScaleSel').addEventListener('change', e => { state.trackerLogX = e.target.value === 'log'; draw(); });
-  $('rhsSel').addEventListener('change', async e => {
-    stopPlay();
-    state.rhs = e.target.value;
-    setRHS(state.rhs);
-    await computeAll();
-    rebuildTable(); draw();
-  });
-  const omegaIn = $('sorOmega'), omegaVal = $('sorOmegaVal');
-  omegaIn.value = state.sorOmega;
-  omegaVal.textContent = state.sorOmega.toFixed(3);
-  omegaIn.addEventListener('input', e => { omegaVal.textContent = (+e.target.value).toFixed(3); });
-  omegaIn.addEventListener('change', e => {
-    stopPlay();
-    state.sorOmega = +e.target.value;
-    $('status').textContent = 'recomputing SOR…';
-    setTimeout(() => {
-      computeSolver(SOLVERS.find(s => s.id === 'sor'));
-      $('status').textContent = '';
-      rebuildTable(); draw();
-    }, 15);
-  });
-  $('sorOptBtn').addEventListener('click', () => {
-    omegaIn.value = Math.round(omegaSorOpt * 1000) / 1000;
-    omegaIn.dispatchEvent(new Event('input'));
-    omegaIn.dispatchEvent(new Event('change'));
-  });
   window.addEventListener('resize', draw);
 
   selectSolver('cg');

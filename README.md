@@ -8,7 +8,7 @@ Implementation and study of **preconditioned conjugate gradients for the 2-D Poi
 
 ## Interactive demo & rendered reports
 
-- **[Iterative solvers explorer](https://yaroslavvb.github.io/poisson-solvers/cg-explorer/)** — interactive dashboard for a 1D Poisson (electrostatics) problem: scrub through the iteration history of CG, SOR, Jacobi, Richardson, and gradient descent. A JavaScript port of the Mathematica CG dashboard in [mathematica/cg_dashboard_1d.wls](mathematica/cg_dashboard_1d.wls).
+- **[Iterative solvers explorer](https://yaroslavvb.github.io/poisson-solvers/cg-explorer/)** — interactive dashboard for a 1D heat-conduction Poisson problem (heater at one end, chiller at the other): scrub through the iteration history of CG, SOR, gradient descent, and CG with a toy in-browser neural preconditioner ([arXiv:2502.01337](https://arxiv.org/abs/2502.01337), trained by [python/neural/train_npo_1d.py](python/neural/train_npo_1d.py)).
 - **[Rendered report suite](https://yaroslavvb.github.io/poisson-solvers/)** — the reports below as web pages (GitHub Pages).
 
 ## Quickstart

@@ -3,27 +3,27 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Iterative solvers explorer — 1D Poisson</title>
+<title>Iterative solvers — 1D heat conduction</title>
 <style>
   :root { color-scheme: light; }
   * { box-sizing: border-box; }
   body { margin: 0; font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; color: #1b1b20; background: #fafafa; }
   .wrap { max-width: 1060px; margin: 0 auto; padding: 20px 18px 48px; }
   header h1 { font-size: 22px; font-weight: 650; margin: 4px 0 2px; }
-  header p.sub { margin: 0 0 10px; color: #555; }
+  header p.sub { margin: 0 0 4px; color: #555; }
   header a { color: #1f5fbf; text-decoration: none; }
   header a:hover { text-decoration: underline; }
   .topnav { font-size: 13px; color: #777; margin-bottom: 14px; }
-  .solverBtns { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 8px; }
+  .schematic { margin: 14px 0 4px; }
+  .schematic svg { width: 100%; max-width: 720px; height: auto; display: block; }
+  .solverBtns { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 8px; }
   .solverBtns button { font: 14px system-ui, sans-serif; padding: 7px 13px; border: 1px solid #ccc; border-radius: 8px; background: #fff; cursor: pointer; display: flex; align-items: center; gap: 7px; }
   .solverBtns button.active { border-color: #1f5fbf; background: #eef4ff; font-weight: 600; }
   .dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
   .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 6px 0 4px; }
   .controls input[type=range] { flex: 1; min-width: 220px; }
-  .controls button, .controls select { font: 13px system-ui, sans-serif; padding: 5px 10px; border: 1px solid #ccc; border-radius: 7px; background: #fff; cursor: pointer; }
-  #stepLabel { font-size: 13px; color: #444; min-width: 300px; }
-  #sorControls { display: none; align-items: center; gap: 9px; font-size: 13px; color: #444; margin: 2px 0 4px; }
-  #sorControls input[type=range] { width: 260px; }
+  .controls button { font: 13px system-ui, sans-serif; padding: 5px 10px; border: 1px solid #ccc; border-radius: 7px; background: #fff; cursor: pointer; }
+  #stepLabel { font-size: 13px; color: #444; min-width: 280px; }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 10px; }
   @media (max-width: 780px) { .grid { grid-template-columns: 1fr; } }
   .grid canvas { width: 100%; height: 300px; background: #fff; border: 1px solid #e2e2e6; border-radius: 10px; }
@@ -36,7 +36,6 @@
   table.summary .dot { margin-right: 8px; vertical-align: -1px; }
   .notes { margin-top: 26px; font-size: 14.5px; }
   .notes h2 { font-size: 17px; margin: 22px 0 6px; }
-  .notes code { background: #efeff3; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
   .notes li { margin: 5px 0; }
 </style>
 </head>
@@ -44,50 +43,51 @@
 <div class="wrap">
 <header>
   <div class="topnav"><a href="../">← poisson-solvers reports</a> · <a href="https://github.com/yaroslavvb/poisson-solvers">GitHub</a></div>
-  <h1>Iterative solvers on a 1D Poisson problem</h1>
-  <p class="sub">Interactive port of a Mathematica conjugate-gradient dashboard
-  (<a href="https://github.com/yaroslavvb/poisson-solvers/blob/main/mathematica/cg_dashboard_1d.wls">original source</a>):
-  the electric-potential problem &minus;u&Prime; = f with unit point charges of opposite sign near the two grounded ends.
-  Pick a solver, then scrub or play through its iteration history.</p>
+  <h1>Iterative solvers on a 1D heat conduction problem</h1>
+  <p class="sub">A rod is heated at one end and chilled at the other; the steady-state temperature is a simple
+  linear ramp. Watch four iterative solvers discover it — pick a solver, then scrub or play through its iteration history.</p>
   <p class="facts" id="facts"></p>
 </header>
+
+<div class="schematic">
+  <svg viewBox="0 0 720 104" role="img" aria-label="Schematic: heater at the left end of a rod, chiller at the right end, temperature ramps linearly from hot to cold">
+    <defs>
+      <linearGradient id="tempGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#e05545"/>
+        <stop offset="0.5" stop-color="#f4f0e8"/>
+        <stop offset="1" stop-color="#4d7fd0"/>
+      </linearGradient>
+    </defs>
+    <rect x="14" y="22" width="58" height="44" rx="7" fill="#e05545"/>
+    <path d="M32 14 q4 -7 0 -12 M43 14 q4 -7 0 -12 M54 14 q4 -7 0 -12" stroke="#e05545" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <text x="43" y="49" text-anchor="middle" fill="#fff" font-size="13" font-weight="600" font-family="system-ui">heater</text>
+    <rect x="72" y="30" width="576" height="28" fill="url(#tempGrad)" stroke="#9a9aa2" stroke-width="1"/>
+    <text x="360" y="48" text-anchor="middle" fill="#333" font-size="12.5" font-family="system-ui">rod: temperature u(x) ramps from hot to cold</text>
+    <rect x="648" y="22" width="58" height="44" rx="7" fill="#4d7fd0"/>
+    <g stroke="#4d7fd0" stroke-width="2" stroke-linecap="round">
+      <path d="M670 8 v8 M666 12 h8 M683 6 v8 M679 10 h8"/>
+    </g>
+    <text x="677" y="49" text-anchor="middle" fill="#fff" font-size="13" font-weight="600" font-family="system-ui">chiller</text>
+    <text x="76" y="84" fill="#777" font-size="11.5" font-family="system-ui">+q into the first cell</text>
+    <text x="644" y="84" text-anchor="end" fill="#777" font-size="11.5" font-family="system-ui">−q out of the last cell</text>
+    <text x="360" y="84" text-anchor="middle" fill="#777" font-size="11.5" font-family="system-ui">−u″ = f on (0,1), ends held at ambient u = 0</text>
+  </svg>
+</div>
 
 <div id="status">computing solver histories…</div>
 
 <div id="dashboard" style="display:none">
   <div class="solverBtns">
     <button id="btn-cg"><span class="dot" style="background:#1f77b4"></span>Conjugate gradient</button>
+    <button id="btn-npo"><span class="dot" style="background:#d62728"></span>CG + neural preconditioner</button>
     <button id="btn-sor"><span class="dot" style="background:#9467bd"></span>SOR</button>
-    <button id="btn-jacobi"><span class="dot" style="background:#d62728"></span>Jacobi</button>
-    <button id="btn-rich"><span class="dot" style="background:#ff7f0e"></span>Richardson</button>
-    <button id="btn-sd"><span class="dot" style="background:#2ca02c"></span>Gradient descent</button>
-  </div>
-
-  <div id="sorControls">
-    <span>SOR relaxation ω:</span>
-    <input type="range" id="sorOmega" min="1.0" max="1.995" step="0.005">
-    <b id="sorOmegaVal"></b>
-    <button id="sorOptBtn">set optimal</button>
+    <button id="btn-grad"><span class="dot" style="background:#2ca02c"></span>Gradient descent</button>
   </div>
 
   <div class="controls">
     <button id="playBtn">▶ play</button>
-    <select id="speedSel" title="frames advanced per tick">
-      <option value="1">slow</option>
-      <option value="4" selected>normal</option>
-      <option value="12">fast</option>
-    </select>
     <input type="range" id="slider" min="0" max="1" value="0">
     <span id="stepLabel"></span>
-    <label style="font-size:13px;color:#444">source:
-      <select id="rhsSel">
-        <option value="points" selected>two point charges (original)</option>
-        <option value="slabs">two charged slabs (smooth)</option>
-      </select>
-    </label>
-    <label style="font-size:13px;color:#444">tracker x-axis:
-      <select id="xScaleSel"><option value="log" selected>log</option><option value="linear">linear</option></select>
-    </label>
   </div>
 
   <div class="grid">
@@ -98,56 +98,56 @@
   </div>
 
   <table class="summary">
-    <thead><tr><th>method</th><th>parameters</th><th style="text-align:right">iterations to ‖r‖/‖b‖ ≤ 10⁻²</th><th style="text-align:right">final rel. residual</th><th style="text-align:right">solution error ‖u−u*‖/‖u*‖ at stop</th></tr></thead>
+    <thead><tr><th>method</th><th>details</th><th style="text-align:right">iterations to ‖r‖/‖b‖ ≤ 10⁻⁴</th><th style="text-align:right">final rel. residual</th><th style="text-align:right">solution error ‖u−u*‖/‖u*‖ at stop</th></tr></thead>
     <tbody id="summaryBody"></tbody>
   </table>
 </div>
 
 <div class="notes">
   <h2>The problem</h2>
-  <p>Discretize &minus;u&Prime;(x) = f(x) on (0,1) with u(0) = u(1) = 0 on n = 256 interior points:
-  A = tridiag(&minus;1, 2, &minus;1)/h&sup2; with h = 1/257. In the original source configuration b is zero except b&#8321; = +1 and b&#8322;&#8325;&#8326; = &minus;1
-  (a + and a &minus; point charge next to the grounded ends; the midpoint entry is set to 0 exactly as in the original code, a deliberate no-op),
-  and the exact potential (dashed gray in the first panel) is piecewise linear. The eigenvalues of A are
-  &lambda;<sub>k</sub> = (2 &minus; 2cos(k&pi;h))/h&sup2;, so the condition number is
-  &kappa; = cot&sup2;(&pi;h/2) &asymp; 2.7&times;10&#8308;.</p>
+  <p>Steady-state heat conduction: &minus;u&Prime;(x) = f on (0,1), with both ends held at ambient temperature (u = 0),
+  discretized on n = 256 cells as A = tridiag(&minus;1, 2, &minus;1)/h&sup2;, h = 1/257. The heater injects +1 into the first cell
+  and the chiller removes 1 from the last, so the exact temperature (dashed gray in the first panel) is essentially
+  a straight ramp from hot to cold. The eigenvalues of A are &lambda;<sub>k</sub> = (2 &minus; 2cos(k&pi;h))/h&sup2;,
+  giving condition number &kappa; &asymp; 2.7&times;10&#8308; — the single number that separates these methods.</p>
 
   <h2>The four panels</h2>
-  <p>Identical to the Mathematica <code>Manipulate</code> dashboard, with axes frozen over the whole history so nothing rescales while you scrub:
-  current solution u (blue, with the exact solution dashed), current residual r = b &minus; Au (red),
-  the step &Delta;u taken at this iteration (green), and the convergence tracker (log residual, red marker at the current step).
-  The tracker overlays all five solvers — the selected one is highlighted.</p>
+  <p>Current temperature u (with the exact solution dashed), current residual r = b &minus; Au, the update &Delta;u
+  taken at this iteration, and the convergence tracker (log residual; red marker = current step; all four solvers
+  overlaid, the selected one highlighted). Axes are frozen over the whole history so nothing rescales while you scrub.</p>
 
-  <h2>The solvers, and how they relate</h2>
+  <h2>The solvers</h2>
   <ul>
-    <li><b>Richardson</b>: x &larr; x + &omega;r with a fixed step &omega;. This <em>is</em> gradient descent with a fixed learning rate on the energy &frac12;x&#7488;Ax &minus; b&#7488;x. Shown with the conservative &omega; = 1/&lambda;<sub>max</sub>; the eigencomponent of the residual at &lambda; contracts by |1 &minus; &omega;&lambda;| per step — up to 1 &minus; 1/&kappa; for the lowest mode, hence worst-case O(&kappa;) iterations.</li>
-    <li><b>Jacobi</b>: x &larr; x + D&#8315;&sup1;r. Here the diagonal is constant, D = (2/h&sup2;)I, so Jacobi is <em>exactly</em> Richardson with the optimal fixed step &omega;* = 2/(&lambda;<sub>min</sub>+&lambda;<sub>max</sub>) = h&sup2;/2 — mode k contracts by |cos k&pi;h| per step: fast mid-spectrum, excruciating at both ends. Still O(&kappa;).</li>
-    <li><b>Gradient descent</b> (steepest descent): the same direction r, but with the exact line search &alpha; = r&#7488;r&#8725;r&#7488;Ar recomputed each step. Adaptive, yet the worst-case rate (&kappa;&minus;1)/(&kappa;+1) is the same O(&kappa;) class — watch it zig-zag.
-    (Fun fact: with the point-charge source the &plusmn;charge symmetry makes b&rsquo;s eigen-spectrum symmetric about the middle eigenvalue 2/h&sup2;, so the exact line search evaluates to exactly h&sup2;/2 every step — steepest descent literally reproduces Jacobi, iteration for iteration.)</li>
-    <li><b>SOR</b>: a Gauss–Seidel sweep with over-relaxation. At the optimal &omega;* = 2/(1+sin &pi;h) &asymp; 1.976 the spectral radius drops to &omega;*&minus;1, turning O(&kappa;) into O(&radic;&kappa;). Try the &omega; slider: at &omega; = 1 (plain Gauss–Seidel) the low modes crawl, and the optimum is razor-sharp.</li>
-    <li><b>Conjugate gradient</b>: also O(&radic;&kappa;), but parameter-free and optimal — it minimizes the A-norm error over the <em>entire</em> Krylov space at every step, and in exact arithmetic terminates in at most n steps. Watch the solution panel with the point-charge source: information propagates inward from the two sources roughly one grid cell per iteration.</li>
+    <li><b>Gradient descent</b>: step along the residual, x &larr; x + &alpha;r, with the exact line search
+    &alpha; = r&#7488;r&#8725;r&#7488;Ar. (With a fixed &alpha; this same family is called Richardson iteration, and for this
+    constant-diagonal A it coincides with Jacobi — they all look alike here, so one representative suffices.)
+    Worst-case rate O(&kappa;) per digit.</li>
+    <li><b>SOR</b>: a Gauss–Seidel sweep with over-relaxation at the optimal &omega; = 2/(1+sin &pi;h) &asymp; 1.976,
+    which improves O(&kappa;) to O(&radic;&kappa;).</li>
+    <li><b>Conjugate gradient</b>: also O(&radic;&kappa;) but parameter-free and optimal over the whole Krylov space.
+    Watch heat &ldquo;information&rdquo; spread inward from the two ends roughly one cell per iteration — and note it
+    terminates at <em>exactly</em> 128 = n/2 steps, where the residual falls off a cliff: the antisymmetric source
+    excites only the 128 antisymmetric eigenmodes, and CG finds them all.</li>
+    <li><b>CG + neural preconditioner</b>: a toy version of the Neural Preconditioning Operator
+    (<a href="https://arxiv.org/abs/2502.01337">arXiv:2502.01337</a>). A tiny two-scale convolutional network —
+    a local fine-grid stencil plus a coarse-grid branch, a miniature of the paper&rsquo;s multigrid design, 1,154 weights
+    running right here in the browser — was trained offline on this A with the paper&rsquo;s condition/residual losses to
+    output z &asymp; A&#8315;&sup1;r; CG then uses z instead of r. Because the ReLU network is nonlinear, it is applied via
+    <em>flexible</em> CG (Polak&ndash;Ribi&egrave;re &beta;, with a fallback to z = r whenever the net fails to produce a
+    descent direction). It is deliberately small, so it accelerates CG by roughly 3&times; without making the solve trivial.</li>
   </ul>
 
-  <h2>Two lessons hiding in the numbers</h2>
-  <p><b>The right-hand side matters as much as the matrix.</b> With the original point charges, <em>every</em> method stops within a few
-  hundred iterations, far below the worst-case O(&kappa;) counts. No accident: sources at nodes adjacent to a Dirichlet boundary have
-  eigen-expansion coefficients &prop; sin(k&pi;h) — almost no energy in the slow extreme modes, lots in the mid-spectrum modes that every
-  method damps quickly. Switch the source to the <em>two charged slabs</em>, whose energy sits in the slow low-frequency modes,
-  and the textbook hierarchy appears in full: Richardson and Jacobi crawl through tens of thousands of iterations,
-  gradient descent zig-zags in the same O(&kappa;) class, while SOR(&omega;*) and CG finish orders of magnitude sooner — that is
-  why the tracker&rsquo;s x-axis defaults to log scale.</p>
-  <p><b>A small residual is not a small error.</b> The last table column compares each stopped solver against the exact solution u* = A&#8315;&sup1;b.
-  At the same stopping criterion &Vert;r&Vert;/&Vert;b&Vert; &le; 10&#8315;&sup2;, the methods land at wildly different solution errors
-  (with point charges: a few percent for SOR(&omega;*) versus ~80% for Jacobi/Richardson). The error is e = A&#8315;&sup1;r, so residual components in
-  low modes get amplified by up to 1/&lambda;<sub>min</sub> — with &kappa; &asymp; 2.7&times;10&#8308;, a &ldquo;converged&rdquo; residual can hide a mostly
-  unconverged potential. Compare the blue curve against the dashed exact solution at the final step of each solver.</p>
+  <p>The stopping rule is a <em>residual</em> test; the last table column measures each solver&rsquo;s actual distance
+  to the exact ramp at the moment it stopped — with &kappa; &asymp; 2.7&times;10&#8308; those two notions of
+  &ldquo;converged&rdquo; can differ more than you&rsquo;d expect.</p>
 
-  <p>For the theory in full detail see the report series in this repo:
+  <p>For the full theory, see the report series in this repo:
   <a href="../reports/04-krylov-and-pcg.html">Krylov methods &amp; PCG</a>,
-  <a href="../reports/05-classical-preconditioners.html">classical preconditioners</a>,
+  <a href="../reports/06-neural-preconditioner.html">neural preconditioning</a>,
   <a href="../reports/02-eigenvalues.html">the eigenvalue story</a>.</p>
 </div>
 </div>
+<script src="npo_weights.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
