@@ -6,6 +6,11 @@ Implementation and study of **preconditioned conjugate gradients for the 2-D Poi
 
 **Why**: at this scale every quantity is exactly computable (analytic spectrum, dense eigensolves, direct-solve ground truth), so each preconditioner's behavior can be *explained*, not just measured — including two instructive failures: Nyström losing to plain CG on a flat-topped spectrum, and plain PCG stalling on a nonlinear neural preconditioner.
 
+## Interactive demo & rendered reports
+
+- **[Iterative solvers explorer](https://yaroslavvb.github.io/poisson-solvers/cg-explorer/)** — interactive dashboard for a 1D Poisson (electrostatics) problem: scrub through the iteration history of CG, SOR, Jacobi, Richardson, and gradient descent. A JavaScript port of the Mathematica CG dashboard in [mathematica/cg_dashboard_1d.wls](mathematica/cg_dashboard_1d.wls).
+- **[Rendered report suite](https://yaroslavvb.github.io/poisson-solvers/)** — the reports below as web pages (GitHub Pages).
+
 ## Quickstart
 
 Python env is managed by `uv` (Python 3.12; numpy, scipy, matplotlib, torch). Run from the repo root:
