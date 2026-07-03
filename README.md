@@ -55,11 +55,12 @@ Start with [reports/00-overview.md](reports/00-overview.md) (full repo map, run 
 6. [06 — Neural Preconditioning Operator](reports/06-neural-preconditioner.md) — NPO paper digest, toy NAMG, 116 → 30, why FCG is required
 7. [07 — Randomized Nyström Preconditioning](reports/07-nystrom-preconditioning.md) — exact implementation, the instructive negative result
 8. [08 — Consolidated Results](reports/08-results.md) — full matrix, timings, sanity checks, limitations, next steps
+9. [09 — The Statistical Dictionary](reports/09-stiffness-as-precision.md) — stiffness matrix = precision matrix: Green's function as Brownian-bridge covariance, solvers as Gaussian inference, preconditioners as surrogate models (incomplete Cholesky = Vecchia, Nyström = factor analysis)
 
 ## Layout
 
 - `mathematica/` — reference `.wls` scripts (problem, PCG, eigen checks, Nyström)
 - `python/` — `poisson.py`, `pcg.py`, `preconditioners.py`, `nystrom.py`, `neural/`, `experiments/`
-- `reports/` — the report suite (00–08)
+- `reports/` — the report suite (00–09)
 - `results/` — JSON summaries + NPO checkpoint (deterministic, reproducible)
 - `figures/` — PNGs at dpi=150; `mma_*` are Mathematica exports

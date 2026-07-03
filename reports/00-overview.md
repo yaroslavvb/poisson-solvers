@@ -35,7 +35,7 @@ python/
     run_nystrom.py       # rank sweep 16..256 + exact preconditioned spectra -> results/nystrom.json
     npo_spectrum.py      # column-linearized NPO spectrum diagnostics -> results/npo_spectrum.json
     run_all.py           # consolidated benchmark + sanity checks -> results/results.json
-reports/                 # this report suite (00..08)
+reports/                 # this report suite (00..09)
 results/                 # JSON summaries, npo_checkpoint.pt, npo_training_history.json
 figures/                 # all PNGs (dpi=150); mma_* are the Mathematica exports
 pyproject.toml, uv.lock  # Python env (3.12: numpy, scipy, matplotlib, torch)
@@ -107,3 +107,5 @@ The reports are written to be read in numerical order; each is self-contained bu
 **[07 — Randomized Nyström Preconditioning](07-nystrom-preconditioning.md).** The stabilized Nyström construction and preconditioner, implemented exactly and verified against dense eigensolves. The instructive negative result: all ranks take *more* iterations than plain CG (119–123 vs 116) despite provably smaller exact $\kappa$, because the Laplacian's flat-topped spectrum caps even *optimal* rank-256 deflation at $\kappa = 298$ — and the report maps precisely the (ridge/kernel) regime where the method actually delivers its $\mathbb{E}\,\kappa < 28$ guarantee.
 
 **[08 — Consolidated Results](08-results.md).** The full method matrix, wall-time accounting (setup vs solve, µs/iteration), the cross-method κ/clustering table, sanity checks and anomalies (including the reported-not-asserted Nyström rank-16/64 tie), what wins in which regime, limitations, and next steps. If you read only one report, read this one.
+
+**[09 — The Statistical Dictionary](09-stiffness-as-precision.md).** A coda that rereads the suite in the language of Gaussian inference: the stiffness matrix as a GMRF precision matrix (whose inverse is a Brownian-bridge covariance in closed form), Jacobi/Gauss–Seidel as conditional-expectation sweeps (Gibbs sampling minus the noise), Cholesky and QR as sequential regression and whitening, CG as conditioning on precision-uncorrelated measurements, and preconditioning as fitting a tractable surrogate Gaussian — incomplete Cholesky as the Vecchia approximation, Nyström as factor analysis — which makes 05's Jacobi no-op and 07's negative result corollaries of one statistical picture. Every identity is machine-verified by [verify_statistical_identities.py](../python/experiments/verify_statistical_identities.py).
