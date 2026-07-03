@@ -220,6 +220,35 @@ function makeSOR() {
   } };
 }
 
+// Preconditioned SOR: each sweep is followed by a line-searched correction
+// along z = M(r) — the smoother-plus-coarse-correction structure of classical
+// multigrid, with the network playing the coarse-correction role.
+function makeSORNPO() {
+  const w = omegaSor;
+  const x = new Float64Array(n), r = Float64Array.from(b);
+  const xprev = new Float64Array(n), Ax = new Float64Array(n);
+  const Az = new Float64Array(n), dx = new Float64Array(n);
+  return { x, r, dx, step() {
+    xprev.set(x);
+    for (let i = 0; i < n; i++) { // forward sweep (smoother)
+      const left = i > 0 ? x[i - 1] : 0, right = i < n - 1 ? x[i + 1] : 0;
+      const gs = (h2 * b[i] + left + right) / 2;
+      x[i] = (1 - w) * x[i] + w * gs;
+    }
+    applyA(x, Ax);
+    for (let i = 0; i < n; i++) r[i] = b[i] - Ax[i];
+    const z = safeguardedNPO(r); // neural correction with exact line search
+    applyA(z, Az);
+    const alpha = dot(r, z) / dot(z, Az);
+    for (let i = 0; i < n; i++) {
+      x[i] += alpha * z[i];
+      r[i] -= alpha * Az[i];
+      dx[i] = x[i] - xprev[i];
+    }
+    return nrm(r) / bNorm;
+  } };
+}
+
 // ---------------- History runner (two passes: count, then record ~MAXFRAMES frames) ----------------
 function runSolver(make) {
   let s = make();
@@ -282,9 +311,9 @@ const SOLVERS = [
     make: makeCG, makeP: makeCGNPO,
     detail: 'no preconditioner', detailP: 'flexible PCG, z = M(r)' },
   { id: 'sor', name: 'SOR', color: '#9467bd',
-    make: makeSOR, makeP: null,
+    make: makeSOR, makeP: makeSORNPO,
     detail: 'ω = ' + omegaSor.toFixed(4) + ' (optimal)',
-    detailP: 'ω = ' + omegaSor.toFixed(4) + ' — sweep method, preconditioner n/a' },
+    detailP: 'sweep + line-searched correction along z = M(r)' },
   { id: 'grad', name: 'Gradient descent', color: '#2ca02c',
     make: makeGradient, makeP: makeGradientNPO,
     detail: 'steepest descent, exact line search', detailP: 'steepest descent along z = M(r)' },
@@ -297,6 +326,7 @@ const state = {
   playing: false,
   timer: null,
   runs: {},       // run key -> {resHist, frames, iters, converged, ranges, dec}
+  trackerRange: { maxIter: 2, minRel: 1e-5 }, // fixed across the toggle
 };
 
 function runKey(s) { return state.precond && s.makeP ? s.id + ':npo' : s.id; }
@@ -431,20 +461,18 @@ function draw() {
     series: [{ xs: X, ys: f.dx, color: '#1c7c33', width: 1.7 }],
   });
 
-  let minRel = 1, maxIter = 1;
   const series = [];
   for (const s of SOLVERS) {
     const r = state.runs[runKey(s)];
     if (!r) continue;
-    minRel = Math.min(minRel, r.resHist[r.resHist.length - 1]);
-    maxIter = Math.max(maxIter, r.iters);
     const sel = s.id === state.selected;
     series.push({ xs: r.dec.ks, ys: r.dec.rs, color: s.color, width: sel ? 2.6 : 1.3, alpha: sel ? 1 : 0.45 });
   }
   drawPlot($('plotC'), {
     title: 'Convergence tracker' + (state.precond ? ' — preconditioner on' : ''),
     xLabel: 'iteration step', yLabel: 'relative residual',
-    xMin: 1, xMax: Math.max(2, maxIter), yMin: Math.max(minRel * 0.5, 3e-6), yMax: 1.6,
+    xMin: 1, xMax: state.trackerRange.maxIter,
+    yMin: state.trackerRange.minRel, yMax: 1.6,
     xLog: true, yLog: true,
     series, marker: { x: Math.max(1, f.iter), y: f.relres },
   });
@@ -573,6 +601,28 @@ async function init() {
     state.runs[key] = run;
     state.frameIdx[key] = 0;
   }
+
+  // merge axis ranges across each solver's plain/preconditioned pair, and fix
+  // the tracker range globally, so toggling the preconditioner never rescales
+  for (const s of SOLVERS) {
+    const pair = [state.runs[s.id], state.runs[s.id + ':npo']].filter(Boolean);
+    if (pair.length === 2) {
+      const merged = {
+        u: [Math.min(pair[0].ranges.u[0], pair[1].ranges.u[0]), Math.max(pair[0].ranges.u[1], pair[1].ranges.u[1])],
+        r: [Math.min(pair[0].ranges.r[0], pair[1].ranges.r[0]), Math.max(pair[0].ranges.r[1], pair[1].ranges.r[1])],
+        dx: [Math.min(pair[0].ranges.dx[0], pair[1].ranges.dx[0]), Math.max(pair[0].ranges.dx[1], pair[1].ranges.dx[1])],
+      };
+      pair[0].ranges = merged;
+      pair[1].ranges = merged;
+    }
+  }
+  let gMaxIter = 2, gMinRel = 1;
+  for (const key in state.runs) {
+    const r = state.runs[key];
+    gMaxIter = Math.max(gMaxIter, r.iters);
+    gMinRel = Math.min(gMinRel, r.resHist[r.resHist.length - 1]);
+  }
+  state.trackerRange = { maxIter: gMaxIter, minRel: Math.max(gMinRel * 0.5, 3e-6) };
   status.textContent = 'analyzing the preconditioner…';
   await new Promise(r => setTimeout(r, 15));
   computeGains();
@@ -592,7 +642,24 @@ async function init() {
     draw();
   });
   $('playBtn').addEventListener('click', togglePlay);
-  $('npoToggle').addEventListener('change', e => { stopPlay(); state.precond = e.target.checked; refresh(); });
+  $('npoToggle').addEventListener('change', e => {
+    stopPlay();
+    // keep the step selector on the same iteration across the toggle, so the
+    // with/without-preconditioner states are directly comparable
+    const sv = currentSolver();
+    const oldRun = state.runs[runKey(sv)];
+    const oldIdx = Math.min(state.frameIdx[runKey(sv)] || 0, oldRun.frames.length - 1);
+    const iter = oldRun.frames[oldIdx].iter;
+    state.precond = e.target.checked;
+    const newRun = state.runs[runKey(sv)];
+    let best = 0, bd = Infinity;
+    for (let i = 0; i < newRun.frames.length; i++) {
+      const d = Math.abs(newRun.frames[i].iter - iter);
+      if (d < bd) { bd = d; best = i; }
+    }
+    state.frameIdx[runKey(sv)] = best;
+    refresh();
+  });
   $('impulseSlider').addEventListener('input', drawImpulse);
   window.addEventListener('resize', () => { draw(); drawImpulse(); drawGains(); });
 

@@ -93,7 +93,7 @@
       <button id="btn-grad"><span class="dot" style="background:#2ca02c"></span>Gradient descent</button>
     </div>
     <label class="toggleWrap"><input type="checkbox" id="npoToggle">
-      neural preconditioner <span class="hint">(CG and gradient descent)</span>
+      neural preconditioner
     </label>
   </div>
 
@@ -127,9 +127,10 @@
   <h2>The four panels</h2>
   <p>Current temperature u (with the exact solution dashed), current residual r = b &minus; Au, the computed step &Delta;u
   applied at this iteration, and the convergence tracker (log-log; red marker = current step; all methods overlaid,
-  the selected one highlighted). Axes are frozen over the whole history so nothing rescales while scrubbing.
-  Toggling the preconditioner re-plots the same solver with and without it — the computed-step panel shows most directly
-  what the preconditioner changes: raw residual-shaped corrections become global, solution-shaped ones.</p>
+  the selected one highlighted). Axes are frozen over the whole history and shared across the preconditioner toggle,
+  and toggling keeps the step selector on the same iteration — so the with/without states are directly comparable.
+  The computed-step panel shows most directly what the preconditioner changes: raw residual-shaped corrections
+  become global, solution-shaped ones.</p>
 
   <h2>The methods</h2>
   <ul>
@@ -150,10 +151,10 @@
   fine-grid stencil plus a coarse-grid branch, a miniature of the paper&rsquo;s multigrid design, 1,154 weights running
   directly in the browser — trained offline on this A with the paper&rsquo;s condition/residual losses to output
   z = M(r) &asymp; A&#8315;&sup1;r. With the toggle on, conjugate gradient becomes <em>flexible</em> PCG
-  (Polak&ndash;Ribi&egrave;re &beta;, with a fallback to z = r whenever the network fails to produce a descent direction)
-  and gradient descent steps along z instead of r. SOR is a triangular-sweep method rather than a residual-correction
-  method, so the preconditioner does not apply to it. The network is deliberately small: it accelerates both methods
-  by roughly 3&ndash;5&times; without making the solve trivial.</p>
+  (Polak&ndash;Ribi&egrave;re &beta;, with a fallback to z = r whenever the network fails to produce a descent direction),
+  gradient descent steps along z instead of r, and each SOR sweep is followed by a line-searched correction along z —
+  the smoother-plus-coarse-correction structure of classical multigrid, with the network in the coarse-correction role.
+  The network is deliberately small: it accelerates the solvers severalfold without making the solve trivial.</p>
 
   <p>The stopping rule is a <em>residual</em> test; the last table column measures each solver&rsquo;s actual distance
   to the exact ramp at the moment it stopped — with &kappa; &asymp; 2.7&times;10&#8308; those two notions of
