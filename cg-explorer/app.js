@@ -262,7 +262,7 @@ function decimate(resHist) { // log-x sampled polyline for the tracker (starts a
 // ---------------- Solver registry ----------------
 const SOLVERS = [
   { id: 'cg', name: 'Conjugate gradient', color: '#1f77b4', make: makeCG, params: 'no preconditioner' },
-  { id: 'npo', name: 'CG + neural preconditioner', color: '#d62728', make: makeNeuralCG, params: 'toy NPO (737 weights), flexible CG' },
+  { id: 'npo', name: 'CG + neural preconditioner', color: '#d62728', make: makeNeuralCG, params: 'toy NPO (1,154 weights), flexible CG' },
   { id: 'sor', name: 'SOR', color: '#9467bd', make: makeSOR, params: 'ω = ' + omegaSor.toFixed(4) + ' (optimal)' },
   { id: 'grad', name: 'Gradient descent', color: '#2ca02c', make: makeGradient, params: 'steepest descent, exact line search' },
 ];
