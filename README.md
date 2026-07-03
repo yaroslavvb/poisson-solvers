@@ -56,11 +56,12 @@ Start with [reports/00-overview.md](reports/00-overview.md) (full repo map, run 
 7. [07 — Randomized Nyström Preconditioning](reports/07-nystrom-preconditioning.md) — exact implementation, the instructive negative result
 8. [08 — Consolidated Results](reports/08-results.md) — full matrix, timings, sanity checks, limitations, next steps
 9. [09 — The Statistical Dictionary](reports/09-stiffness-as-precision.md) — stiffness matrix = precision matrix: Green's function as Brownian-bridge covariance, solvers as Gaussian inference, preconditioners as surrogate models (incomplete Cholesky = Vecchia, Nyström = factor analysis)
+10. [10 — Kick It, or Watch It Jitter](reports/10-fluctuation-dissipation.md) — fluctuation–dissipation for the discrete Laplacian: kick response = jitter covariance, the Cholesky factors read out of thermal snapshots, and a Vecchia preconditioner learned from noise alone that cuts the canonical solve 116 → 30 (κ 440.69 → 13.7)
 
 ## Layout
 
 - `mathematica/` — reference `.wls` scripts (problem, PCG, eigen checks, Nyström)
 - `python/` — `poisson.py`, `pcg.py`, `preconditioners.py`, `nystrom.py`, `neural/`, `experiments/`
-- `reports/` — the report suite (00–09)
+- `reports/` — the report suite (00–10)
 - `results/` — JSON summaries + NPO checkpoint (deterministic, reproducible)
 - `figures/` — PNGs at dpi=150; `mma_*` are Mathematica exports

@@ -20,6 +20,7 @@ mathematica/
   poisson_pcg.wls        # reference program: problem + GRF RHS + functional PCG (NestWhile), CG vs Jacobi
   eigen_check.wls        # verifies spec(d1), spec(A), kappa against closed forms
   nystrom_pcg.wls        # independent Wolfram implementation of the Nystrom preconditioner (ell = 128)
+  fdt_fluctuations.wls   # independent Wolfram check of the FDT identities + exact B-pattern checks (report 10)
 python/
   poisson.py             # laplacian_1d, poisson_2d, variable_poisson_2d, grf_rhs
   pcg.py                 # pcg (Fletcher-Reeves PCG) + flexible_pcg (Notay Polak-Ribiere FCG)
@@ -35,7 +36,9 @@ python/
     run_nystrom.py       # rank sweep 16..256 + exact preconditioned spectra -> results/nystrom.json
     npo_spectrum.py      # column-linearized NPO spectrum diagnostics -> results/npo_spectrum.json
     run_all.py           # consolidated benchmark + sanity checks -> results/results.json
-reports/                 # this report suite (00..09)
+    verify_statistical_identities.py  # machine-checks every identity of report 09 (19 PASS)
+    fdt_fluctuations.py  # fluctuation-dissipation experiments of report 10 -> results/fdt.json + fdt_* figures
+reports/                 # this report suite (00..10)
 results/                 # JSON summaries, npo_checkpoint.pt, npo_training_history.json
 figures/                 # all PNGs (dpi=150); mma_* are the Mathematica exports
 pyproject.toml, uv.lock  # Python env (3.12: numpy, scipy, matplotlib, torch)
@@ -54,11 +57,14 @@ uv run python python/neural/train_npo.py           # train the NPO (~216 s CPU) 
 uv run python python/neural/eval_npo.py            # NPO evaluation (needs checkpoint)
 uv run python python/experiments/npo_spectrum.py   # NPO linearized-spectrum study (needs checkpoint)
 uv run python python/experiments/run_all.py        # consolidated matrix + hard sanity assertions
+uv run python python/experiments/verify_statistical_identities.py  # report 09 identity checks (19 PASS)
+uv run python python/experiments/fdt_fluctuations.py               # report 10 FDT experiments (52 PASS)
 
 # Mathematica cross-checks (Wolfram 15.0)
 wolframscript -file mathematica/poisson_pcg.wls    # reference CG/Jacobi run + mma_* figures
 wolframscript -file mathematica/eigen_check.wls    # analytic-spectrum verification
 wolframscript -file mathematica/nystrom_pcg.wls    # Wolfram Nystrom run (ell = 128)
+wolframscript -file mathematica/fdt_fluctuations.wls  # report 10 Wolfram cross-check (10 PASS)
 ```
 
 Everything Python-side is bit-deterministic (GRF seed 42, training seeds 100–139, Nyström seed 0, torch seed 0); reruns reproduce the committed JSONs exactly. The Mathematica runs use a different RNG stream, so they are the *same distribution but a different draw*: 115 CG iterations vs Python's 116 — statistically equivalent, deliberately not bit-matched (divergence ledger in [01-code-walkthrough.md](01-code-walkthrough.md) §3).
@@ -109,3 +115,5 @@ The reports are written to be read in numerical order; each is self-contained bu
 **[08 — Consolidated Results](08-results.md).** The full method matrix, wall-time accounting (setup vs solve, µs/iteration), the cross-method κ/clustering table, sanity checks and anomalies (including the reported-not-asserted Nyström rank-16/64 tie), what wins in which regime, limitations, and next steps. If you read only one report, read this one.
 
 **[09 — The Statistical Dictionary](09-stiffness-as-precision.md).** A coda that rereads the suite in the language of Gaussian inference: the stiffness matrix as a GMRF precision matrix (whose inverse is a Brownian-bridge covariance in closed form), Jacobi/Gauss–Seidel as conditional-expectation sweeps (Gibbs sampling minus the noise), Cholesky and QR as sequential regression and whitening, CG as conditioning on precision-uncorrelated measurements, and preconditioning as fitting a tractable surrogate Gaussian — incomplete Cholesky as the Vecchia approximation, Nyström as factor analysis — which makes 05's Jacobi no-op and 07's negative result corollaries of one statistical picture. Every identity is machine-verified by [verify_statistical_identities.py](../python/experiments/verify_statistical_identities.py).
+
+**[10 — Kick It, or Watch It Jitter](10-fluctuation-dissipation.md).** The physics companion to 09, running the dictionary in the fluctuation–dissipation direction: hold the discretized rod at temperature $k_BT$ and show that everything a solver needs is measurable from the equilibrium jitter alone — the kick response $A^{-1}e_j$ equals the fluctuation covariance column, regressions on thermal snapshots recover the Jacobi matrix $B$, both Cholesky factors and their closed-form bridge coefficients, and an IC(0)-pattern Vecchia preconditioner fitted purely to snapshots cuts the canonical 2-D solve from 116 to 30 iterations ($\kappa$ 440.69 → 13.7). Along the way it measures the Euler–Maruyama sampler's exact $O(\Delta t)$ bias, identifies critical slowing down / MCMC mixing / solver stall as one phenomenon with $\kappa$ as its dimensionless face, and reads 2-D fill-in as walk-sum marginalization. Machine-checked by [fdt_fluctuations.py](../python/experiments/fdt_fluctuations.py) (52 checks) and independently by [fdt_fluctuations.wls](../mathematica/fdt_fluctuations.wls) (10 checks).
