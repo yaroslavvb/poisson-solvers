@@ -41,9 +41,19 @@
   .controls button:hover { background: #e6e8ee; }
   .controls button.primary { background: #1a5fb4; border-color: #1a5fb4; color: #fff; }
   .controls button.primary:hover { background: #14497f; }
-  .controls label { display: flex; align-items: center; gap: 6px; }
-  .controls input[type=range] { width: 140px; }
-  #speedVal { min-width: 74px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .controls { flex-direction: column; align-items: stretch; }
+  .scrubRow { display: flex; align-items: center; gap: 8px; }
+  .scrubRow input[type=range] { flex: 1; accent-color: #1a5fb4; }
+  .scrubRow button { min-width: 34px; padding: 6px 8px; }
+  #frameVal { min-width: 122px; text-align: right; color: var(--ink); font-weight: 600;
+              font-size: 0.95em; font-variant-numeric: tabular-nums; }
+  .playRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .playRow label { display: flex; align-items: center; gap: 5px;
+                   font-size: 0.85em; color: var(--muted); }
+  .playRow select { font: inherit; font-size: 0.9em; padding: 2px 4px;
+                    border: 1px solid #c6c9d2; border-radius: 4px;
+                    background: #f7f8fa; color: var(--muted); }
+  .keysHint { font-size: 0.8em; color: var(--muted); margin-left: auto; }
 
   .checks { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 6px 0 2px; }
   .checks label { display: flex; align-items: center; gap: 6px; cursor: pointer;
@@ -60,7 +70,8 @@
   .mpanel canvas { width: 192px; height: 192px; image-rendering: pixelated; border: 1px solid var(--line); }
   .mpanel .cap { font-size: 0.85em; color: var(--muted); margin-top: 6px;
                  font-variant-numeric: tabular-nums; }
-  .mpanel .cap.conv { color: #1a7f37; }
+  .mpanel .cap .tag { color: #1a7f37; opacity: 0.85; }
+  .mpanel .cap .tag.capped { color: #b4540a; }   /* hit CAP without converging */
 
   #chartWrap { background: var(--panel); border: 1px solid var(--line);
                border-radius: 8px; padding: 12px; margin: 14px 0; }
@@ -86,6 +97,9 @@
   leaves plus off-diagonal blocks truncated to rank 2 or rank 8 &mdash; loaded from the exact
   data exported by the experiments; Richardson uses the same rank-8 preconditioner with the
   optimal damping &omega; &asymp; 0.7376 (undamped Richardson diverges at rank 8).
+  Every run is precomputed to convergence at load, so the main slider <em>scrubs the shared
+  iteration history</em>: drag it (or press Play) and all five panels plus the chart marker
+  jump to frame k, with converged methods holding their final state.
   Background and derivations: <a href="../reports/14-hierarchical-inverse.html">report 14 &mdash;
   the hierarchical structure of the inverse</a>.
 </p>
@@ -93,13 +107,26 @@
 <div id="status"></div>
 
 <div class="controls">
-  <button id="playBtn" class="primary">&#9654; Play</button>
-  <button id="stepBtn">Step</button>
-  <button id="resetBtn">Reset</button>
-  <label>speed
-    <input type="range" id="speed" min="1" max="60" step="1" value="12">
-    <span id="speedVal">12 iters/s</span>
-  </label>
+  <div class="scrubRow">
+    <button id="minusBtn" aria-label="one iteration back" title="step back (&#8592;)">&minus;</button>
+    <input type="range" id="frame" min="0" max="0" step="1" value="0"
+           aria-label="iteration frame">
+    <button id="plusBtn" aria-label="one iteration forward" title="step forward (&#8594;)">+</button>
+    <span id="frameVal">k = 0 / 0</span>
+  </div>
+  <div class="playRow">
+    <button id="playBtn" class="primary">&#9654; Play</button>
+    <label>fps
+      <select id="fps" aria-label="playback frames per second">
+        <option value="5">5</option>
+        <option value="15">15</option>
+        <option value="30" selected>30</option>
+        <option value="60">60</option>
+      </select>
+    </label>
+    <button id="resetBtn">Reset</button>
+    <span class="keysHint">&#8592;/&#8594; &plusmn;1 &middot; PgUp/PgDn &plusmn;25 &middot; Home/End</span>
+  </div>
 </div>
 
 <div class="checks" id="checks"></div>
@@ -303,16 +330,27 @@ var METHODS = [
     make: function () { return makeRichardson(G.hodlr.rank8, OMEGA8); } }
 ];
 
-/* run a fresh instance to TOL (cap CAP); returns {iters, err, reached} */
-function runToTol(meth) {
+/* ONE recorded run per method: fresh instance to TOL (cap CAP), storing every
+   iterate.  Frames are display-only Float32Array(1024) copies of the Float64
+   iterate (the solver itself stays double precision — numerics unchanged).
+   Memory-sanity assertion, exact for this data: (1190 + 54 + 24 + 10 + 21)
+   recorded iterations + 5 initial zero frames = 1304 frames x 1024 floats
+   x 4 bytes ~= 5.3 MB total.  Do NOT store Float64 histories — that would
+   double it to ~10.7 MB.  Returns { frames, errs, K, reached } with
+   frames.length === errs.length === K + 1 and frame 0 = the zero guess.    */
+function runRecorded(meth) {
   var inst = meth.make();
-  var it = 0, err = relErr(inst.x);
+  var frames = [new Float32Array(inst.x)];   // frame 0: x0 = 0
+  var errs = [relErr(inst.x)];               // rel err 1.0 at x0
+  var it = 0, err = errs[0];
   while (err > TOL && it < CAP) {
     inst.step();
     it++;
     err = relErr(inst.x);
+    frames.push(new Float32Array(inst.x));
+    errs.push(err);
   }
-  return { iters: it, err: err, reached: err <= TOL };
+  return { frames: frames, errs: errs, K: it, reached: err <= TOL };
 }
 
 /* ============================== UI layer ============================== */
@@ -351,25 +389,39 @@ function buildUI() {
   var chart = document.getElementById('chart');
   var cctx = chart.getContext('2d');
   var playBtn = document.getElementById('playBtn');
-  var stepBtn = document.getElementById('stepBtn');
   var resetBtn = document.getElementById('resetBtn');
-  var speedEl = document.getElementById('speed');
-  var speedVal = document.getElementById('speedVal');
+  var minusBtn = document.getElementById('minusBtn');
+  var plusBtn = document.getElementById('plusBtn');
+  var frameEl = document.getElementById('frame');
+  var frameVal = document.getElementById('frameVal');
+  var fpsEl = document.getElementById('fps');
 
   var n = G.n;
 
-  /* --- tolerance table (once, at load) --- */
+  /* --- record every method to convergence, once; the same single run fills
+     the tolerance table AND the frame store the scrubber replays from --- */
+  var KMAXG = 0;               // global scrubber range: max K over ALL methods
   METHODS.forEach(function (m) {
-    m.tol = runToTol(m);
+    var rec = runRecorded(m);
+    m.frames = rec.frames;     // Float32Array(1024) per frame, frame 0 = x0
+    m.errs = rec.errs;         // rel err per frame, errs[k] pairs frames[k]
+    m.K = rec.K;
+    m.reached = rec.reached;
+    if (m.K > KMAXG) KMAXG = m.K;
+
     var tr = document.createElement('tr');
-    var itText = m.tol.reached ? String(m.tol.iters) : '&gt;' + CAP + ' (not reached)';
+    var itText = m.reached ? String(m.K) : '&gt;' + CAP + ' (not reached)';
     tr.innerHTML =
       '<td><span class="swatch" style="background:' + m.color + '"></span> ' +
       m.name + '</td>' +
       '<td class="num">' + itText + '</td>' +
-      '<td class="num">' + m.tol.err.toExponential(2) + '</td>';
+      '<td class="num">' + m.errs[m.K].toExponential(2) + '</td>';
     tbody.appendChild(tr);
   });
+
+  var kCur = 0;                // current scrubber frame, 0..KMAXG
+  frameEl.max = String(KMAXG);
+  frameEl.value = '0';
 
   /* --- per-method panels + checkboxes --- */
   METHODS.forEach(function (m) {
@@ -381,7 +433,8 @@ function buildUI() {
     m.checkbox.addEventListener('change', function () {
       m.enabled = m.checkbox.checked;
       m.panel.style.display = m.enabled ? '' : 'none';
-      drawChart();
+      drawBase();              // enabled set (and possibly xmax) changed
+      renderAll();             // KMAXG stays global, so the scrubber never jumps
     });
 
     var panel = document.createElement('div');
@@ -402,10 +455,10 @@ function buildUI() {
 
   /* --- diverging blue-white-red, fixed scale [-vmax, +vmax] --- */
   var NEG = [33, 102, 172], POS = [178, 24, 43];       // blue / red endpoints
-  function drawHeatmap(m) {
-    var x = m.inst.x, px = m.img.data, vmax = G.vmax;
+  function drawHeatmap(m, frame) {
+    var px = m.img.data, vmax = G.vmax;
     for (var k = 0; k < G.N; k++) {
-      var t = x[k] / vmax;
+      var t = frame[k] / vmax;
       if (t > 1) t = 1; else if (t < -1) t = -1;
       var e = t >= 0 ? POS : NEG, a = Math.abs(t), o = 4 * k;
       px[o]     = Math.round(255 + (e[0] - 255) * a);
@@ -419,157 +472,174 @@ function buildUI() {
     ctx.drawImage(m.off, 0, 0, 192, 192);
   }
 
-  function updatePanel(m) {
-    drawHeatmap(m);
-    var it = m.errs.length - 1;
-    var txt = 'iter ' + it + ' — rel err ' + m.errs[it].toExponential(2);
-    if (m.done) {
-      txt += m.errs[it] <= TOL ? ' ✓ converged' : ' (cap)';
-      m.cap.className = m.errs[it] <= TOL ? 'cap conv' : 'cap';
-    } else {
-      m.cap.className = 'cap';
+  /* render one method's panel at scrubber frame k: clamp to its own history
+     length K_m, tag the clamp so it reads as "holding its final state" */
+  function updatePanel(m, k) {
+    var shown = Math.min(k, m.K);
+    drawHeatmap(m, m.frames[shown]);
+    var html = 'iter ' + shown + ' &mdash; rel err ' + m.errs[shown].toExponential(2);
+    if (k > m.K) {
+      html += m.reached ? ' <span class="tag">(converged)</span>'
+                        : ' <span class="tag capped">(cap)</span>';
     }
-    m.cap.textContent = txt;
+    m.cap.innerHTML = html;
   }
 
-  /* --- solver lifecycle --- */
-  function resetAll() {
+  function renderAll() {
     METHODS.forEach(function (m) {
-      m.inst = m.make();
-      m.errs = [relErr(m.inst.x)];       // iter 0: x = 0, rel err 1
-      m.done = false;
-      updatePanel(m);
+      if (m.enabled) updatePanel(m, kCur);
     });
+    frameVal.textContent = 'k = ' + kCur + ' / ' + KMAXG;
     drawChart();
   }
 
-  function advance(m) {                  // one iteration of one method
-    if (m.done) return;
-    m.inst.step();
-    var e = relErr(m.inst.x);
-    m.errs.push(e);
-    if (e <= TOL || m.errs.length - 1 >= CAP) m.done = true;
+  function setK(kNew) {
+    kNew = Math.max(0, Math.min(KMAXG, kNew));
+    if (kNew === kCur) return;
+    kCur = kNew;
+    frameEl.value = String(kCur);
+    renderAll();
   }
 
-  function stepAll(k) {
-    var moved = false;
-    METHODS.forEach(function (m) {
-      if (!m.enabled || m.done) return;
-      for (var i = 0; i < k && !m.done; i++) advance(m);
-      moved = true;
-      updatePanel(m);
-    });
-    if (moved) drawChart();
-    return moved;
-  }
-
-  /* --- log-scale error chart --- */
+  /* --- log-scale error chart ---
+     Two layers: drawBase() renders the static content (gridlines, full error
+     curves, legend) ONCE into an offscreen canvas — at load and again only
+     when a checkbox changes the enabled set (which can change xmax).  Per
+     scrub/playback frame, drawChart() just blits that cache and draws the
+     marker overlay, so per-frame cost is O(#methods), not O(sum K_m). */
   var YMAX = 2.0, YMIN = 1e-7;
   var ML = 62, MR = 14, MT = 12, MB = 34;              // margins
-  function drawChart() {
-    var W = chart.width, H = chart.height;
-    var pw = W - ML - MR, ph = H - MT - MB;
-    cctx.clearRect(0, 0, W, H);
-    cctx.font = '12px sans-serif';
+  var CW = chart.width, CH = chart.height;
+  var PW = CW - ML - MR, PH = CH - MT - MB;
+  var baseLayer = document.createElement('canvas');    // offscreen static cache
+  baseLayer.width = CW; baseLayer.height = CH;
+  var bctx = baseLayer.getContext('2d');
+  var xmax = 20;                                       // set by drawBase()
 
-    var xmax = 20;
+  function X(it) { return ML + PW * it / xmax; }
+  function Y(e) {
+    var t = (Math.log10(YMAX) - Math.log10(Math.max(e, YMIN))) /
+            (Math.log10(YMAX) - Math.log10(YMIN));
+    return MT + Math.min(1, Math.max(0, t)) * PH;
+  }
+
+  function drawBase() {
+    bctx.clearRect(0, 0, CW, CH);
+    bctx.font = '12px sans-serif';
+
+    xmax = 20;
     METHODS.forEach(function (m) {
-      if (m.enabled && m.errs.length - 1 > xmax) xmax = m.errs.length - 1;
+      if (m.enabled && m.K > xmax) xmax = m.K;
     });
 
-    function X(it) { return ML + pw * it / xmax; }
-    function Y(e) {
-      var t = (Math.log10(YMAX) - Math.log10(Math.max(e, YMIN))) /
-              (Math.log10(YMAX) - Math.log10(YMIN));
-      return MT + Math.min(1, Math.max(0, t)) * ph;
-    }
-
     // frame + decade gridlines
-    cctx.strokeStyle = '#e3e5ea';
-    cctx.fillStyle = '#556';
-    cctx.textAlign = 'right';
-    cctx.textBaseline = 'middle';
+    bctx.strokeStyle = '#e3e5ea';
+    bctx.fillStyle = '#556';
+    bctx.textAlign = 'right';
+    bctx.textBaseline = 'middle';
     for (var dec = 0; dec >= -7; dec--) {
       var yv = Math.pow(10, dec), y = Y(yv);
-      cctx.beginPath(); cctx.moveTo(ML, y); cctx.lineTo(W - MR, y); cctx.stroke();
-      cctx.fillText('1e' + dec, ML - 6, y);
+      bctx.beginPath(); bctx.moveTo(ML, y); bctx.lineTo(CW - MR, y); bctx.stroke();
+      bctx.fillText('1e' + dec, ML - 6, y);
     }
     // x ticks: ~6 round-numbered ticks
     var rawStep = xmax / 6;
     var mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
     var xstep = Math.max(1, Math.ceil(rawStep / mag) * mag);
-    cctx.textAlign = 'center';
-    cctx.textBaseline = 'top';
+    bctx.textAlign = 'center';
+    bctx.textBaseline = 'top';
     for (var xt = 0; xt <= xmax; xt += xstep) {
       var xx = X(xt);
-      cctx.strokeStyle = '#eff1f4';
-      cctx.beginPath(); cctx.moveTo(xx, MT); cctx.lineTo(xx, H - MB); cctx.stroke();
-      cctx.fillText(String(xt), xx, H - MB + 6);
+      bctx.strokeStyle = '#eff1f4';
+      bctx.beginPath(); bctx.moveTo(xx, MT); bctx.lineTo(xx, CH - MB); bctx.stroke();
+      bctx.fillText(String(xt), xx, CH - MB + 6);
     }
-    cctx.fillText('iteration', ML + pw / 2, H - 15);
-    cctx.strokeStyle = '#99a';
-    cctx.strokeRect(ML, MT, pw, ph);
+    bctx.fillText('iteration', ML + PW / 2, CH - 15);
+    bctx.strokeStyle = '#99a';
+    bctx.strokeRect(ML, MT, PW, PH);
 
     // dashed target line at 1e-6
-    cctx.save();
-    cctx.strokeStyle = '#c33';
-    cctx.setLineDash([6, 4]);
-    cctx.beginPath();
-    cctx.moveTo(ML, Y(TOL)); cctx.lineTo(W - MR, Y(TOL));
-    cctx.stroke();
-    cctx.restore();
-    cctx.fillStyle = '#c33';
-    cctx.textAlign = 'left';
-    cctx.textBaseline = 'bottom';
-    cctx.fillText('target 1e-6', ML + 6, Y(TOL) - 2);
+    bctx.save();
+    bctx.strokeStyle = '#c33';
+    bctx.setLineDash([6, 4]);
+    bctx.beginPath();
+    bctx.moveTo(ML, Y(TOL)); bctx.lineTo(CW - MR, Y(TOL));
+    bctx.stroke();
+    bctx.restore();
+    bctx.fillStyle = '#c33';
+    bctx.textAlign = 'left';
+    bctx.textBaseline = 'bottom';
+    bctx.fillText('target 1e-6', ML + 6, Y(TOL) - 2);
 
-    // curves
+    // full curves — complete at load, histories are precomputed
     METHODS.forEach(function (m) {
       if (!m.enabled || !m.errs) return;
-      cctx.strokeStyle = m.color;
-      cctx.lineWidth = 1.8;
-      cctx.beginPath();
+      bctx.strokeStyle = m.color;
+      bctx.lineWidth = 1.8;
+      bctx.beginPath();
       for (var it = 0; it < m.errs.length; it++) {
         var px = X(it), py = Y(m.errs[it]);
-        if (it === 0) cctx.moveTo(px, py); else cctx.lineTo(px, py);
+        if (it === 0) bctx.moveTo(px, py); else bctx.lineTo(px, py);
       }
-      cctx.stroke();
+      bctx.stroke();
     });
-    cctx.lineWidth = 1;
+    bctx.lineWidth = 1;
 
     // legend (top-right)
-    var lx = W - MR - 250, ly = MT + 10;
+    var lx = CW - MR - 250, ly = MT + 10;
     METHODS.forEach(function (m) {
       if (!m.enabled) return;
-      cctx.fillStyle = m.color;
-      cctx.fillRect(lx, ly - 5, 18, 4);
-      cctx.fillStyle = '#334';
-      cctx.textAlign = 'left';
-      cctx.textBaseline = 'middle';
-      cctx.fillText(m.name, lx + 24, ly - 3);
+      bctx.fillStyle = m.color;
+      bctx.fillRect(lx, ly - 5, 18, 4);
+      bctx.fillStyle = '#334';
+      bctx.textAlign = 'left';
+      bctx.textBaseline = 'middle';
+      bctx.fillText(m.name, lx + 24, ly - 3);
       ly += 17;
     });
   }
 
-  /* --- play / pause / step / reset / speed ---
-     driven by setInterval + performance.now() (not requestAnimationFrame,
-     which stalls entirely in hidden/background tabs)                     */
+  /* per-frame: blit the cached static layer, then the marker overlay only */
+  function drawChart() {
+    cctx.clearRect(0, 0, CW, CH);
+    cctx.drawImage(baseLayer, 0, 0);
+
+    // scrub marker: vertical line at the current frame (clamped to the axis
+    // when a hidden method shrinks xmax) + a dot on each visible curve
+    var km = Math.min(kCur, xmax), mx = X(km);
+    cctx.save();
+    cctx.strokeStyle = '#D55E00';
+    cctx.lineWidth = 1.2;
+    cctx.beginPath();
+    cctx.moveTo(mx, MT); cctx.lineTo(mx, MT + PH);
+    cctx.stroke();
+    cctx.restore();
+    METHODS.forEach(function (m) {
+      if (!m.enabled) return;
+      var s = Math.min(kCur, m.K);          // s <= K_m <= xmax for enabled m
+      cctx.fillStyle = m.color;
+      cctx.beginPath();
+      cctx.arc(X(s), Y(m.errs[s]), 3.5, 0, 2 * Math.PI);
+      cctx.fill();
+    });
+  }
+
+  /* --- playback: advances the scrubber at the fps-select rate, stops at the
+     end (no loop).  Driven by setInterval + performance.now() accumulator
+     (not requestAnimationFrame, which stalls in hidden/background tabs)   */
   var playing = false, acc = 0, lastT = 0, timerId = null;
 
   function setPlaying(p) {
+    if (p === playing) return;
     playing = p;
     playBtn.innerHTML = p ? '&#10074;&#10074; Pause' : '&#9654; Play';
     playBtn.classList.toggle('primary', !p);
     if (p) {
       lastT = performance.now(); acc = 0;
-      timerId = setInterval(tick, 33);
+      timerId = setInterval(tick, 16);
     } else if (timerId !== null) {
       clearInterval(timerId); timerId = null;
     }
-  }
-
-  function allDone() {
-    return METHODS.every(function (m) { return !m.enabled || m.done; });
   }
 
   function tick() {
@@ -577,26 +647,54 @@ function buildUI() {
     var now = performance.now();
     var dt = Math.min(0.25, (now - lastT) / 1000);
     lastT = now;
-    acc += dt * Number(speedEl.value);
-    var k = Math.floor(acc);
-    if (k > 0) {
-      acc -= k;
-      stepAll(Math.min(k, 60));
-      if (allDone()) setPlaying(false);
+    acc += dt * Number(fpsEl.value);      // fps select = playback rate only
+    var adv = Math.floor(acc);
+    if (adv > 0) {
+      acc -= adv;
+      setK(kCur + adv);
+      if (kCur >= KMAXG) setPlaying(false);   // stop at the end, do not loop
     }
   }
 
   playBtn.addEventListener('click', function () {
-    if (!playing && allDone()) resetAll();
+    if (!playing && kCur >= KMAXG) setK(0);   // replay from the start
     setPlaying(!playing);
   });
-  stepBtn.addEventListener('click', function () { setPlaying(false); stepAll(1); });
-  resetBtn.addEventListener('click', function () { setPlaying(false); resetAll(); });
-  speedEl.addEventListener('input', function () {
-    speedVal.textContent = speedEl.value + ' iters/s';
+  resetBtn.addEventListener('click', function () { setPlaying(false); setK(0); });
+  minusBtn.addEventListener('click', function () { setPlaying(false); setK(kCur - 1); });
+  plusBtn.addEventListener('click', function () { setPlaying(false); setK(kCur + 1); });
+  frameEl.addEventListener('input', function () {
+    setPlaying(false);
+    kCur = Math.max(0, Math.min(KMAXG, Math.round(Number(frameEl.value) || 0)));
+    frameEl.value = String(kCur);
+    renderAll();
   });
 
-  resetAll();
+  /* arrow keys +-1, PageUp/PageDown +-25, Home/End — handled here even when
+     the slider has focus (preventDefault suppresses the native range step,
+     so every key path uses the same increments) */
+  document.addEventListener('keydown', function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;  // keep Cmd+Arrow = browser nav etc.
+    var t = e.target;
+    if (t && (t.tagName === 'SELECT' ||
+              (t.tagName === 'INPUT' && t !== frameEl))) return;
+    var kNew;
+    switch (e.key) {
+      case 'ArrowRight': kNew = kCur + 1;  break;
+      case 'ArrowLeft':  kNew = kCur - 1;  break;
+      case 'PageUp':     kNew = kCur + 25; break;
+      case 'PageDown':   kNew = kCur - 25; break;
+      case 'Home':       kNew = 0;         break;
+      case 'End':        kNew = KMAXG;     break;
+      default: return;
+    }
+    e.preventDefault();
+    setPlaying(false);
+    setK(kNew);
+  });
+
+  drawBase();                           // static layer: curves drawn once
+  renderAll();                          // initial paint at k = 0
 }
 
 if (typeof document !== 'undefined') boot();
