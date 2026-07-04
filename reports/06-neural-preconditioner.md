@@ -1,6 +1,6 @@
 # 06 — Neural Preconditioning Operator (NPO)
 
-Part of the report suite: [01-code-walkthrough.md](01-code-walkthrough.md) · [02-eigenvalues.md](02-eigenvalues.md) · [03-gaussian-random-fields.md](03-gaussian-random-fields.md) · [04-krylov-and-pcg.md](04-krylov-and-pcg.md) · [05-classical-preconditioners.md](05-classical-preconditioners.md) · **06-neural-preconditioner.md** · [07-nystrom-preconditioning.md](07-nystrom-preconditioning.md) · [08-results.md](08-results.md)
+Part of the report suite (00–14; full index in [00-overview.md](00-overview.md)): [01-code-walkthrough.md](01-code-walkthrough.md) · [02-eigenvalues.md](02-eigenvalues.md) · [03-gaussian-random-fields.md](03-gaussian-random-fields.md) · [04-krylov-and-pcg.md](04-krylov-and-pcg.md) · [05-classical-preconditioners.md](05-classical-preconditioners.md) · **06-neural-preconditioner.md** · [07-nystrom-preconditioning.md](07-nystrom-preconditioning.md) · [08-results.md](08-results.md) · [09-stiffness-as-precision.md](09-stiffness-as-precision.md) · [10-fluctuation-dissipation.md](10-fluctuation-dissipation.md) · [11-regressions-and-multiscale.md](11-regressions-and-multiscale.md) · [12-autoregressive-preconditioning.md](12-autoregressive-preconditioning.md) · [13-preconditioning-as-decoupling.md](13-preconditioning-as-decoupling.md) · [14-hierarchical-inverse.md](14-hierarchical-inverse.md)
 
 This report covers two things:
 

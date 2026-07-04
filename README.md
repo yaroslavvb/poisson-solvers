@@ -9,6 +9,7 @@ Implementation and study of **preconditioned conjugate gradients for the 2-D Poi
 ## Interactive demo & rendered reports
 
 - **[Iterative solvers explorer](https://yaroslavvb.github.io/poisson-solvers/cg-explorer/)** — interactive dashboard for a 1D heat-conduction Poisson problem (heater at one end, chiller at the other): scrub through the iteration history of CG, SOR, gradient descent, and CG with a toy in-browser neural preconditioner ([arXiv:2502.01337](https://arxiv.org/abs/2502.01337), trained by [python/neural/train_npo_1d.py](python/neural/train_npo_1d.py)).
+- **[Hierarchical solver race](https://yaroslavvb.github.io/poisson-solvers/interactive/hierarchical-solvers.html)** — five solvers (GD, CG, PCG with the *actual* HODLR rank-2/rank-8 compressed inverses, damped Richardson) racing live in the browser on the hot/cold-rod problem of [report 14](reports/14-hierarchical-inverse.md) §5; runs locally too ([interactive/hierarchical-solvers.html](interactive/hierarchical-solvers.html), serve the repo root over HTTP).
 - **[Rendered report suite](https://yaroslavvb.github.io/poisson-solvers/)** — the reports below as web pages (GitHub Pages).
 
 ## Quickstart
@@ -60,11 +61,13 @@ Start with [reports/00-overview.md](reports/00-overview.md) (full repo map, run 
 11. [11 — Predict Thy Neighbor, Subtract the Average](reports/11-regressions-and-multiscale.md) — the 09/10 dictionary worked on the 8×8 grid: Cholesky fill as wavefront regressions, the IC(0)-vs-Vecchia gap measured (~22%), block averages as coarse regressors, and an additive two-level IC(0)+coarse preconditioner that takes the hot/cold-rod solve 76 → 32 (κ 440.69 → 11.05)
 12. [12 — The Preconditioner Is an Autoregressive Predictor](reports/12-autoregressive-preconditioning.md) — the synthesis: CG removed, every preconditioner run as the same stationary predict-and-correct Richardson iteration, quality read as ρ(I − CA) — perfect two-sided regressions scheduled synchronously = Jacobi (ρ = cos πh), sequentially = Gauss–Seidel (rate exponent exactly doubles), the perfect causal predictor solving in one step, and the truncation ladder down to a mesh-independent two-grid ρ = 0.357 (17 sweeps vs Jacobi's 4777)
 13. [13 — Preconditioning Is Decoupling](reports/13-preconditioning-as-decoupling.md) — the capstone: coupling = cross-partials = off-diagonal precision = conditional dependence, and every preconditioner is a scheme for splitting one entangled minimization into (nearly) independent subproblems — five decoupling axes (coordinates, frequency, direction, space, scale) raced on one ladder (ADI cuts κ 440.69 → 10.52 = 0.50√κ; block-Jacobi(2) leaves 960 of 1024 eigenvalues at exactly 1 and CG needs just 12 iterations), plus the measured GD-vs-CG verdict — two distinct eigenvalues mean CG finishes in exactly 2 steps even at κ = 10⁶ (GD: 11.5 million): clusters, not range, are CG's currency
+14. [14 — The Hierarchical Structure of the Inverse](reports/14-hierarchical-inverse.md) — the structural sequel: conditional independence across a separator is a *rank bound* on covariance blocks ($\Sigma_{LR} = \Sigma_{LI}\Sigma_{II}^{-1}\Sigma_{IR}$, rank ≤ |I|), measured as a machine-precision cliff at exactly the separator width 32 at every level of a HODLR partition of $A^{-1}$ — so the dense inverse compresses to $O(Nr\log N)$ (8× at rank 8) and runs as an apply-ready preconditioner (κ 440.69 → 3.85 at rank 8; rank 16 takes the iteration lead, 11 vs block-Jacobi's 12) — plus an **interactive in-browser solver race** ([interactive/hierarchical-solvers.html](interactive/hierarchical-solvers.html)) driving the actual exported rank-2/rank-8 blocks against GD and CG
 
 ## Layout
 
 - `mathematica/` — reference `.wls` scripts (problem, PCG, eigen checks, Nyström)
 - `python/` — `poisson.py`, `pcg.py`, `preconditioners.py`, `nystrom.py`, `neural/`, `experiments/`
-- `reports/` — the report suite (00–13)
+- `reports/` — the report suite (00–14)
+- `interactive/` — self-contained browser demos (`hierarchical-solvers.html`, `adi-sweep.html`)
 - `results/` — JSON summaries + NPO checkpoint (deterministic, reproducible)
 - `figures/` — PNGs at dpi=150; `mma_*` are Mathematica exports
