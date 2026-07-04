@@ -81,7 +81,7 @@ $$
 r = e^{i\theta_k}, \qquad \theta_k = \frac{k\pi}{n+1}, \qquad k \in \mathbb{Z}.
 $$
 
-Since $d_1$ is symmetric its eigenvalues are real, and indeed $|r| = 1$ makes $\lambda = 2 - (r + r^{-1}) = 2 - 2\cos\theta_k$ real automatically. The values $k = 1, \dots, n$ give distinct $\theta_k \in (0, \pi)$ hence distinct eigenvalues ($2 - 2\cos\theta$ is strictly increasing on $(0,\pi)$); $k = 0$ and $k = n+1$ give $r = \pm 1$ (the excluded repeated-root cases) and only the trivial solution; $k > n+1$ and $k < 0$ repeat the same eigenvectors up to sign. So we have exactly $n$ eigenpairs — the complete spectrum.
+Since $d_1$ is symmetric its eigenvalues are real, and indeed $\vert r\vert  = 1$ makes $\lambda = 2 - (r + r^{-1}) = 2 - 2\cos\theta_k$ real automatically. The values $k = 1, \dots, n$ give distinct $\theta_k \in (0, \pi)$ hence distinct eigenvalues ($2 - 2\cos\theta$ is strictly increasing on $(0,\pi)$); $k = 0$ and $k = n+1$ give $r = \pm 1$ (the excluded repeated-root cases) and only the trivial solution; $k > n+1$ and $k < 0$ repeat the same eigenvectors up to sign. So we have exactly $n$ eigenpairs — the complete spectrum.
 
 **Step 4 — read off the eigenvector.** With $r = e^{i\theta_k}$,
 
@@ -223,7 +223,7 @@ The continuum limit is the fundamental Dirichlet eigenvalue $\pi^2(1^2 + 1^2) = 
 
 $$
 \lambda_{\min}(A) = 2\pi^2\left(1 - \frac{(\pi h)^2}{12} + O(h^4)\right),
-\qquad \frac{(\pi h)^2}{12}\bigg|_{h = 1/33} = 7.55\times10^{-4},
+\qquad \frac{(\pi h)^2}{12}\bigg\vert _{h = 1/33} = 7.55\times10^{-4},
 $$
 
 and indeed $(2\pi^2 - 19.72431)/2\pi^2 = 7.55\times10^{-4}$ — the standard $O(h^2)$ consistency of the 5-point stencil, visible here as an eigenvalue statement.
@@ -293,7 +293,7 @@ $\kappa/n^2$ descends monotonically toward the limit $4/\pi^2 = 0.405285$ (the r
 **What this costs CG.** The classical CG bound (derived in [04-krylov-and-pcg.md](04-krylov-and-pcg.md)) gives, in the $A$-norm,
 
 $$
-\|e_j\|_A \le 2\left(\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}\right)^{j} \|e_0\|_A .
+\Vert e_j\Vert _A \le 2\left(\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}\right)^{j} \Vert e_0\Vert _A .
 $$
 
 With $\kappa = 440.689$: $\sqrt{\kappa} = 20.99$, contraction factor $\rho = 19.99/21.99 = 0.9091$, and reaching $10^{-10}$ needs at most $j \ge \ln(2\times10^{10})/\ln(1/\rho) \approx 23.72/0.09535 \approx 249$ iterations. Observed: **116 iterations** to relative residual $6.667\times10^{-11}$ ([results/results.json](../results/results.json), `canonical/cg_none`) — about $2.1\times$ better than the worst-case bound, because CG is adaptive to the whole spectrum, not just its endpoints, and because the GRF right-hand side ([03-gaussian-random-fields.md](03-gaussian-random-fields.md)) concentrates energy in smooth modes. The scaling message stands: $\sqrt{\kappa} \propto n$, so unpreconditioned CG iterations grow **linearly with grid refinement** — halving $h$ doubles the iteration count, which is the entire motivation for the preconditioner studies in reports 05–07.
@@ -339,7 +339,7 @@ Even *perfect* deflation of the top 256 of 1024 eigenvalues (25% of the spectrum
 
 ### 8.4 NPO: clustering without symmetry — see [06-neural-preconditioner.md](06-neural-preconditioner.md)
 
-The neural preconditioner ([NPO, arXiv:2502.01337](https://arxiv.org/abs/2502.01337)) is a nonlinear map $r \mapsto \mathrm{NPO}(r)$, not an SPD matrix. Its column-wise linearization $\tilde M$ (assembled from 1024 canonical-basis applies, [results/npo_spectrum.json](../results/npo_spectrum.json)) is markedly non-symmetric ($\|\tilde M - \tilde M^{\mathsf T}\|_F/\|\tilde M\|_F = 0.568$) and the operator is markedly nonlinear ($\|\tilde M b - \mathrm{NPO}(b)\|/\|\mathrm{NPO}(b)\| = 0.432$ on the canonical GRF $b$) — yet $\operatorname{eig}(\tilde M A)$ lands entirely in the right half-plane ($\operatorname{Re} \in [248.8,\, 3125.2]$, $\max|\operatorname{Im}| = 257.1$, zero non-positive real parts) and is **tightly clustered**: modulus spread $\max|\lambda|/\min|\lambda| = 12.56$ versus $\kappa(A) = 440.69$ ($35\times$ tighter), with 98.1% of eigenvalues within $[0.5, 2]\times$ the median versus 82.0% for $A$'s spectrum. Clustering — not symmetry — is what a flexible Krylov method can exploit: flexible PCG (Notay) converges in **30 iterations** vs 116, while plain PCG (whose Fletcher–Reeves recursion assumes a fixed SPD $M$) stalls at $\sim10^{-5}$ and never converges (2000 iterations, deliberate negative control). See [06-neural-preconditioner.md](06-neural-preconditioner.md) and the FCG derivation in [04-krylov-and-pcg.md](04-krylov-and-pcg.md).
+The neural preconditioner ([NPO, arXiv:2502.01337](https://arxiv.org/abs/2502.01337)) is a nonlinear map $r \mapsto \mathrm{NPO}(r)$, not an SPD matrix. Its column-wise linearization $\tilde M$ (assembled from 1024 canonical-basis applies, [results/npo_spectrum.json](../results/npo_spectrum.json)) is markedly non-symmetric ($\Vert \tilde M - \tilde M^{\mathsf T}\Vert _F/\Vert \tilde M\Vert _F = 0.568$) and the operator is markedly nonlinear ($\Vert \tilde M b - \mathrm{NPO}(b)\Vert /\Vert \mathrm{NPO}(b)\Vert  = 0.432$ on the canonical GRF $b$) — yet $\operatorname{eig}(\tilde M A)$ lands entirely in the right half-plane ($\operatorname{Re} \in [248.8,\, 3125.2]$, $\max\vert \operatorname{Im}\vert  = 257.1$, zero non-positive real parts) and is **tightly clustered**: modulus spread $\max\vert \lambda\vert /\min\vert \lambda\vert  = 12.56$ versus $\kappa(A) = 440.69$ ($35\times$ tighter), with 98.1% of eigenvalues within $[0.5, 2]\times$ the median versus 82.0% for $A$'s spectrum. Clustering — not symmetry — is what a flexible Krylov method can exploit: flexible PCG (Notay) converges in **30 iterations** vs 116, while plain PCG (whose Fletcher–Reeves recursion assumes a fixed SPD $M$) stalls at $\sim10^{-5}$ and never converges (2000 iterations, deliberate negative control). See [06-neural-preconditioner.md](06-neural-preconditioner.md) and the FCG derivation in [04-krylov-and-pcg.md](04-krylov-and-pcg.md).
 
 ---
 

@@ -79,9 +79,9 @@ go long-range. Measured anatomy of $L = \mathrm{chol}(A)$ at $n=8$ (confirmed in
 
 (Wolfram rendering of the same object: ![mma cholL](../figures/mma_grid8_cholL.png).)
 
-The heatmap of $\log_{10}|L|$ shows the filled band; the cyan circles outline the only entries $A$'s own lower pattern contains — the diagonal plus the W ($k{-}1$) and N ($k{-}8$) couplings. Everything else inside the band is marginalization-induced regression weight.
+The heatmap of $\log_{10}\vert L\vert $ shows the filled band; the cyan circles outline the only entries $A$'s own lower pattern contains — the diagonal plus the W ($k{-}1$) and N ($k{-}8$) couplings. Everything else inside the band is marginalization-induced regression weight.
 
-**The wavefront profile.** How big are those fill coefficients? The $\le 8$ successors of an interior node $k = (r,c)$ are the remainder of its own grid row plus the leading nodes of the next — the *elimination wavefront*. Sorting them by **lateral distance** (how far the predicting node sits, within the wavefront, from the predicted node's column; lateral 0 = the node $(r{+}1, c)$ directly in the next grid row, flat offset $+8$), the mean $|{\text{coefficient}}|$ over interior rows $r = 1..6$ decays *monotonically* (checked):
+**The wavefront profile.** How big are those fill coefficients? The $\le 8$ successors of an interior node $k = (r,c)$ are the remainder of its own grid row plus the leading nodes of the next — the *elimination wavefront*. Sorting them by **lateral distance** (how far the predicting node sits, within the wavefront, from the predicted node's column; lateral 0 = the node $(r{+}1, c)$ directly in the next grid row, flat offset $+8$), the mean $\vert {\text{coefficient}}\vert $ over interior rows $r = 1..6$ decays *monotonically* (checked):
 
 | lateral distance | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -103,8 +103,8 @@ Incomplete Cholesky with zero fill keeps only the cyan-circled entries of the he
 
 | quantity | value |
 |---|---:|
-| $\|L_{\mathrm{IC}} - L\|_F/\|L\|_F$ on the kept pattern | **0.0391** |
-| dropped mass $\|L_{\text{off-pattern}}\|_F/\|L\|_F$ | **0.0848** |
+| $\Vert L_{\mathrm{IC}} - L\Vert _F/\Vert L\Vert _F$ on the kept pattern | **0.0391** |
+| dropped mass $\Vert L_{\text{off-pattern}}\Vert _F/\Vert L\Vert _F$ | **0.0848** |
 | $(L_{\mathrm{IC}}L_{\mathrm{IC}}^\top)_{ij} = A_{ij}$ on $A$'s pattern | exact (checked) |
 | $\kappa(A) \to \kappa(M_{\mathrm{IC}}^{-1}A)$ | $32.16 \to 3.68$ |
 
@@ -138,11 +138,11 @@ The sharper diagnostic is what conditioning does to *correlation length*:
 
 ![Long-range correlations before and after coarse conditioning](../figures/grid8_residual_cov.png)
 
-Left: $\mathrm{corr}(u_{(3,3)}, u_{\cdot})$ under $\Sigma$ — the positive halo spans the domain; mean $|{\mathrm{corr}}|$ at Chebyshev distance $\ge 3$ from the node is **0.098**. Right: the same node in the *residual* field after conditioning on the 16 block averages — the halo is gone; far-field mean $|{\mathrm{corr}}|$ collapses to **0.011**, a 8.9× drop (checked at $< 0.25\times$). **Coarse averages absorb the long-range dependence, leaving a short-range residual field** — precisely the component a local whitener (§4) is good at. The division of labor could not be cleaner, and it is the statistical case for a two-level method: let block averages model the walks that are long, let the stencil regressions model the walks that are short.
+Left: $\mathrm{corr}(u_{(3,3)}, u_{\cdot})$ under $\Sigma$ — the positive halo spans the domain; mean $\vert {\mathrm{corr}}\vert $ at Chebyshev distance $\ge 3$ from the node is **0.098**. Right: the same node in the *residual* field after conditioning on the 16 block averages — the halo is gone; far-field mean $\vert {\mathrm{corr}}\vert $ collapses to **0.011**, a 8.9× drop (checked at $< 0.25\times$). **Coarse averages absorb the long-range dependence, leaving a short-range residual field** — precisely the component a local whitener (§4) is good at. The division of labor could not be cleaner, and it is the statistical case for a two-level method: let block averages model the walks that are long, let the stencil regressions model the walks that are short.
 
 ### 5.2 The preconditioner: local whitener + coarse regression (n = 32 solve)
 
-Assemble that division of labor as an **additive two-level preconditioner** on the canonical $n = 32$ grid. Coarse space: $Z$ = the 64 columns of 4×4 block-average indicators; Galerkin coarse operator $A_c = Z^\top A Z$ (the coarse correction $Z A_c^{-1} Z^\top$ is invariant to column scaling of $Z$, so "average" vs "indicator" is immaterial); note $Z A_c^{-1} Z^\top A$ is the $A$-orthogonal projector onto the coarse space — *regression on the coarse averages in the energy inner product*. Candidates, all run to $\|r_k\|/\|b\| \le 10^{-10}$ on §6's hot/cold-rod right-hand side through the suite's [pcg](../python/pcg.py) (all five converge; all match `spsolve` to $\sim10^{-11}$; $\kappa(M^{-1}A)$ from the dense generalized eigenproblem):
+Assemble that division of labor as an **additive two-level preconditioner** on the canonical $n = 32$ grid. Coarse space: $Z$ = the 64 columns of 4×4 block-average indicators; Galerkin coarse operator $A_c = Z^\top A Z$ (the coarse correction $Z A_c^{-1} Z^\top$ is invariant to column scaling of $Z$, so "average" vs "indicator" is immaterial); note $Z A_c^{-1} Z^\top A$ is the $A$-orthogonal projector onto the coarse space — *regression on the coarse averages in the energy inner product*. Candidates, all run to $\Vert r_k\Vert /\Vert b\Vert  \le 10^{-10}$ on §6's hot/cold-rod right-hand side through the suite's [pcg](../python/pcg.py) (all five converge; all match `spsolve` to $\sim10^{-11}$; $\kappa(M^{-1}A)$ from the dense generalized eigenproblem):
 
 | $M^{-1}$ | model it encodes | iterations | $\kappa(M^{-1}A)$ | spectrum of $M^{-1}A$ |
 |---|---|---:|---:|---|
@@ -186,9 +186,9 @@ The convergence curves realize §5.2's table: coarse-only (dashed) lies *exactly
 
 ![Error fields at k = 0, 5, 15](../figures/twolevel_error_fields.png)
 
-The measured numbers under each panel ($v_{\min}$ = lowest eigenvector of $A$; "low-15" = the *amplitude* fraction of $e_k$ in $A$'s lowest 15 eigenmodes, $\|V_{\mathrm{low}}^\top e_k\|/\|e_k\|$, and "$v_{\min}$ frac" $= |\langle v_{\min}, e_k\rangle|/\|e_k\|$ — norm fractions, not squared energies):
+The measured numbers under each panel ($v_{\min}$ = lowest eigenvector of $A$; "low-15" = the *amplitude* fraction of $e_k$ in $A$'s lowest 15 eigenmodes, $\Vert V_{\mathrm{low}}^\top e_k\Vert /\Vert e_k\Vert $, and "$v_{\min}$ frac" $= \vert \langle v_{\min}, e_k\rangle\vert /\Vert e_k\Vert $ — norm fractions, not squared energies):
 
-| $\|e_k\|/\|u^\star\|$ | $k=0$ | $k=5$ | $k=15$ | low-15 at $k{=}0/5/15$ | $v_{\min}$ frac at $k{=}0/5/15$ |
+| $\Vert e_k\Vert /\Vert u^\star\Vert $ | $k=0$ | $k=5$ | $k=15$ | low-15 at $k{=}0/5/15$ | $v_{\min}$ frac at $k{=}0/5/15$ |
 |---|---:|---:|---:|---|---|
 | plain CG | 1.0 | 0.643 | 0.200 | 0.974 / 0.991 / 0.989 | 0 / 0 / 0 (exact) |
 | IC(0)-PCG | 1.0 | 0.156 | $1.31\times10^{-4}$ | 0.974 / 0.985 / 0.996 | 0.000 / 0.001 / **0.914** |

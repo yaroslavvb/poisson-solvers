@@ -76,7 +76,7 @@ The rate is where statistics gives the cleanest *explanation of failure*. For ou
 
 Let $D \in \mathbb R^{(n+1)\times n}$ be the scaled forward-difference (incidence) matrix, $(Du)_k = (u_k - u_{k-1})/h$ with the boundary values grounded. Then
 
-$$A = D^\top D, \qquad J(u) = \tfrac12\|Du\|^2 - b^\top u.$$
+$$A = D^\top D, \qquad J(u) = \tfrac12\Vert Du\Vert ^2 - b^\top u.$$
 
 So $A$ is the Gram matrix ("uncentered covariance," the notebook's $\mathrm{cov}[X] = X^\top X$) of a design matrix, and $Au = b$ is a set of **normal equations**: the solve is ridgeless least squares in which the "design matrix" is a differential operator and the penalty is roughness. Under the prior, $Du$ is white noise conditioned to sum to zero ($\mathrm{Cov}(Du) = D(D^\top D)^{-1}D^\top$ is the orthogonal projector onto $\{\text{increments summing to }0\}$) — the increments of a bridge.
 
@@ -150,7 +150,7 @@ Everything above concerned the equilibrium problem; the time-dependent heat equa
 
 $$(I + \Delta t\, A)\,u^{+} = u,$$
 
-and $I + \Delta t\,A = \Delta t\,(\tau^2 - \Delta_h)$ with $\tau^2 = 1/\Delta t$ is precisely a **Whittle–Matérn precision operator**. The suite's GRF right-hand side ([03 — The GRF Right-Hand Side](03-gaussian-random-fields.md), effective Matérn smoothness $\nu = 1$) — spectrum $(|\omega|^2 + \tau^2)^{-\alpha/2}$ applied to white noise — is the spectral implementation of the SPDE construction $(\tau^2 - \Delta)^{\alpha/2}\,g = \mathcal W$ (Whittle 1954; Lindgren, Rue & Lindström 2011): Matérn fields are exactly the fields whose precision is a power of a shifted Laplacian, which is *why* Matérn GPs admit sparse GMRF representations and fast solvers at all. Note the symmetry with §4.2: the generator **colors** white noise by a covariance square root in the KL basis; the solver **whitens** by the precision. Same factor, opposite directions, and "inverse transposed" is the hinge between them.
+and $I + \Delta t\,A = \Delta t\,(\tau^2 - \Delta_h)$ with $\tau^2 = 1/\Delta t$ is precisely a **Whittle–Matérn precision operator**. The suite's GRF right-hand side ([03 — The GRF Right-Hand Side](03-gaussian-random-fields.md), effective Matérn smoothness $\nu = 1$) — spectrum $(\vert \omega\vert ^2 + \tau^2)^{-\alpha/2}$ applied to white noise — is the spectral implementation of the SPDE construction $(\tau^2 - \Delta)^{\alpha/2}\,g = \mathcal W$ (Whittle 1954; Lindgren, Rue & Lindström 2011): Matérn fields are exactly the fields whose precision is a power of a shifted Laplacian, which is *why* Matérn GPs admit sparse GMRF representations and fast solvers at all. Note the symmetry with §4.2: the generator **colors** white noise by a covariance square root in the KL basis; the solver **whitens** by the precision. Same factor, opposite directions, and "inverse transposed" is the hinge between them.
 
 For the neural preconditioner of [06 — Neural Preconditioning Operator](06-neural-preconditioner.md) this closes a loop. §6 said a preconditioner is a surrogate covariance; a network trained to approximate the inverse is therefore doing *covariance estimation* — learning the kriging map of the field — and its measured success mode, spectral clustering rather than raw $\kappa$ reduction, is what a good-but-inexact covariance model looks like to CG. More broadly, for operator learning trained on pairs $(f, u = A^{-1}f)$ with GRF forcing $f \sim \mathcal N(0, \Sigma_f)$, the pairs are *jointly Gaussian* with $\mathrm{Cov}(u) = A^{-1}\Sigma_f A^{-\top}$ and cross-covariance $\Sigma_f A^{-\top}$; the Bayes-optimal map from $f$ to $u$ is the linear kriging operator, which here is $A^{-1}$ itself, and the smoothing it applies — two extra powers of spectral decay per solve — is why solved fields are so much tamer than their sources.
 
@@ -190,7 +190,7 @@ For the neural preconditioner of [06 — Neural Preconditioning Operator](06-neu
 | Deflation of known eigenvectors (eq. 5.8) | Conditioning on known factors / coarse modes |
 | Multigrid coarse-grid correction | Hierarchical model; inference on aggregated (marginalized) variables |
 | Backward Euler operator $I + \Delta t\,A$ | Whittle–Matérn precision, $\tau^2 = 1/\Delta t$ |
-| Spectral GRF generator $(|\omega|^2+\tau^2)^{-\alpha/2}\cdot$noise | SPDE sampling $(\tau^2-\Delta)^{\alpha/2}g = \mathcal W$ (Lindgren–Rue–Lindström) |
+| Spectral GRF generator $(\vert \omega\vert ^2+\tau^2)^{-\alpha/2}\cdot$noise | SPDE sampling $(\tau^2-\Delta)^{\alpha/2}g = \mathcal W$ (Lindgren–Rue–Lindström) |
 | Solution operator $A^{-1}$ acting on random $f$ | Kriging map; Bayes-optimal linear operator for the joint $(f,u)$ Gaussian |
 
 ---

@@ -46,21 +46,21 @@ The paper trains $M_\theta$ with a sum of three scale-free losses (the numbering
 
 **Condition loss (Eq. 9)** — over residual vectors $r_i$ *recorded from actual Krylov runs*:
 
-$$\mathcal{L}_{\text{cond}} = \frac{1}{|\mathcal{R}|}\sum_{r_i \in \mathcal{R}} \frac{\|(I - A\,M_\theta(r_i))\, \|^2\text{-style operator error on } r_i}{\|r_i\|^2} = \frac{1}{|\mathcal{R}|}\sum_i \frac{\|A\,M_\theta(r_i) - r_i\|^2}{\|r_i\|^2}.$$
+$$\mathcal{L}_{\text{cond}} = \frac{1}{\vert \mathcal{R}\vert }\sum_{r_i \in \mathcal{R}} \frac{\Vert (I - A\,M_\theta(r_i))\, \Vert ^2\text{-style operator error on } r_i}{\Vert r_i\Vert ^2} = \frac{1}{\vert \mathcal{R}\vert }\sum_i \frac{\Vert A\,M_\theta(r_i) - r_i\Vert ^2}{\Vert r_i\Vert ^2}.$$
 
 This is the loss that makes $M_\theta$ a good *preconditioner* rather than a good *solver*: it forces $A M_\theta \approx I$ precisely on the distribution of vectors PCG will actually feed it — CG residuals, which become progressively enriched in low-frequency (smooth) error modes as iterations proceed. Training on generic random vectors would misallocate capacity.
 
 **Residual loss (Eq. 10)** — the same operator-consistency error, but evaluated on the *right-hand sides* $b_i$ themselves:
 
-$$\mathcal{L}_{\text{res}} = \frac{1}{|\mathcal{B}|}\sum_{b_i \in \mathcal{B}} \frac{\|A\,M_\theta(b_i) - b_i\|^2}{\|b_i\|^2}.$$
+$$\mathcal{L}_{\text{res}} = \frac{1}{\vert \mathcal{B}\vert }\sum_{b_i \in \mathcal{B}} \frac{\Vert A\,M_\theta(b_i) - b_i\Vert ^2}{\Vert b_i\Vert ^2}.$$
 
 RHS fields (smooth GRFs, see [03-gaussian-random-fields.md](03-gaussian-random-fields.md)) look statistically different from mid-solve CG residuals; this loss covers the $k=0$ input distribution (PCG's very first preconditioner call is $z_0 = M(b)$).
 
 **Data loss (unnumbered in the paper — described in Fig. 1 and the Sec. 5.1.1 text)** — direct regression on exact solutions:
 
-$$\mathcal{L}_{\text{data}} = \frac{1}{m}\sum_i \frac{\|M_\theta(v_i) - A^{-1} v_i\|^2}{\|A^{-1} v_i\|^2},$$
+$$\mathcal{L}_{\text{data}} = \frac{1}{m}\sum_i \frac{\Vert M_\theta(v_i) - A^{-1} v_i\Vert ^2}{\Vert A^{-1} v_i\Vert ^2},$$
 
-with targets from an offline direct solve. This is the only loss with access to $A^{-1}$'s action on *low* modes with strong gradient signal: the operator losses weight errors by $A$, which suppresses exactly the smooth modes where $A$ is small — the modes a preconditioner most needs to fix. The data loss compensates. (For the record: the paper's Eq. 8 is *not* this loss — it is the intractable Frobenius-norm objective $\|I - A\,M_\theta(A)\|_F^2$ whose per-vector restriction motivates the condition loss of Eq. 9.)
+with targets from an offline direct solve. This is the only loss with access to $A^{-1}$'s action on *low* modes with strong gradient signal: the operator losses weight errors by $A$, which suppresses exactly the smooth modes where $A$ is small — the modes a preconditioner most needs to fix. The data loss compensates. (For the record: the paper's Eq. 8 is *not* this loss — it is the intractable Frobenius-norm objective $\Vert I - A\,M_\theta(A)\Vert _F^2$ whose per-vector restriction motivates the condition loss of Eq. 9.)
 
 **Ablation (paper Table 3)**: the losses are complementary. On the paper's Poisson-512 benchmark, the full three-loss objective reaches 184 iterations; removing the residual loss gives 189, removing the data loss 206, removing the condition loss 189. So it is the **data loss** whose removal costs the most (184 → 206) — in the paper's words, "removing the data loss has a larger effect (206 iterations)" — while dropping either operator loss costs only ~5 iterations. No single loss is redundant.
 
@@ -120,7 +120,7 @@ Trained configuration ([results/npo_training_history.json](../results/npo_traini
 
 This is the single most important implementation detail (npo.py lines 47–53, train_npo.py lines 21–27).
 
-**Problem.** The unscaled operator $A = (\mathrm{kron}(d_1, I) + \mathrm{kron}(I, d_1))/h^2$ has spectrum $[19.72,\ 8692.28]$ at $n=32$ (measured: `eig_A.min/max` in [results/npo_spectrum.json](../results/npo_spectrum.json); analytic derivation in [02-eigenvalues.md](02-eigenvalues.md)). Asking a float32 network to output $A^{-1} r$ means producing values $\sim 10^{-4}\times\|r\|$ against loss terms involving matvecs with entries $\sim 10^4$ — needlessly hostile numerics.
+**Problem.** The unscaled operator $A = (\mathrm{kron}(d_1, I) + \mathrm{kron}(I, d_1))/h^2$ has spectrum $[19.72,\ 8692.28]$ at $n=32$ (measured: `eig_A.min/max` in [results/npo_spectrum.json](../results/npo_spectrum.json); analytic derivation in [02-eigenvalues.md](02-eigenvalues.md)). Asking a float32 network to output $A^{-1} r$ means producing values $\sim 10^{-4}\times\Vert r\Vert $ against loss terms involving matvecs with entries $\sim 10^4$ — needlessly hostile numerics.
 
 **Fix.** Train against the scaled matrix $\hat A = h^2 A$ (train_npo.py line 121), whose spectrum is $[19.72,\ 8692.28] \cdot h^2 = [0.0181,\ 7.98]$ with $h = 1/33$ — comfortable float32 territory. Then use $M_\theta \approx \hat A^{-1} = h^{-2} A^{-1}$ **directly, with no rescaling**, as the preconditioner for $A$.
 
@@ -158,7 +158,7 @@ $$\hat A\, e_k = \hat A(x^* - x_k) = \hat b - \hat A x_k = r_k \quad\Longrightar
 
 so the data-loss target for a mid-solve residual is exactly the **error of the recorded partial iterate** — the network is literally trained to output the correction that would finish the solve in one step.
 
-**Loss implementation** (lines 163–179): with unit-norm inputs, one sparse matvec $\hat A\,M_\theta(v)$ serves both operator losses; the sample-wise squared error $\|\hat A M_\theta(v_i) - v_i\|^2$ is split by a boolean mask into the **condition loss** (residual samples) and **residual loss** (RHS samples) — the $\|v_i\|^2$ denominators of Eqs. 9–10 are already 1. The **data loss** is $\|M_\theta(v_i) - \hat A^{-1} v_i\|^2 / \|\hat A^{-1} v_i\|^2$. Total loss = unweighted sum of the three.
+**Loss implementation** (lines 163–179): with unit-norm inputs, one sparse matvec $\hat A\,M_\theta(v)$ serves both operator losses; the sample-wise squared error $\Vert \hat A M_\theta(v_i) - v_i\Vert ^2$ is split by a boolean mask into the **condition loss** (residual samples) and **residual loss** (RHS samples) — the $\Vert v_i\Vert ^2$ denominators of Eqs. 9–10 are already 1. The **data loss** is $\Vert M_\theta(v_i) - \hat A^{-1} v_i\Vert ^2 / \Vert \hat A^{-1} v_i\Vert ^2$. Total loss = unweighted sum of the three.
 
 **Training curve** ([results/npo_training_history.json](../results/npo_training_history.json); figure not committed — the history JSON is the record):
 
@@ -171,7 +171,7 @@ so the data-loss target for a mid-solve residual is exactly the **error of the r
 | 300 | 0.393 | 0.084 | 0.172 | 0.137 |
 | 399 | **0.3014** | **0.0738** | **0.1545** | **0.0730** |
 
-Reading: the operator losses (condition/residual) drop fast in the first ~10 epochs (local stencil inversion is easy for the conv relaxations), then the second half of the cosine schedule (epochs 200→400) buys another $3.6\times$ on the total, mostly through the data loss (0.521 → 0.073) — i.e. through the smooth, low-frequency part of $\hat A^{-1}$ that only the data loss supervises well (Sec. 1.2). Final condition loss 0.0738 means $\|\hat A M_\theta(r) - r\| \approx 0.27\,\|r\|$ on the residual distribution: a crude inverse — and per Sec. 5, crude-but-clustered is all PCG needs.
+Reading: the operator losses (condition/residual) drop fast in the first ~10 epochs (local stencil inversion is easy for the conv relaxations), then the second half of the cosine schedule (epochs 200→400) buys another $3.6\times$ on the total, mostly through the data loss (0.521 → 0.073) — i.e. through the smooth, low-frequency part of $\hat A^{-1}$ that only the data loss supervises well (Sec. 1.2). Final condition loss 0.0738 means $\Vert \hat A M_\theta(r) - r\Vert  \approx 0.27\,\Vert r\Vert $ on the residual distribution: a crude inverse — and per Sec. 5, crude-but-clustered is all PCG needs.
 
 ---
 
@@ -211,19 +211,19 @@ For a fixed SPD $M$ the correction term vanishes ($z_{k+1}^{\mathsf T} r_k = r_{
 
 Code: [python/experiments/npo_spectrum.py](../python/experiments/npo_spectrum.py); numbers: [results/npo_spectrum.json](../results/npo_spectrum.json).
 
-$M_\theta$ is nonlinear, so it has no spectrum in the strict sense. We build the **column linearization** $\tilde M \in \mathbb{R}^{1024\times1024}$, $\tilde M_{:,j} = M_\theta(e_j)$ (all 1024 canonical basis vectors; since $\|e_j\| = 1$ the wrapper's normalization is a no-op and each column is a raw network evaluation — npo_spectrum.py lines 54–60), and examine $\mathrm{eig}(\tilde M A)$ via dense nonsymmetric `scipy.linalg.eig` (line 73).
+$M_\theta$ is nonlinear, so it has no spectrum in the strict sense. We build the **column linearization** $\tilde M \in \mathbb{R}^{1024\times1024}$, $\tilde M_{:,j} = M_\theta(e_j)$ (all 1024 canonical basis vectors; since $\Vert e_j\Vert  = 1$ the wrapper's normalization is a no-op and each column is a raw network evaluation — npo_spectrum.py lines 54–60), and examine $\mathrm{eig}(\tilde M A)$ via dense nonsymmetric `scipy.linalg.eig` (line 73).
 
 Measured (all from `npo_spectrum.json`):
 
 | quantity | value |
 |---|---|
-| nonsymmetry $\|\tilde M - \tilde M^{\mathsf T}\|_F / \|\tilde M\|_F$ | **0.568** |
-| nonlinearity $\|\tilde M b - M_\theta(b)\| / \|M_\theta(b)\|$ on the canonical GRF $b$ | **0.432** |
+| nonsymmetry $\Vert \tilde M - \tilde M^{\mathsf T}\Vert _F / \Vert \tilde M\Vert _F$ | **0.568** |
+| nonlinearity $\Vert \tilde M b - M_\theta(b)\Vert  / \Vert M_\theta(b)\Vert $ on the canonical GRF $b$ | **0.432** |
 | $\mathrm{eig}(\tilde M A)$: real parts | $[248.81,\ 3125.24]$ — **all 1024 in the right half-plane, zero nonpositive** |
-| $\mathrm{eig}(\tilde M A)$: max $|\mathrm{Im}\,\lambda|$ | 257.06 |
-| spread $\max|\lambda|/\min|\lambda|$ of $\tilde M A$ | **12.56** |
+| $\mathrm{eig}(\tilde M A)$: max $\vert \mathrm{Im}\,\lambda\vert $ | 257.06 |
+| spread $\max\vert \lambda\vert /\min\vert \lambda\vert $ of $\tilde M A$ | **12.56** |
 | vs $\kappa(A) = \lambda_{\max}/\lambda_{\min}$ | **440.69** (35× tighter) |
-| fraction of $|\lambda|$ within $[0.5, 2]\times$ median: $\tilde M A$ vs $A$ | **98.1%** vs 82.0% |
+| fraction of $\vert \lambda\vert $ within $[0.5, 2]\times$ median: $\tilde M A$ vs $A$ | **98.1%** vs 82.0% |
 
 ![NPO linearized spectrum: complex-plane scatter and median-scaled clustering histogram](../figures/npo_spectrum.png)
 

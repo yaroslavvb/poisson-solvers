@@ -9,7 +9,7 @@ An implementation and study of **preconditioned conjugate gradients for the 2-D 
 3. **Neural**: a toy Neural Preconditioning Operator (NPO) after Li, Xiao, Lai & Wang, [arXiv:2502.01337](https://arxiv.org/abs/2502.01337) — a ~50k-parameter attention-multigrid network trained to approximate the inverse ([python/neural/](../python/neural/));
 4. **Nothing**, as the baseline plain CG.
 
-Notation used everywhere: $d_1$ is the 1-D tridiagonal $[-1,2,-1]$ stencil (no $1/h^2$); $A = (d_1\otimes I + I\otimes d_1)/h^2$ with $h = 1/(n+1)$, $n = 32$, $N = n^2 = 1024$; $\kappa(A) = 440.69$; $b$ = `grf_rhs(32, alpha=2.0, tau=3.0, seed=42)`; tolerance $\|r_k\|/\|b\| \le 10^{-10}$; iterations = `len(res_hist) - 1`.
+Notation used everywhere: $d_1$ is the 1-D tridiagonal $[-1,2,-1]$ stencil (no $1/h^2$); $A = (d_1\otimes I + I\otimes d_1)/h^2$ with $h = 1/(n+1)$, $n = 32$, $N = n^2 = 1024$; $\kappa(A) = 440.69$; $b$ = `grf_rhs(32, alpha=2.0, tau=3.0, seed=42)`; tolerance $\Vert r_k\Vert /\Vert b\Vert  \le 10^{-10}$; iterations = `len(res_hist) - 1`.
 
 The punchline of the study is that each method behaves exactly as its theory predicts *once the problem's spectrum is understood*: ILU nearly factorizes the toy problem and wins outright; Jacobi is provably a no-op on constant coefficients and worth 5.6× on a 100:1 coefficient jump; Nyström *loses* to plain CG because the Laplacian's flat-topped spectrum is its adversarial case; and the NPO cuts iterations 3.87× via eigenvalue clustering — but only inside *flexible* CG, because a ReLU network is not a fixed SPD matrix and plain PCG demonstrably stalls on it.
 

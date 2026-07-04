@@ -9,8 +9,8 @@ All canonical-problem runs share one configuration (recorded in `results.json �
 | item | value |
 |---|---|
 | operator $A$ | `poisson_2d(32)`: 5-point Dirichlet Laplacian, $A = (\mathrm{kron}(d_1,I)+\mathrm{kron}(I,d_1))/h^2$, $h = 1/33$, $N = 1024$ ([python/poisson.py](../python/poisson.py) lines 43–68; see [02-eigenvalues.md](02-eigenvalues.md)) |
-| right-hand side $b$ | `grf_rhs(32, alpha=2.0, tau=3.0, seed=42)` — standardized Gaussian random field, Matérn-like spectrum $(|k|^2+\tau^2)^{-\alpha/2}$ ([python/poisson.py](../python/poisson.py) lines 131–184; see [03-gaussian-random-fields.md](03-gaussian-random-fields.md)). Seed 42 is **held out** from the NPO training seeds 100–139. |
-| tolerance | stop when $\|r_k\|/\|b\| \le 10^{-10}$ |
+| right-hand side $b$ | `grf_rhs(32, alpha=2.0, tau=3.0, seed=42)` — standardized Gaussian random field, Matérn-like spectrum $(\vert k\vert ^2+\tau^2)^{-\alpha/2}$ ([python/poisson.py](../python/poisson.py) lines 131–184; see [03-gaussian-random-fields.md](03-gaussian-random-fields.md)). Seed 42 is **held out** from the NPO training seeds 100–139. |
+| tolerance | stop when $\Vert r_k\Vert /\Vert b\Vert  \le 10^{-10}$ |
 | max iterations | 2000 |
 | Nyström sketch seed | 0 |
 | solvers | `pcg` (Hestenes–Stiefel, Fletcher–Reeves $\beta$) and `flexible_pcg` (Notay 2000, Polak–Ribière $\beta$), [python/pcg.py](../python/pcg.py) lines 15–81 and 84–141; see [04-krylov-and-pcg.md](04-krylov-and-pcg.md) |
@@ -154,22 +154,22 @@ Preconditioned condition numbers (Nyström values are **exact**, from dense `eig
 | Nyström rank 64 | 434.52 | 395.67 | 123 | 115.2 |
 | Nyström rank 128 | 426.58 | 359.61 | 122 | 114.1 |
 | Nyström rank 256 | 407.46 | 298.41 | 119 | 111.5 |
-| NPO (FCG) | n/a (non-normal); $|\lambda|$-spread **12.56** | — | 30 | ~19.6 if the spread acted like a κ |
+| NPO (FCG) | n/a (non-normal); $\vert \lambda\vert $-spread **12.56** | — | 30 | ~19.6 if the spread acted like a κ |
 | ILU | not computed (would require forming $M^{-1/2}$) | — | 5 | — |
 | Jacobi (canonical) | 440.69 (scalar scaling, provably unchanged) | — | 116 | 116 |
 
-$^\dagger$ scaled as $116\sqrt{\kappa_P/\kappa_A}$, using the classical CG bound $\|e_k\|_A \le 2\big(\frac{\sqrt\kappa - 1}{\sqrt\kappa + 1}\big)^k \|e_0\|_A$, i.e. iterations $\propto \sqrt{\kappa}$ at fixed tolerance. (For calibration, the bound itself is loose here: it predicts $\tfrac12\sqrt{440.69}\,\ln(2\cdot10^{10}) \approx 249$ iterations for plain CG vs 116 observed — CG exploits the discrete spectrum's structure beyond the two-point bound.)
+$^\dagger$ scaled as $116\sqrt{\kappa_P/\kappa_A}$, using the classical CG bound $\Vert e_k\Vert _A \le 2\big(\frac{\sqrt\kappa - 1}{\sqrt\kappa + 1}\big)^k \Vert e_0\Vert _A$, i.e. iterations $\propto \sqrt{\kappa}$ at fixed tolerance. (For calibration, the bound itself is loose here: it predicts $\tfrac12\sqrt{440.69}\,\ln(2\cdot10^{10}) \approx 249$ iterations for plain CG vs 116 observed — CG exploits the discrete spectrum's structure beyond the two-point bound.)
 
 ### 5.2 Reading the table: three different stories
 
 **Nyström: correct implementation, adversarial problem.** All four sketches *reduce* the exact κ (440.69 → 439.62…407.46), monotonically in rank, and all sit above their optimal-rank-$\ell$ lower bounds — exactly what [arXiv:2110.02820](https://arxiv.org/abs/2110.02820) (Frangella–Tropp–Udell) predicts. But the reductions are marginal *by construction of the problem*: the Nyström preconditioner deflates the **top** of the spectrum, so the best any rank-$\ell$ method can achieve is $\kappa = \lambda_{\ell+1}/\lambda_{\min}$, and the 2-D Laplacian's spectrum decays so slowly from the top that even a **perfect** rank-256 deflation (a quarter of all modes!) would leave $\kappa = 298$. The paper targets regularized/ridge-type systems with fast spectral decay and small effective dimension $d_{\mathrm{eff}}(\mu)$; the flat-topped Laplacian at $\mu = 0$ is the worst case. On top of that, the randomized sketch slightly perturbs the retained eigenvectors, which at these tiny κ-gains is enough to make the observed iteration counts (119–123) land *above* plain CG's 116 rather than at the $\sqrt\kappa$-predicted 111–116. Full derivation in [07-nystrom-preconditioning.md](07-nystrom-preconditioning.md).
 
-**NPO: clustering, not symmetry, drives the win.** The NPO is not a matrix — it's a ReLU network — so `npo_spectrum.py` linearizes it column-by-column ($\tilde M_{:,j} = M_\theta(e_j)$, exact per column because the wrapper normalizes inputs and $\|e_j\| = 1$) and takes the dense nonsymmetric spectrum of $\tilde M A$. From `npo_spectrum.json`:
+**NPO: clustering, not symmetry, drives the win.** The NPO is not a matrix — it's a ReLU network — so `npo_spectrum.py` linearizes it column-by-column ($\tilde M_{:,j} = M_\theta(e_j)$, exact per column because the wrapper normalizes inputs and $\Vert e_j\Vert  = 1$) and takes the dense nonsymmetric spectrum of $\tilde M A$. From `npo_spectrum.json`:
 
-- all 1024 eigenvalues have **positive real part**: $\mathrm{Re}\,\lambda \in [248.8,\ 3125.2]$, $\max|\mathrm{Im}\,\lambda| = 257.1$, zero nonpositive-real eigenvalues;
-- modulus spread $\max|\lambda|/\min|\lambda| = \textbf{12.56}$ vs $\kappa(A) = 440.69$ — **35× tighter**;
-- **98.1%** of $|\lambda(\tilde M A)|$ lie within $[0.5, 2]\times$ median, vs **82.0%** for $\lambda(A)$;
-- yet the linearization is severely non-symmetric ($\|\tilde M - \tilde M^\top\|_F/\|\tilde M\|_F = 0.568$) and the operator severely non-linear ($\|\tilde M b - M_\theta(b)\|/\|M_\theta(b)\| = 0.432$ on the canonical GRF $b$).
+- all 1024 eigenvalues have **positive real part**: $\mathrm{Re}\,\lambda \in [248.8,\ 3125.2]$, $\max\vert \mathrm{Im}\,\lambda\vert  = 257.1$, zero nonpositive-real eigenvalues;
+- modulus spread $\max\vert \lambda\vert /\min\vert \lambda\vert  = \textbf{12.56}$ vs $\kappa(A) = 440.69$ — **35× tighter**;
+- **98.1%** of $\vert \lambda(\tilde M A)\vert $ lie within $[0.5, 2]\times$ median, vs **82.0%** for $\lambda(A)$;
+- yet the linearization is severely non-symmetric ($\Vert \tilde M - \tilde M^\top\Vert _F/\Vert \tilde M\Vert _F = 0.568$) and the operator severely non-linear ($\Vert \tilde M b - M_\theta(b)\Vert /\Vert M_\theta(b)\Vert  = 0.432$ on the canonical GRF $b$).
 
 So the NPO's 116 → 30 comes from squeezing the spectrum of the preconditioned operator into one decade with a strong cluster near the median — despite being nothing like an SPD matrix. The naive $\sqrt{440.69/12.56} \approx 5.9\times$ prediction overestimates the realized $3.87\times$; the gap is exactly the price of complex eigenvalues, non-normality, and the 43% nonlinearity, which FCG's local orthogonality tolerates but cannot fully exploit. Details in [06-neural-preconditioner.md](06-neural-preconditioner.md). (Training context: 400 epochs, 50,465 parameters, 216.6 s wall; total loss 7.504 → 0.301, with the condition/residual/data terms ending at 0.0738/0.1545/0.0730 — `npo_training_history.json`.)
 

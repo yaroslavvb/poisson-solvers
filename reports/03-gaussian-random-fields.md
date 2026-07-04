@@ -42,7 +42,7 @@ return (flat - flat.mean()) / flat.std(ddof=1)
 In math: with $k=(k_1,k_2)\in\{-n/2,\dots,n/2-1\}^2$ integer wavenumbers,
 
 $$
-b(x) \;\propto\; \operatorname{Re}\!\Big[\sum_{k} \underbrace{\big(n^2|k|^2+\tau^2\big)^{-\alpha/2}}_{S_k}\, Z_k\, e^{2\pi i\, k\cdot x/n}\Big],
+b(x) \;\propto\; \operatorname{Re}\!\Big[\sum_{k} \underbrace{\big(n^2\vert k\vert ^2+\tau^2\big)^{-\alpha/2}}_{S_k}\, Z_k\, e^{2\pi i\, k\cdot x/n}\Big],
 \qquad Z_k = G^{(1)}_k + i\,G^{(2)}_k,\;\; G^{(j)}_k \overset{iid}{\sim}\mathcal N(0,1),
 $$
 
@@ -70,17 +70,17 @@ After scaling, the spectral amplitude at integer mode $k$ is
 
 $$
 S_k = \big(n^2 k_1^2 + n^2 k_2^2 + \tau^2\big)^{-\alpha/2}
-    = n^{-\alpha}\Big(|k|^2 + \big(\tfrac{\tau}{n}\big)^2\Big)^{-\alpha/2}.
+    = n^{-\alpha}\Big(\vert k\vert ^2 + \big(\tfrac{\tau}{n}\big)^2\Big)^{-\alpha/2}.
 $$
 
 Two consequences, one trivial and one substantive:
 
 1. **The prefactor $n^{-\alpha}$ is irrelevant.** It is a global constant, annihilated by the final standardization (Sec. 6).
-2. **The effective mass parameter is $\tau_{\mathrm{eff}}=\tau/n = 3/32 = 0.09375$, not $\tau=3$.** The Matérn "knee" — the wavenumber below which the spectrum flattens — sits at $|k|\approx\tau_{\mathrm{eff}}\approx 0.094$, *below the first resolvable nonzero mode* $|k|=1$. So on every mode the field actually contains, the spectrum is a nearly pure power law $|k|^{-\alpha}$: the relative flattening at $k=(1,0)$ is $\tau^2/n^2 = 9/1024 \approx 0.88\%$. Concretely (verified): $S_{(0,1)}/S_{(0,2)} = 3.974$ versus exactly $4$ for a pure $|k|^{-2}$ law.
+2. **The effective mass parameter is $\tau_{\mathrm{eff}}=\tau/n = 3/32 = 0.09375$, not $\tau=3$.** The Matérn "knee" — the wavenumber below which the spectrum flattens — sits at $\vert k\vert \approx\tau_{\mathrm{eff}}\approx 0.094$, *below the first resolvable nonzero mode* $\vert k\vert =1$. So on every mode the field actually contains, the spectrum is a nearly pure power law $\vert k\vert ^{-\alpha}$: the relative flattening at $k=(1,0)$ is $\tau^2/n^2 = 9/1024 \approx 0.88\%$. Concretely (verified): $S_{(0,1)}/S_{(0,2)} = 3.974$ versus exactly $4$ for a pure $\vert k\vert ^{-2}$ law.
 
-Compare the FNO-paper normalization, which uses angular wavenumbers: amplitude $\propto(4\pi^2|k|^2+\tau^2)^{-\alpha/2}$, i.e. $\tau_{\mathrm{eff}} = \tau/2\pi \approx 0.477$ and a $\tau^2/4\pi^2 \approx 23\%$ flattening at mode 1. The `* n` convention here (with $n=32 \approx 5.1\times 2\pi$) therefore produces a *smoother, longer-range* field than FNO's at the same $(\alpha,\tau)$ — effectively scale-free across the resolved band. Same family, slightly different point in it; nothing downstream depends on this distinction since every experiment uses the one convention consistently.
+Compare the FNO-paper normalization, which uses angular wavenumbers: amplitude $\propto(4\pi^2\vert k\vert ^2+\tau^2)^{-\alpha/2}$, i.e. $\tau_{\mathrm{eff}} = \tau/2\pi \approx 0.477$ and a $\tau^2/4\pi^2 \approx 23\%$ flattening at mode 1. The `* n` convention here (with $n=32 \approx 5.1\times 2\pi$) therefore produces a *smoother, longer-range* field than FNO's at the same $(\alpha,\tau)$ — effectively scale-free across the resolved band. Same family, slightly different point in it; nothing downstream depends on this distinction since every experiment uses the one convention consistently.
 
-The DC entry $S_{(0,0)} = \tau^{-\alpha} = 1/9 \approx 0.1111$ is enormous relative to its neighbors — $S_{(0,0)}/S_{(0,1)} = (n^2+\tau^2)/\tau^2 \cdot \ldots = 1033/9 = 114.8$ in amplitude, and the DC mode carries $99.95\%$ of the raw spectral energy $\sum_k S_k^2$ (verified: $\sum S_k^2 = 1.2351\times10^{-2}$, of which $S_{(0,0)}^2 = 1/81 = 1.2346\times10^{-2}$). This would be alarming except that a DC Fourier mode is a *spatial constant*, and `Standardize` subtracts the sample mean — which for a band-limited periodic field equals the DC component exactly (Sec. 6). So the huge DC amplitude is created and then exactly destroyed; only the $|k|\ge 1$ modes survive into $b$.
+The DC entry $S_{(0,0)} = \tau^{-\alpha} = 1/9 \approx 0.1111$ is enormous relative to its neighbors — $S_{(0,0)}/S_{(0,1)} = (n^2+\tau^2)/\tau^2 \cdot \ldots = 1033/9 = 114.8$ in amplitude, and the DC mode carries $99.95\%$ of the raw spectral energy $\sum_k S_k^2$ (verified: $\sum S_k^2 = 1.2351\times10^{-2}$, of which $S_{(0,0)}^2 = 1/81 = 1.2346\times10^{-2}$). This would be alarming except that a DC Fourier mode is a *spatial constant*, and `Standardize` subtracts the sample mean — which for a band-limited periodic field equals the DC component exactly (Sec. 6). So the huge DC amplitude is created and then exactly destroyed; only the $\vert k\vert \ge 1$ modes survive into $b$.
 
 ---
 
@@ -88,20 +88,20 @@ The DC entry $S_{(0,0)} = \tau^{-\alpha} = 1/9 \approx 0.1111$ is enormous relat
 
 ### 3.1 Covariance operator
 
-A mean-zero Gaussian field with Fourier *amplitudes* $S_k \propto (|k|^2+\tau^2)^{-\alpha/2}$ has *power spectral density* $S_k^2 \propto (|k|^2+\tau^2)^{-\alpha}$, i.e. covariance operator
+A mean-zero Gaussian field with Fourier *amplitudes* $S_k \propto (\vert k\vert ^2+\tau^2)^{-\alpha/2}$ has *power spectral density* $S_k^2 \propto (\vert k\vert ^2+\tau^2)^{-\alpha}$, i.e. covariance operator
 
 $$
 C = \sigma^2\big({-\Delta} + \tau^2 I\big)^{-\alpha}
 $$
 
-on the torus (where $-\Delta$ has Fourier symbol $|k|^2$ in the wavenumber units used — with the code's `* n` scaling the symbol is $n^2|k|^2$, which just rescales $\tau$ per Sec. 2.2). This is exactly the base measure $\mu = \mathcal N\big(0, (-\Delta + 9I)^{-2}\big)$ that the FNO paper pushes through a threshold map to make its Darcy coefficients; the NPO paper (Sec. 5.1.2) specifies only an unqualified "Gaussian Random Field" for its right-hand sides.
+on the torus (where $-\Delta$ has Fourier symbol $\vert k\vert ^2$ in the wavenumber units used — with the code's `* n` scaling the symbol is $n^2\vert k\vert ^2$, which just rescales $\tau$ per Sec. 2.2). This is exactly the base measure $\mu = \mathcal N\big(0, (-\Delta + 9I)^{-2}\big)$ that the FNO paper pushes through a threshold map to make its Darcy coefficients; the NPO paper (Sec. 5.1.2) specifies only an unqualified "Gaussian Random Field" for its right-hand sides.
 
 ### 3.2 Whittle–Matérn dictionary
 
 The Whittle–Matérn covariance in $d$ dimensions with smoothness $\nu$ and inverse length-scale $\tau$ has spectral density
 
 $$
-\hat C(\xi) \;\propto\; \big(|\xi|^2 + \tau^2\big)^{-(\nu + d/2)},
+\hat C(\xi) \;\propto\; \big(\vert \xi\vert ^2 + \tau^2\big)^{-(\nu + d/2)},
 $$
 
 so matching exponents gives
@@ -112,7 +112,7 @@ $$
 
 Interpretation of the two knobs:
 
-- **$\alpha$ controls smoothness.** Sobolev regularity of samples: $\mathbb E\,\|b\|_{H^s}^2 \propto \sum_k (1+|k|^2)^s (|k|^2+\tau^2)^{-\alpha} < \infty \iff 2(\alpha - s) > d$, i.e. samples lie a.s. in $H^s$ for every $s < \alpha - d/2 = 1$ and *not* in $H^1$. Equivalently Matérn $\nu=1$: continuous, but not mean-square differentiable (that requires $\nu>1$). By elliptic regularity the exact solution $u = A^{-1}b$ then sits (formally, modulo box-corner caveats) two derivatives higher, in $H^{3-\varepsilon}$ — a smooth-looking blob, cf. [figures/solution_field.png](../figures/solution_field.png).
+- **$\alpha$ controls smoothness.** Sobolev regularity of samples: $\mathbb E\,\Vert b\Vert _{H^s}^2 \propto \sum_k (1+\vert k\vert ^2)^s (\vert k\vert ^2+\tau^2)^{-\alpha} < \infty \iff 2(\alpha - s) > d$, i.e. samples lie a.s. in $H^s$ for every $s < \alpha - d/2 = 1$ and *not* in $H^1$. Equivalently Matérn $\nu=1$: continuous, but not mean-square differentiable (that requires $\nu>1$). By elliptic regularity the exact solution $u = A^{-1}b$ then sits (formally, modulo box-corner caveats) two derivatives higher, in $H^{3-\varepsilon}$ — a smooth-looking blob, cf. [figures/solution_field.png](../figures/solution_field.png).
 - **$\tau$ controls correlation length**, roughly $\ell \sim 1/\tau_{\mathrm{eff}}$ in domain units. With the code's $\tau_{\mathrm{eff}} = \tau/n \approx 0.094 \ll 1$ the correlation length exceeds the domain: the field is dominated by its few lowest modes.
 
 ### 3.3 Measured correlation structure (seed-42 draw, $n=32$)
@@ -128,7 +128,7 @@ From the exact covariance formula of Sec. 4, the theoretical lag-1 (one grid cel
 
 The $0.972$ wrap-around correlation is the periodicity artifact discussed in Sec. 7.
 
-Why this matters for the solver benchmarks: a $|k|^{-\alpha}$-weighted $b$ concentrates energy in the *low* end of $A$'s spectrum — precisely the eigenmodes CG resolves last (see [02-eigenvalues.md](02-eigenvalues.md) for the eigenstructure and [04-krylov-and-pcg.md](04-krylov-and-pcg.md) for the convergence consequences). A white-noise $b$ would flatter the solvers; the GRF is the harder and more physical choice, and it is what the neural preconditioner is trained on, so train/test distributions match by construction.
+Why this matters for the solver benchmarks: a $\vert k\vert ^{-\alpha}$-weighted $b$ concentrates energy in the *low* end of $A$'s spectrum — precisely the eigenmodes CG resolves last (see [02-eigenvalues.md](02-eigenvalues.md) for the eigenstructure and [04-krylov-and-pcg.md](04-krylov-and-pcg.md) for the convergence consequences). A white-noise $b$ would flatter the solvers; the GRF is the harder and more physical choice, and it is what the neural preconditioner is trained on, so train/test distributions match by construction.
 
 ---
 
@@ -162,7 +162,7 @@ $$
 \mathbb E\big[F(x)F(y)\big] = \frac{1}{n^4}\sum_k S_k^2\,\mathbb E[Z_k^2]\,e^{\cdots} = 0 .
 $$
 
-Because $S_k$ depends on $k$ only through $|k|^2$ (with the wrapped DFT frequencies, $f_j^2 = f_{n-j}^2$), the first sum is invariant under $k\to -k$ and hence real. Expanding $\operatorname{Re}F(x)\operatorname{Re}F(y) = \tfrac14(F(x)+\bar F(x))(F(y)+\bar F(y))$ and using both identities:
+Because $S_k$ depends on $k$ only through $\vert k\vert ^2$ (with the wrapped DFT frequencies, $f_j^2 = f_{n-j}^2$), the first sum is invariant under $k\to -k$ and hence real. Expanding $\operatorname{Re}F(x)\operatorname{Re}F(y) = \tfrac14(F(x)+\bar F(x))(F(y)+\bar F(y))$ and using both identities:
 
 $$
 \operatorname{Cov}\big(b_{\text{raw}}(x),\, b_{\text{raw}}(y)\big)
@@ -178,7 +178,7 @@ Monte-Carlo verification (400 fresh draws, $n=32$, seeds 1000–1399 via `np.ran
 |---|---|---|
 | per-point variance of $\operatorname{Re}F$ after mean removal, $\big(\sum_k S_k^2 - S_0^2\big)/n^4$ | $5.399\times10^{-12}$ | $5.59\times10^{-12}$ |
 | spatial variance of $\operatorname{Im}F$ | same | $5.21\times10^{-12}$ |
-| $\mathbb E\,\overline{|F|^2}$ vs $2\times$ Re-variance incl. DC ($2\sum S_k^2/n^4 = 2.356\times10^{-8}$) | $2.356\times10^{-8}$ | $2.418\times10^{-8}$ |
+| $\mathbb E\,\overline{\vert F\vert ^2}$ vs $2\times$ Re-variance incl. DC ($2\sum S_k^2/n^4 = 2.356\times10^{-8}$) | $2.356\times10^{-8}$ | $2.418\times10^{-8}$ |
 | lag-$(0,1)$ correlation | $0.9698$ | $0.972$ (seed-42 sample) |
 
 ---
@@ -196,7 +196,7 @@ This is also why the FNO reference implementation's amplitude prefactor $\sigma 
 Mathematica `Standardize[list]` computes $(x - \bar x)/s$ with $s$ the **sample** standard deviation (Bessel-corrected); the Python port matches with `ddof=1` ([poisson.py](../python/poisson.py) L184). Three precise effects:
 
 1. **Exact DC surgery.** For a band-limited periodic field, the spatial mean over one full period equals the DC Fourier component: every $k\ne0$ mode integrates to zero exactly over the $n\times n$ grid, so $\overline{b_{\text{raw}}} = \operatorname{Re}(Z_0)\,S_0/n^2$. (Verified: `field.mean() == noise[0,0].real * S[0,0] / n**2` to float precision.) Mean subtraction therefore zeroes the $k=0$ mode *exactly* and touches nothing else — the clean answer to the scary-looking $99.95\%$-of-energy DC mode from Sec. 2.2.
-2. **Scale fixing.** Division by the sample std maps every draw to sample variance 1 (measured on seed 42: mean $2.8\times10^{-17}$, std $1.000000$), making all the dropped constants ($n^{-\alpha}$, $n^2$, $\tfrac12$) moot and giving every solver run a right-hand side with $\|b\|_2 = \sqrt{n^2-1}\approx 32.0$ regardless of $(\alpha,\tau)$ bookkeeping.
+2. **Scale fixing.** Division by the sample std maps every draw to sample variance 1 (measured on seed 42: mean $2.8\times10^{-17}$, std $1.000000$), making all the dropped constants ($n^{-\alpha}$, $n^2$, $\tfrac12$) moot and giving every solver run a right-hand side with $\Vert b\Vert _2 = \sqrt{n^2-1}\approx 32.0$ regardless of $(\alpha,\tau)$ bookkeeping.
 3. **A pedantic caveat.** Normalizing by the *per-sample* std makes the resulting $b$ very slightly non-Gaussian (its marginal law is a Gaussian conditioned on its own empirical variance). With $n^2 = 1024$ weakly-correlated-ish degrees of freedom this is negligible, and it is standard practice in the benchmark literature; it just means "GRF" is accurate to first order, not a theorem, after this line.
 
 Finally `Flatten` / `.ravel()` produce the row-major vector with flat index $k = i\,n + j$ — the same convention used to assemble $A$ from Kronecker products (see [01-code-walkthrough.md](01-code-walkthrough.md)), so no transposition bug is possible between $b$ and $A$.

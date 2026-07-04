@@ -27,12 +27,12 @@ $$
 and the CG error bound transfers with $\kappa(A)$ replaced by $\kappa(P^{-1/2} A P^{-1/2}) = \kappa(P^{-1}A)$:
 
 $$
-\|x_k - x_\star\|_A \;\le\; 2 \left( \frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1} \right)^{k} \|x_0 - x_\star\|_A .
+\Vert x_k - x_\star\Vert _A \;\le\; 2 \left( \frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1} \right)^{k} \Vert x_0 - x_\star\Vert _A .
 $$
 
 For our canonical problem, $\kappa(A) = 440.6886$ exactly (analytic value $440.6885603836582$ from [results/spectra.json](../results/spectra.json), matching the dense eigensolve to all printed digits; see [02-eigenvalues.md](02-eigenvalues.md)). That gives an asymptotic per-iteration contraction factor $(\sqrt{\kappa}-1)/(\sqrt{\kappa}+1) = (20.99-1)/(20.99+1) \approx 0.909$ and a worst-case bound of $\lceil \tfrac{1}{2}\sqrt{\kappa}\,\ln(2\cdot 10^{10}) \rceil = 249$ iterations to $10^{-10}$; observed is 116 because the bound ignores the clustering/Ritz-deflation effects discussed in [04-krylov-and-pcg.md](04-krylov-and-pcg.md). A preconditioner's job is to make $\kappa(P^{-1}A)$ small — or, more sharply, to *cluster* the eigenvalues of $P^{-1}A$ (clustering, not just $\kappa$, is what actually drives iteration counts; the NPO analysis in [06-neural-preconditioner.md](06-neural-preconditioner.md) makes this vivid).
 
-All experiments below: $A$ of size $N = n^2 = 1024$ ($n = 32$, $h = 1/33$), $b = $ `grf_rhs(32, alpha=2.0, tau=3.0, seed=42)` (see [03-gaussian-random-fields.md](03-gaussian-random-fields.md)), tol $10^{-10}$ on $\|r_k\|/\|b\|$, maxiter 2000 — the `config` block of [results/results.json](../results/results.json).
+All experiments below: $A$ of size $N = n^2 = 1024$ ($n = 32$, $h = 1/33$), $b = $ `grf_rhs(32, alpha=2.0, tau=3.0, seed=42)` (see [03-gaussian-random-fields.md](03-gaussian-random-fields.md)), tol $10^{-10}$ on $\Vert r_k\Vert /\Vert b\Vert $, maxiter 2000 — the `config` block of [results/results.json](../results/results.json).
 
 ---
 
@@ -144,8 +144,8 @@ The trade is monotone: more fill ⇒ $\tilde L \tilde U$ closer to $A$ ⇒ eigen
 [python/preconditioners.py](../python/preconditioners.py) lines 44–60 wrap `scipy.sparse.linalg.spilu` with **default parameters**, which SciPy forwards to SuperLU's ILUTP defaults: `drop_tol = 1e-4`, `fill_factor = 10`. Measured properties of the resulting factorization on `poisson_2d(32)` (computed for this report):
 
 * nnz($\tilde L$) + nnz($\tilde U$) = **34,719** vs. nnz($A$) = 4,992 — a fill ratio of **6.95**, i.e. 93% of the exact factorization's 37,334 nonzeros. With `drop_tol = 1e-4` on a 1024-unknown problem, ILUTP is *nearly a direct solve*.
-* Used as a one-shot solver, $\|A\tilde U^{-1}\tilde L^{-1} b - b\|/\|b\| = 7.2\times 10^{-3}$ — not exact, but a $10^{-2}$-accurate inverse.
-* The preconditioned spectrum, $\operatorname{eig}(P^{-1}A)$ computed densely: all 1024 eigenvalues have real part in $[0.99804,\ 1.00057]$, max $|\mathrm{Im}| = 3.4\times 10^{-4}$, spread $\lambda_{\max}/\lambda_{\min} = \mathbf{1.00253}$. Compare $\kappa(A) = 440.69$.
+* Used as a one-shot solver, $\Vert A\tilde U^{-1}\tilde L^{-1} b - b\Vert /\Vert b\Vert  = 7.2\times 10^{-3}$ — not exact, but a $10^{-2}$-accurate inverse.
+* The preconditioned spectrum, $\operatorname{eig}(P^{-1}A)$ computed densely: all 1024 eigenvalues have real part in $[0.99804,\ 1.00057]$, max $\vert \mathrm{Im}\vert  = 3.4\times 10^{-4}$, spread $\lambda_{\max}/\lambda_{\min} = \mathbf{1.00253}$. Compare $\kappa(A) = 440.69$.
 
 With $\kappa \approx 1.00253$, the CG contraction factor is $(\sqrt{\kappa}-1)/(\sqrt{\kappa}+1) \approx 6.3\times 10^{-4}$ **per iteration** — three orders of magnitude of residual per step. Measured (from `results.json`):
 
