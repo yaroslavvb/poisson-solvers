@@ -630,6 +630,14 @@ for r in RANKS:
     it_r = iters_to(rel2_r)
     relerr_vs_spsolve = rel2_r[-1]
     flops = 2 * floats
+    # Solve-phase flop model, counted off pcg.pcg's actual loop (1 MAC = 2
+    # flops): per iteration 1 A-matvec (2 nnz(A)) + 1 M-apply (2 x storage
+    # floats: dense block 2mn, low-rank 2k(m+nc)) + six 2N-flop vector ops
+    # (p.Ap, x-update, r-update, ||r||, r.z, p-update) = 12N; setup adds one
+    # M-apply + one 2N dot (z0 = M b, rz0 = r.z).  Offline construction of
+    # M_r is EXCLUDED (see cost_note: pedagogical dense-inverse build).
+    per_iter = 2 * A.nnz + 12 * N + flops
+    solve_flops = it_r * per_iter + (flops + 2 * N)
     sweep[str(r)] = {
         "rank": r, "asym": asym, "rel_err_2": relerr2,
         "storage_floats": floats, "storage_frac_N2": floats / N**2,
@@ -641,6 +649,8 @@ for r in RANKS:
         "kappa_MA": kap, "rho_richardson": rho,
         "omega_opt": float(omega), "rho_richardson_damped": rho_damped,
         "pcg_iters_l2": it_r, "pcg_final_relerr": float(relerr_vs_spsolve),
+        "per_iter_flops": int(per_iter),
+        "solve_flops_to_1e10": int(solve_flops),
         "pcg_rel2_curve": rel2_r}
     print(f"  {r:>2d} | {relerr2:.4e} | {floats:>6d} ({floats/N**2:.4f}) | "
           f"{flops:>7d} ({(2*N**2)/flops:4.1f}x) | {minM:.4e} | "
@@ -931,6 +941,42 @@ RESULTS["anim"] = {
 info("rel err at k=24: " + ", ".join(
     f"{name}: {v:.1e}" for name, v in RESULTS["anim"]["rel_err_at_k24"].items()))
 info(f"GIF done in {time.time()-t0:.1f}s")
+
+# ---- total solve flops to convergence (report 14 SS4 table column) -----------------
+# Plain-CG baseline under the identical counting model (M-apply = 0 flops).
+cg_per_iter = 2 * A.nnz + 12 * N
+cg_solve_flops = it_cg_l2 * cg_per_iter + 2 * N
+partB["flops"] = {
+    "convention": "1 MAC = 2 flops; per iter = 2*nnz(A) + 12N + 2*storage; "
+                  "setup = one M-apply + 2N; offline M_r construction excluded",
+    "nnz_A": int(A.nnz), "vector_flops_per_iter": 12 * N,
+    "cg_per_iter_flops": int(cg_per_iter),
+    "cg_solve_flops_to_1e10": int(cg_solve_flops)}
+
+# independent recount of the apply cost from the exported viz block lists
+recount_ok = True
+for r in (2, 8):
+    rc = 0
+    for blk in viz_blocks_by_rank[r]:
+        if blk["type"] == "dense":
+            rc += 2 * blk["m"] * blk["nc"]
+        else:
+            rc += 2 * blk["k"] * (blk["m"] + blk["nc"])
+    recount_ok &= (rc == sweep[str(r)]["apply_flops"])
+ok("flops column self-consistent: apply cost recounted from the exported "
+   "viz block lists (dense 2mn + low-rank 2k(m+nc)) matches 2 x storage "
+   "for r = 2 and 8", bool(recount_ok))
+
+tot = [sweep[str(r)]["solve_flops_to_1e10"] for r in RANKS]
+mono_dec = all(tot[i] > tot[i + 1] for i in range(len(tot) - 1))
+cg_cheapest = cg_solve_flops < min(tot)
+ok(f"HONEST flops race at N=1024: total solve flops fall monotonically with "
+   f"rank ({', '.join(f'r={r}: {t/1e6:.2f}M' for r, t in zip(RANKS, tot))}) "
+   f"— iterations drop faster than the apply grows — yet plain CG "
+   f"({cg_solve_flops/1e6:.2f}M) undercuts every HODLR rank: kappa 440.69 "
+   f"is too benign to amortize a {sweep['16']['apply_flops']/(2*A.nnz+12*N):.0f}x "
+   f"costlier per-iteration apply at this N",
+   mono_dec and cg_cheapest)
 
 # ---- trim bulky curves, save results ------------------------------------------------
 for key in ["cg_rel2_curve", "blockjacobi2_rel2_curve"]:

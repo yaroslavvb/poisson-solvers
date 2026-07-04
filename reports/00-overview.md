@@ -73,7 +73,7 @@ uv run python python/experiments/fdt_fluctuations.py               # report 10 F
 uv run python python/experiments/grid_regressions_multiscale.py    # report 11 grid + multiscale checks (36 PASS)
 uv run python python/experiments/richardson_ar.py                  # report 12 Richardson ladder (53 PASS)
 uv run python python/experiments/decoupling.py                     # report 13 decoupling checks (44 PASS)
-uv run python python/experiments/hierarchical.py                   # report 14 HODLR checks (29 PASS) + hodlr_viz_data.json export
+uv run python python/experiments/hierarchical.py                   # report 14 HODLR checks (31 PASS) + hodlr_viz_data.json export
 uv run python python/experiments/make_report14_diagrams.py         # report 14 schematic figures (self-asserting)
 
 # Mathematica cross-checks (Wolfram 15.0)

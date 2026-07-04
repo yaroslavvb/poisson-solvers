@@ -134,6 +134,14 @@
     {
       "name": "figures/anim14_hodlr_pcg.gif (0.39 MB < 2.5 MB, 28 frames, fps 4, dpi 90)",
       "pass": true
+    },
+    {
+      "name": "flops column self-consistent: apply cost recounted from the exported viz block lists (dense 2mn + low-rank 2k(m+nc)) matches 2 x storage for r = 2 and 8",
+      "pass": true
+    },
+    {
+      "name": "HONEST flops race at N=1024: total solve flops fall monotonically with rank (r=1: 7.79M, r=2: 6.87M, r=4: 6.11M, r=8: 5.38M, r=16: 4.97M) \u2014 iterations drop faster than the apply grows \u2014 yet plain CG (1.63M) undercuts every HODLR rank: kappa 440.69 is too benign to amortize a 18x costlier per-iteration apply at this N",
+      "pass": true
     }
   ],
   "figures": [
@@ -598,6 +606,8 @@
         "rho_richardson_damped": 0.9579676138672397,
         "pcg_iters_l2": 45,
         "pcg_final_relerr": 8.322781963658855e-11,
+        "per_iter_flops": 169728,
+        "solve_flops_to_1e10": 7787264,
         "pcg_rel2_curve": [
           1.0,
           0.5515498111134938,
@@ -667,6 +677,8 @@
         "rho_richardson_damped": 0.9181055155413377,
         "pcg_iters_l2": 36,
         "pcg_final_relerr": 7.232314749227596e-11,
+        "per_iter_flops": 186112,
+        "solve_flops_to_1e10": 6865920,
         "pcg_rel2_curve": [
           1.0,
           0.34369184649879553,
@@ -727,6 +739,8 @@
         "rho_richardson_damped": 0.8120482858469172,
         "pcg_iters_l2": 27,
         "pcg_final_relerr": 3.781853903490157e-11,
+        "per_iter_flops": 218880,
+        "solve_flops_to_1e10": 6108416,
         "pcg_rel2_curve": [
           1.0,
           0.11382962646312227,
@@ -778,6 +792,8 @@
         "rho_richardson_damped": 0.5877678581874797,
         "pcg_iters_l2": 18,
         "pcg_final_relerr": 2.272100609441034e-11,
+        "per_iter_flops": 284416,
+        "solve_flops_to_1e10": 5383680,
         "pcg_rel2_curve": [
           1.0,
           0.06228699236236569,
@@ -820,6 +836,8 @@
         "rho_richardson_damped": 0.32163302194289867,
         "pcg_iters_l2": 11,
         "pcg_final_relerr": 1.6693601895683918e-11,
+        "per_iter_flops": 415488,
+        "solve_flops_to_1e10": 4965632,
         "pcg_rel2_curve": [
           1.0,
           0.017938673242657417,
@@ -852,6 +870,13 @@
         "P.-G. Martinsson, V. Rokhlin, 'A fast direct solver for boundary integral equations in two dimensions', J. Comput. Phys. 205(1):1-23, 2005",
         "K. L. Ho, L. Ying, 'Hierarchical interpolative factorization for elliptic operators: differential equations', Comm. Pure Appl. Math. 69(8):1415-1451, 2016"
       ]
+    },
+    "flops": {
+      "convention": "1 MAC = 2 flops; per iter = 2*nnz(A) + 12N + 2*storage; setup = one M-apply + 2N; offline M_r construction excluded",
+      "nnz_A": 4992,
+      "vector_flops_per_iter": 12288,
+      "cg_per_iter_flops": 22272,
+      "cg_solve_flops_to_1e10": 1627904
     }
   },
   "viz": {
