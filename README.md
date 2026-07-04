@@ -59,11 +59,12 @@ Start with [reports/00-overview.md](reports/00-overview.md) (full repo map, run 
 10. [10 — Kick It, or Watch It Jitter](reports/10-fluctuation-dissipation.md) — fluctuation–dissipation for the discrete Laplacian: kick response = jitter covariance, the Cholesky factors read out of thermal snapshots, and a Vecchia preconditioner learned from noise alone that cuts the canonical solve 116 → 30 (κ 440.69 → 13.7)
 11. [11 — Predict Thy Neighbor, Subtract the Average](reports/11-regressions-and-multiscale.md) — the 09/10 dictionary worked on the 8×8 grid: Cholesky fill as wavefront regressions, the IC(0)-vs-Vecchia gap measured (~22%), block averages as coarse regressors, and an additive two-level IC(0)+coarse preconditioner that takes the hot/cold-rod solve 76 → 32 (κ 440.69 → 11.05)
 12. [12 — The Preconditioner Is an Autoregressive Predictor](reports/12-autoregressive-preconditioning.md) — the synthesis: CG removed, every preconditioner run as the same stationary predict-and-correct Richardson iteration, quality read as ρ(I − CA) — perfect two-sided regressions scheduled synchronously = Jacobi (ρ = cos πh), sequentially = Gauss–Seidel (rate exponent exactly doubles), the perfect causal predictor solving in one step, and the truncation ladder down to a mesh-independent two-grid ρ = 0.357 (17 sweeps vs Jacobi's 4777)
+13. [13 — Preconditioning Is Decoupling](reports/13-preconditioning-as-decoupling.md) — the capstone: coupling = cross-partials = off-diagonal precision = conditional dependence, and every preconditioner is a scheme for splitting one entangled minimization into (nearly) independent subproblems — five decoupling axes (coordinates, frequency, direction, space, scale) raced on one ladder (ADI cuts κ 440.69 → 10.52 = 0.50√κ; block-Jacobi(2) leaves 960 of 1024 eigenvalues at exactly 1 and CG needs just 12 iterations), plus the measured GD-vs-CG verdict — two distinct eigenvalues mean CG finishes in exactly 2 steps even at κ = 10⁶ (GD: 11.5 million): clusters, not range, are CG's currency
 
 ## Layout
 
 - `mathematica/` — reference `.wls` scripts (problem, PCG, eigen checks, Nyström)
 - `python/` — `poisson.py`, `pcg.py`, `preconditioners.py`, `nystrom.py`, `neural/`, `experiments/`
-- `reports/` — the report suite (00–12)
+- `reports/` — the report suite (00–13)
 - `results/` — JSON summaries + NPO checkpoint (deterministic, reproducible)
 - `figures/` — PNGs at dpi=150; `mma_*` are Mathematica exports
