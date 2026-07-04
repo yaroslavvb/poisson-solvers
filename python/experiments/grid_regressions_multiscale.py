@@ -54,6 +54,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from pcg import pcg
 from poisson import poisson_2d
+from preconditioners import block_average_matrix, ic0
 
 ROOT = Path(__file__).resolve().parents[2]
 FIGDIR = ROOT / "figures"
@@ -89,56 +90,9 @@ def jsonable(x):
 
 
 # ---------------------------------------------------------------------------
-# IC(0): zero-fill incomplete Cholesky, statistical reading in the comments.
+# IC(0) and block_average_matrix moved to python/preconditioners.py (shared
+# with experiments/richardson_ar.py); imported above.
 # ---------------------------------------------------------------------------
-def ic0(Ad):
-    """Zero-fill incomplete Cholesky: L kept on tril(A)'s sparsity pattern.
-
-    Standard IC(0) recurrence (Saad, Iterative Methods, 2nd ed., Sec. 10.3.5),
-    computed dense here for inspectability:
-
-        L[i,j] = (A[i,j] - sum_{m<j} L[i,m] L[j,m]) / L[j,j]   (i,j) in pattern
-        L[i,i] = sqrt(A[i,i] - sum_{m<i} L[i,m]^2)
-
-    Statistical reading (reports 09/10): exact chol(A) whitens u ~ N(0,A^{-1})
-    by regressing each u_i on ALL its successors in the elimination order,
-    with coefficients -L[j,i]/L[i,i] spread over the whole bandwidth-n
-    wavefront. IC(0) truncates that regression to the stencil successors only
-    (the tril(A) pattern) -- exactly a Vecchia approximation of the Gaussian
-    field: keep p(u_i | stencil subset) instead of the full conditional.
-    Schafer, Katzfuss & Owhadi, "Sparse Cholesky factorization by
-    Kullback-Leibler minimization" (SIAM J. Sci. Comput. 43(3), 2021) show the
-    covariance-side truncated regression is the KL-optimal factor on the
-    pattern; part 5 below measures how close IC(0) gets to it on the grid
-    (they coincide exactly on the 1-D chain, where there is no fill-in).
-    """
-    N = Ad.shape[0]
-    pattern = np.tril(Ad) != 0.0
-    L = np.zeros_like(Ad)
-    for i in range(N):
-        for j in np.nonzero(pattern[i, : i + 1])[0]:  # ascending, ends at j=i
-            s = Ad[i, j] - L[i, :j] @ L[j, :j]
-            if j == i:
-                L[i, i] = np.sqrt(s)
-            else:
-                L[i, j] = s / L[j, j]
-    return L
-
-
-def block_average_matrix(n, bs):
-    """N x (n/bs)^2 block-average matrix: column (bi,bj) puts 1/bs^2 on its
-    bs x bs block (row-major coarse index bi*(n//bs)+bj)."""
-    nb = n // bs
-    Z = np.zeros((n * n, nb * nb))
-    for bi in range(nb):
-        for bj in range(nb):
-            col = bi * nb + bj
-            for di in range(bs):
-                for dj in range(bs):
-                    Z[(bi * bs + di) * n + (bj * bs + dj), col] = 1.0 / bs**2
-    return Z
-
-
 def kappa_from_Minv(Ad, Minv):
     """kappa(M^{-1}A) for SPD Minv: eig(Minv A) = eig(R^T A R), R = chol(Minv)."""
     R = np.linalg.cholesky(Minv)
