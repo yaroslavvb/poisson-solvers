@@ -70,6 +70,8 @@ $$\kappa(M^{-1}A) \;=\; \frac{f_{\max}}{f_{\min}} \;=\; \frac{1 + \kappa}{2\sqrt
 
 *Watch each half-sweep wipe the error along one direction on the real $32\times32$ rod problem ($\sigma = 207.032$): the rows half-sweep leaves bold horizontal stripes, the columns half-sweep erases them (the rel-error readout momentarily **rises** after a rows half-sweep — $\times 4.10$ on the first one, worst case $5.05\times$ — a genuine Peaceman–Rachford transient: half-steps are not contractions, only the full double sweep is), and the measured per-double-sweep tail rate 0.7885 approaches $(\sigma-\lambda_1)^2/(\sigma+\lambda_1)^2 = 0.8264 = 1 - f_{\min}$, exactly the $\rho(I - M^{-1}A) = 0.826$ quoted above. (Static key frames: [anim13_adi_sweep_frames.png](../figures/anim13_adi_sweep_frames.png); the schematic above is $8\times8$ for legibility, the experiments are $32\times32$.)*
 
+**Interactive:** [drag through the sweeps yourself](../interactive/adi-sweep.html) — a slider over ADI half-sweeps on the hot-rod/cold-rod plate.
+
 ---
 
 ## 3. Semiseparable: the solution operator has reduced interactions built in
@@ -94,7 +96,7 @@ max relative dev $1.4\times10^{-15}$ — and the Wolfram script proves it **exac
 
 ![Semiseparable 1-D inverse and low-rank 2-D far block](../figures/decoupling_semiseparable.png)
 
-The statistical reading: between two well-separated regions, the $256^2$ pairwise covariances are routed through $\approx 11$ effective degrees of freedom — long-range dependence is **low-dimensional**, the far field interacts through a few smooth "factors" (the screening effect of [12 §3](12-autoregressive-preconditioning.md), seen from the covariance side). The numerical-analysis reading: this is the defining compression of **hierarchical ($\mathcal H$-) matrices** (Hackbusch): partition $A^{-1}$ by an admissibility condition and store far blocks as low-rank factors, giving $O(N\log N)$ approximate inverses — with the guarantee that elliptic inverses admit exactly this structure (Bebendorf–Hackbusch). The moral for the thesis: *reduced interactions are not only something you impose on the problem; the solution operator already has them.* Decoupling schemes work because the object they approximate is itself nearly decoupled at long range.
+The statistical reading: between two well-separated regions, the $256^2$ pairwise covariances are routed through $\approx 11$ effective degrees of freedom — long-range dependence is **low-dimensional**, the far field interacts through a few smooth "factors" (the screening effect of [12 §3](12-autoregressive-preconditioning.md), seen from the covariance side). The numerical-analysis reading: this is the defining compression of **hierarchical ($\mathcal H$-) matrices** (Hackbusch): partition $A^{-1}$ by an admissibility condition and store far blocks as low-rank factors, giving $O(N\log N)$ approximate inverses — with the guarantee that elliptic inverses admit exactly this structure (Bebendorf–Hackbusch). The moral for the thesis: *reduced interactions are not only something you impose on the problem; the solution operator already has them.* Decoupling schemes work because the object they approximate is itself nearly decoupled at long range. ([14](14-hierarchical-inverse.md) follows this section to its algorithmic conclusion: the separator theorem behind these ranks, the full HODLR anatomy of $A^{-1}$, and the compressed inverse run as a preconditioner.)
 
 ---
 
