@@ -607,8 +607,12 @@ Minv_dense = {
 
 partB["methods"] = {}
 sol = {}
+err_curves = {}  # per-iteration rel l2 error ||x_k - u*||/||u*||, k=0..iters (Part C reuses)
+ustar_norm = np.linalg.norm(ustar)
 for name, M in methods:
-    x, res = pcg(A, b, M=M, tol=1e-10, maxiter=2000)
+    xh = []
+    x, res = pcg(A, b, M=M, tol=1e-10, maxiter=2000, x_hist=xh)
+    err_curves[name] = np.array([np.linalg.norm(xk - ustar) for xk in xh]) / ustar_norm
     kap, lmin, lmax = kappa_from_Minv(Ad, Minv_dense[name])
     relerr = np.linalg.norm(x - ustar) / np.linalg.norm(ustar)
     sol[name] = (x, res)
@@ -787,6 +791,225 @@ partB["lam_min_A"] = lam_min_A
 partB["theta_coarse_only"] = theta
 RESULTS["part_b"] = partB
 print(f"  [time] Part B done in {time.time()-t0:.1f}s")
+
+# ===========================================================================
+# PART C -- COST MODELS: flops and span for the five Part-B methods
+# ===========================================================================
+# APPENDED SECTION: reports 11/13 cite the 36 PASS lines above by position,
+# so everything new lives here, after all Part-A/B output.
+#
+# FLOP convention (report 14 SS4, PASS 30): 1 MAC = 2 flops.
+#   * A-matvec = 2 nnz(A).
+#   * PCG vector work per iteration, counted off python/pcg.py's loop: six
+#     2N ops (dot p.Ap; axpy x; axpy r; norm r; dot r.z; axpy p) = 12N.
+#     alpha/beta scalar divides are O(1) and dropped.
+#   * IC(0) apply = two sparse triangular solves = 2 x 2 nnz(L), nnz(L)
+#     counted from the actual factor.
+#   * Coarse correction, counted from coarse_corr()'s implementation:
+#     restriction Zb^T r = 64 x (16 mults + 15 adds); cho_solve = two dense
+#     64x64 triangular solves, sum_i (2i+1) = m^2 flops each; prolongation
+#     Zb c = one mult per fine node (each row of Zb has a single nonzero).
+#   * coarse-only apply, from M_coarse_only(): dot (2N) + scalar divide (1)
+#     + scale (N) + scale (N) + add (N) = 5N + 1.
+#   * additive two-level = smoother flops + coarse flops + one vector add.
+# Setup (included in totals, checked in PASS 40): pcg()'s pre-loop work =
+# bnorm (2N) + z0 = M(b) (one M-apply) + rz0 dot (2N) = 4N + M-apply flops;
+# NOTE this is 2N MORE than report 14 SS4's setup term ("one apply and one
+# dot" = 2N + apply), which omits the bnorm = ||b|| reduction that pcg.py
+# actually performs -- so 14 SS4's plain-CG total sits exactly 2N = 2,048
+# flops below this convention; per-iteration conventions are identical.
+# span = span(M) + 10 (the bnorm reduction runs in parallel). One-time
+# factorizations (ic0(A), forming Zb^T A Zb, cho_factor) are EXCLUDED:
+# amortized offline, identical for every solve with that preconditioner.
+#
+# SPAN convention (work-span / Blelloch, unbounded processors): depths in
+# cm_depths below, one-line justification each. Per-iteration span is the
+# pcg.py critical path: matvec -> dot(p,Ap) -> alpha divide -> r-axpy ->
+# M(r) -> dot(r,z) -> beta divide -> p-axpy = matvec + M-apply +
+# 2 reductions + 4 elementwise (x-axpy and the norm stop-test hang off the
+# path in parallel).
+#
+# Triangular-solve span from the dependency DAG: in the lower solve
+# L y = r on the IC(0) pattern, row k has strictly-lower nonzeros only at
+# k-1 (W neighbor, absent at grid col 0) and k-n (N neighbor, absent in
+# grid row 0), so y_(r,c) waits on y_(r,c-1) and y_(r-1,c). By induction
+# both predecessors of (r,c) sit on level r+c-1, so level(r,c) = r+c: the
+# anti-diagonal hyperplanes r+c = 0..2(n-1) -- exactly 2n-1 = 63 sequential
+# wavefronts, each of depth 3 (two MACs + one divide). PASS 37 computes
+# this longest path by explicit levelization of the actual factor instead
+# of assuming it. The L^T solve is the 180-degree-rotated DAG (level
+# 2(n-1)-(r+c)), again 63 wavefronts, and it consumes the L-solve's output:
+# the pair is sequential, span = 2 x 63 x 3 = 378.
+t0 = time.time()
+print("== PART C: work/span cost models for the five Part-B methods ==")
+
+cm_nnzA = int(A.nnz)
+cm_nnzL = int((np.abs(Lic) > 0).sum())
+cm_nnzZb = int((Zb != 0).sum())
+cm_mc = Zb.shape[1]  # 64 coarse dofs
+
+# --- PASS 37: explicit topological levelization of the L solve's DAG ------
+cm_strict = np.tril(np.abs(Lic) > 0, -1)  # strictly-lower nonzeros = edges j->k
+cm_level = np.zeros(N, dtype=int)
+for cm_k in range(N):  # rows of a lower-triangular L are already topological
+    cm_preds = np.nonzero(cm_strict[cm_k])[0]
+    if cm_preds.size:
+        cm_level[cm_k] = cm_level[cm_preds].max() + 1
+cm_nwave = int(cm_level.max()) + 1
+ok(f"IC(0) triangular-solve dependency DAG levelizes into exactly 2n-1 = {2*n-1} wavefronts "
+   f"(longest path over the factor's {int(cm_strict.sum())} strictly-lower nonzeros: "
+   f"{cm_nwave} levels, computed not assumed)",
+   cm_nwave == 2 * n - 1)
+info(f"levelization: level(r,c) == r+c for all nodes: "
+     f"{bool((cm_level == (np.arange(N)//n + np.arange(N)%n)).all())}; "
+     f"largest wavefront {int(np.bincount(cm_level).max())} nodes (the main anti-diagonal)")
+
+# --- flop model ------------------------------------------------------------
+cm_matvec_fl = 2 * cm_nnzA                    # 9984
+cm_vec_fl = 12 * N                            # six 2N ops in the pcg loop
+cm_ic_fl = 2 * (2 * cm_nnzL)                  # two tri solves x 2 nnz(L)
+cm_restrict_fl = cm_mc * (16 + 15)            # 16 mults + 15 adds per coarse dof
+cm_csolve_fl = 2 * cm_mc * cm_mc              # cho_solve: two dense tri solves, m^2 each
+cm_prolong_fl = N                             # one mult per fine node
+cm_cc_fl = cm_restrict_fl + cm_csolve_fl + cm_prolong_fl
+cm_M_fl = {
+    "none": 0,
+    "ic0": cm_ic_fl,
+    "coarse_only": 5 * N + 1,
+    "twolevel_jacobi": N + cm_cc_fl + N,      # Jacobi scale + coarse + combine add
+    "twolevel_ic0": cm_ic_fl + cm_cc_fl + N,  # IC(0) + coarse + combine add
+}
+
+# --- span model ------------------------------------------------------------
+cm_depths = {
+    "elementwise": (1, "independent per component (scale/divide/add)"),
+    "axpy": (1, "fused multiply-add, independent per component"),
+    "stencil_matvec": (4, "ceil(log2 5)+1: 5 stencil products in parallel + depth-3 sum tree"),
+    "reduction": (10, "dot/norm over N=1024: ceil(log2 N) = 10 binary tree"),
+    "dense_inverse_apply_64": (7, "ceil(log2 64)+1: per coarse row, products in parallel + 6-deep sum tree"),
+    "restriction_4x4": (5, "ceil(log2 16)+1: per coarse dof, scale + 4-deep sum tree over its 16 fine nodes"),
+    "prolongation": (1, "each fine node scales its single block value"),
+    "tri_solve_wavefront": (189, "63 hyperplane wavefronts (level(r,c)=r+c, PASS 37) x depth 3 (two MACs + divide)"),
+    "ic0_apply": (378, "L then L^T solves sequentially dependent: 2 x 189"),
+    "coarse_correction": (13, "restriction 5 -> dense inverse-apply 7 -> prolongation 1, sequential"),
+    "coarse_only_apply": (13, "dot 10 -> divide 1 -> scale 1 on one branch, theta*r in parallel, + combine add 1"),
+    "additive_combine": (1, "smoother and coarse branches independent: max(spans) + one add"),
+    "pcg_iteration_overhead": (28, "matvec 4 + dot 10 + alpha-div 1 + r-axpy 1 + dot 10 + beta-div 1 + p-axpy 1; x-axpy and stop test off-path"),
+    "setup": ("M-apply span + 10", "z0 = M(b) then rz0 dot (10); bnorm reduction in parallel"),
+}
+cm_M_sp = {
+    "none": 0,
+    "ic0": cm_depths["ic0_apply"][0],
+    "coarse_only": cm_depths["coarse_only_apply"][0],
+    "twolevel_jacobi": max(1, cm_depths["coarse_correction"][0]) + 1,
+    "twolevel_ic0": max(cm_depths["ic0_apply"][0], cm_depths["coarse_correction"][0]) + 1,
+}
+
+cm_names = [m for m, _ in methods]
+cm = {}
+for cm_m in cm_names:
+    cm_iters = it[cm_m]
+    cm_pif = cm_matvec_fl + cm_vec_fl + cm_M_fl[cm_m]
+    cm_sf = 4 * N + cm_M_fl[cm_m]
+    cm_pis = cm_depths["pcg_iteration_overhead"][0] + cm_M_sp[cm_m]
+    cm_ss = cm_M_sp[cm_m] + cm_depths["reduction"][0]
+    cm[cm_m] = {
+        "iters": cm_iters,
+        "per_iter_flops": cm_pif, "setup_flops": cm_sf,
+        "total_flops": cm_iters * cm_pif + cm_sf,
+        "per_iter_span": cm_pis, "setup_span": cm_ss,
+        "total_span": cm_iters * cm_pis + cm_ss,
+        "final_rel_err": float(err_curves[cm_m][-1]),
+    }
+cm_rank_f = sorted(cm_names, key=lambda m: cm[m]["total_flops"])
+cm_rank_s = sorted(cm_names, key=lambda m: cm[m]["total_span"])
+
+info("cost table (model): method / per-iter flops / total flops / per-iter span / total span / iters")
+for cm_m in cm_names:
+    c = cm[cm_m]
+    info(f"  {cm_m:16s} {c['per_iter_flops']:7,d} fl/it  {c['total_flops']:10,d} fl total  "
+         f"{c['per_iter_span']:4d} span/it  {c['total_span']:7,d} span total  {c['iters']:3d} its")
+
+# --- PASS 38-40: rankings and consistency ----------------------------------
+ok(f"flops ranking (cheapest first): {' < '.join(cm_rank_f)} -- the two IC(0)-based methods "
+   f"are the two cheapest in total flops ({cm['ic0']['total_flops']:,} and "
+   f"{cm['twolevel_ic0']['total_flops']:,} vs {cm['none']['total_flops']:,} plain CG): "
+   "the 378-deep solves are only 2 x 2 nnz(L) flops and buy the biggest iteration cuts",
+   set(cm_rank_f[:2]) == {"ic0", "twolevel_ic0"} and cm_rank_f[0] == "ic0")
+ok(f"span ranking FLIPS: {' < '.join(cm_rank_s)} -- two-level Jacobi ({cm['twolevel_jacobi']['total_span']:,}) "
+   f"and plain CG ({cm['none']['total_span']:,}) are cheapest in span while the IC(0)-based methods "
+   f"are the two most expensive ({cm['twolevel_ic0']['total_span']:,} and {cm['ic0']['total_span']:,}): "
+   "378-deep sequential triangular solves dwarf the depth-14 two-level apply; the flops winner "
+   "ic0 is the span loser",
+   cm_rank_s[0] == "twolevel_jacobi" and cm_rank_s[1] == "none"
+   and set(cm_rank_s[-2:]) == {"ic0", "twolevel_ic0"} and cm_rank_s[-1] == cm_rank_f[0])
+ok("cost-model consistency: total == iters x per-iter + setup for flops and span, all five methods",
+   all(c["total_flops"] == c["iters"] * c["per_iter_flops"] + c["setup_flops"]
+       and c["total_span"] == c["iters"] * c["per_iter_span"] + c["setup_span"]
+       for c in cm.values())
+   and all(err_curves[m].shape[0] == cm[m]["iters"] + 1 for m in cm_names))
+
+RESULTS["cost_models"] = {
+    "flop_convention": "1 MAC = 2 flops; A-matvec = 2 nnz(A); pcg loop vector work = six 2N ops "
+                       "= 12N; IC(0) apply = 2 tri solves x 2 nnz(L); coarse correction from "
+                       "coarse_corr(): restriction 64x(16 mults+15 adds) + cho_solve two dense "
+                       "64x64 tri solves (m^2 flops each) + prolongation N mults; coarse-only "
+                       "apply 5N+1; additive two-level adds one vector add; setup = 4N + one "
+                       "M-apply (pcg pre-loop: bnorm 2N + z0 = M(b) + rz0 dot 2N -- 2N more "
+                       "than report 14 SS4's setup of one apply + one dot, which omits the "
+                       "bnorm reduction pcg.py performs; per-iteration conventions identical); "
+                       "one-time factorizations excluded (amortized)",
+    "span_convention": "work-span (Blelloch) depth, unbounded processors; per-iteration span = "
+                       "stencil matvec + M-apply + 2 reductions + 4 elementwise (pcg critical "
+                       "path); setup span = M-apply + 10; additive two-level = max(branch "
+                       "spans) + 1",
+    "constants": {
+        "N": N, "n": n,
+        "nnz_A": cm_nnzA, "matvec_flops": cm_matvec_fl,
+        "nnz_L_ic0": cm_nnzL, "ic0_apply_flops": cm_ic_fl,
+        "nnz_Zb": cm_nnzZb, "coarse_dim": cm_mc,
+        "restriction_flops": cm_restrict_fl, "coarse_solve_flops": cm_csolve_fl,
+        "prolongation_flops": cm_prolong_fl, "coarse_correction_flops": cm_cc_fl,
+        "pcg_vector_flops_per_iter": cm_vec_fl, "pcg_setup_vector_flops": 4 * N,
+        "ic0_wavefronts_computed": cm_nwave,
+        "ic0_dag_edges": int(cm_strict.sum()),
+    },
+    "depths": {k: {"depth": v[0], "why": v[1]} for k, v in cm_depths.items()},
+    "methods": cm,
+    "ranking_by_flops": cm_rank_f,
+    "ranking_by_span": cm_rank_s,
+}
+
+# --- figures: rel l2 error vs cumulative flops / span -----------------------
+for cm_fname, cm_key, cm_xlab, cm_scale, cm_ttl in [
+    ("twolevel_error_vs_flops.png", "flops", "cumulative flops (model, millions)", 1e6,
+     "hot/cold-rod, n=32: error vs modeled WORK\n(1 MAC = 2 flops; IC(0)-based methods cheapest)"),
+    ("twolevel_error_vs_span.png", "span", "cumulative span (model, critical-path depth)", 1.0,
+     "same runs vs modeled SPAN (unbounded processors)\n"
+     "ranking flips: IC(0)'s 378-deep triangular solves dominate"),
+]:
+    fig, ax = plt.subplots(figsize=(7.6, 5.2))
+    for cm_m in cm_names:
+        c = cm[cm_m]
+        cum = (c[f"setup_{cm_key}"]
+               + c[f"per_iter_{cm_key}"] * np.arange(c["iters"] + 1)) / cm_scale
+        ls = "--" if cm_m == "coarse_only" else "-"
+        (ln,) = ax.semilogy(cum, err_curves[cm_m], ls, lw=1.6,
+                            label=f"{labels[cm_m]}  [{c['iters']} its, "
+                                  f"{c[f'total_{cm_key}']:,} {cm_key}]")
+        ax.semilogy(cum[-1], err_curves[cm_m][-1], "o", ms=5, color=ln.get_color())
+    ax.axhline(1e-10, color="gray", lw=0.8, ls=":")
+    ax.text(0.01, 1.3e-10, "rel err 1e-10", color="gray", fontsize=7,
+            ha="left", transform=ax.get_yaxis_transform())
+    ax.set_xlabel(cm_xlab)
+    ax.set_ylabel(r"relative error $\Vert x_k - u^*\Vert / \Vert u^*\Vert$")
+    ax.set_title(cm_ttl, fontsize=10)
+    ax.legend(fontsize=8, loc="upper right")
+    ax.grid(alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(FIGDIR / cm_fname, dpi=150)
+    plt.close(fig)
+print(f"  [time] Part C done in {time.time()-t0:.1f}s")
 
 with open(RESDIR / "grid_multiscale.json", "w") as fjson:
     json.dump(jsonable(RESULTS), fjson, indent=2)

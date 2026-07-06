@@ -628,5 +628,151 @@
     },
     "lam_min_A": 19.724305271643455,
     "theta_coarse_only": 0.00022956841138659326
+  },
+  "cost_models": {
+    "flop_convention": "1 MAC = 2 flops; A-matvec = 2 nnz(A); pcg loop vector work = six 2N ops = 12N; IC(0) apply = 2 tri solves x 2 nnz(L); coarse correction from coarse_corr(): restriction 64x(16 mults+15 adds) + cho_solve two dense 64x64 tri solves (m^2 flops each) + prolongation N mults; coarse-only apply 5N+1; additive two-level adds one vector add; setup = 4N + one M-apply (pcg pre-loop: bnorm 2N + z0 = M(b) + rz0 dot 2N -- 2N more than report 14 SS4's setup of one apply + one dot, which omits the bnorm reduction pcg.py performs; per-iteration conventions identical); one-time factorizations excluded (amortized)",
+    "span_convention": "work-span (Blelloch) depth, unbounded processors; per-iteration span = stencil matvec + M-apply + 2 reductions + 4 elementwise (pcg critical path); setup span = M-apply + 10; additive two-level = max(branch spans) + 1",
+    "constants": {
+      "N": 1024,
+      "n": 32,
+      "nnz_A": 4992,
+      "matvec_flops": 9984,
+      "nnz_L_ic0": 3008,
+      "ic0_apply_flops": 12032,
+      "nnz_Zb": 1024,
+      "coarse_dim": 64,
+      "restriction_flops": 1984,
+      "coarse_solve_flops": 8192,
+      "prolongation_flops": 1024,
+      "coarse_correction_flops": 11200,
+      "pcg_vector_flops_per_iter": 12288,
+      "pcg_setup_vector_flops": 4096,
+      "ic0_wavefronts_computed": 63,
+      "ic0_dag_edges": 1984
+    },
+    "depths": {
+      "elementwise": {
+        "depth": 1,
+        "why": "independent per component (scale/divide/add)"
+      },
+      "axpy": {
+        "depth": 1,
+        "why": "fused multiply-add, independent per component"
+      },
+      "stencil_matvec": {
+        "depth": 4,
+        "why": "ceil(log2 5)+1: 5 stencil products in parallel + depth-3 sum tree"
+      },
+      "reduction": {
+        "depth": 10,
+        "why": "dot/norm over N=1024: ceil(log2 N) = 10 binary tree"
+      },
+      "dense_inverse_apply_64": {
+        "depth": 7,
+        "why": "ceil(log2 64)+1: per coarse row, products in parallel + 6-deep sum tree"
+      },
+      "restriction_4x4": {
+        "depth": 5,
+        "why": "ceil(log2 16)+1: per coarse dof, scale + 4-deep sum tree over its 16 fine nodes"
+      },
+      "prolongation": {
+        "depth": 1,
+        "why": "each fine node scales its single block value"
+      },
+      "tri_solve_wavefront": {
+        "depth": 189,
+        "why": "63 hyperplane wavefronts (level(r,c)=r+c, PASS 37) x depth 3 (two MACs + divide)"
+      },
+      "ic0_apply": {
+        "depth": 378,
+        "why": "L then L^T solves sequentially dependent: 2 x 189"
+      },
+      "coarse_correction": {
+        "depth": 13,
+        "why": "restriction 5 -> dense inverse-apply 7 -> prolongation 1, sequential"
+      },
+      "coarse_only_apply": {
+        "depth": 13,
+        "why": "dot 10 -> divide 1 -> scale 1 on one branch, theta*r in parallel, + combine add 1"
+      },
+      "additive_combine": {
+        "depth": 1,
+        "why": "smoother and coarse branches independent: max(spans) + one add"
+      },
+      "pcg_iteration_overhead": {
+        "depth": 28,
+        "why": "matvec 4 + dot 10 + alpha-div 1 + r-axpy 1 + dot 10 + beta-div 1 + p-axpy 1; x-axpy and stop test off-path"
+      },
+      "setup": {
+        "depth": "M-apply span + 10",
+        "why": "z0 = M(b) then rz0 dot (10); bnorm reduction in parallel"
+      }
+    },
+    "methods": {
+      "none": {
+        "iters": 76,
+        "per_iter_flops": 22272,
+        "setup_flops": 4096,
+        "total_flops": 1696768,
+        "per_iter_span": 28,
+        "setup_span": 10,
+        "total_span": 2138,
+        "final_rel_err": 1.2996675608744348e-11
+      },
+      "ic0": {
+        "iters": 39,
+        "per_iter_flops": 34304,
+        "setup_flops": 16128,
+        "total_flops": 1353984,
+        "per_iter_span": 406,
+        "setup_span": 388,
+        "total_span": 16222,
+        "final_rel_err": 3.972832155346331e-11
+      },
+      "coarse_only": {
+        "iters": 76,
+        "per_iter_flops": 27393,
+        "setup_flops": 9217,
+        "total_flops": 2091085,
+        "per_iter_span": 41,
+        "setup_span": 23,
+        "total_span": 3139,
+        "final_rel_err": 1.2996689717420282e-11
+      },
+      "twolevel_jacobi": {
+        "iters": 48,
+        "per_iter_flops": 35520,
+        "setup_flops": 17344,
+        "total_flops": 1722304,
+        "per_iter_span": 42,
+        "setup_span": 24,
+        "total_span": 2040,
+        "final_rel_err": 1.2598863765856197e-11
+      },
+      "twolevel_ic0": {
+        "iters": 32,
+        "per_iter_flops": 46528,
+        "setup_flops": 28352,
+        "total_flops": 1517248,
+        "per_iter_span": 407,
+        "setup_span": 389,
+        "total_span": 13413,
+        "final_rel_err": 2.1748689589802736e-11
+      }
+    },
+    "ranking_by_flops": [
+      "ic0",
+      "twolevel_ic0",
+      "none",
+      "twolevel_jacobi",
+      "coarse_only"
+    ],
+    "ranking_by_span": [
+      "twolevel_jacobi",
+      "none",
+      "coarse_only",
+      "twolevel_ic0",
+      "ic0"
+    ]
   }
 }

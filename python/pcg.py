@@ -12,7 +12,7 @@ neural operator.
 import numpy as np
 
 
-def pcg(A, b, M=None, tol=1e-10, maxiter=2000):
+def pcg(A, b, M=None, tol=1e-10, maxiter=2000, x_hist=None):
     """Preconditioned conjugate gradient, ported from Mathematica ``PCGSolve``.
 
     State transition per iteration (identical to the reference)::
@@ -40,6 +40,11 @@ def pcg(A, b, M=None, tol=1e-10, maxiter=2000):
         Stop when the relative residual ``||r_k|| / ||b|| <= tol``.
     maxiter : int, optional
         Maximum number of iterations.
+    x_hist : list or None, optional
+        If a list is supplied, ``x_k.copy()`` is appended for k = 0
+        (the zero initial guess), 1, ..., so on return it holds
+        ``len(res_hist)`` iterates aligned with ``res_hist``. Default
+        ``None`` records nothing and changes no behavior.
 
     Returns
     -------
@@ -59,6 +64,8 @@ def pcg(A, b, M=None, tol=1e-10, maxiter=2000):
     res_hist = [1.0]
 
     x = np.zeros_like(b)
+    if x_hist is not None:
+        x_hist.append(x.copy())
     r = b.copy()
     z = M(r)
     p = z.copy()
@@ -68,6 +75,8 @@ def pcg(A, b, M=None, tol=1e-10, maxiter=2000):
         Ap = A @ p
         alpha = rz / (p @ Ap)
         x = x + alpha * p
+        if x_hist is not None:
+            x_hist.append(x.copy())
         r = r - alpha * Ap
         relres = np.linalg.norm(r) / bnorm
         res_hist.append(relres)
