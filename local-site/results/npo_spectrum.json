@@ -1,0 +1,24 @@
+{
+  "n": 32,
+  "size": 1024,
+  "nonsymmetry_relfro": 0.5679605885295307,
+  "nonlinearity_relerr_on_grf_b": 0.4319452307627593,
+  "eig_MA": {
+    "re_min": 248.8141799331039,
+    "re_max": 3125.2399827343593,
+    "abs_im_max": 257.05597815883084,
+    "num_nonpositive_real": 0,
+    "abs_min": 248.8141799331039,
+    "abs_max": 3125.2399827343593,
+    "abs_median": 917.3898147213794,
+    "spread_absmax_over_absmin": 12.56053808337857,
+    "frac_within_half_to_2x_median": 0.9814453125
+  },
+  "eig_A": {
+    "min": 19.724305271649925,
+    "max": 8692.27569472836,
+    "median": 4356.0,
+    "spread_max_over_min": 440.6885603835139,
+    "frac_within_half_to_2x_median": 0.8203125
+  }
+}

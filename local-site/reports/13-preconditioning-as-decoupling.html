@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preconditioning Is Decoupling</title>
+<style>
+body { margin: 0; color: #1b1f23; background: #fff;
+       font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI",
+             Helvetica, Arial, sans-serif; }
+.page { max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+nav.site { font-size: .85rem; color: #57606a; margin-bottom: 1.5rem;
+           border-bottom: 1px solid #d8dee4; padding-bottom: .5rem; }
+nav.site a { color: #0969da; text-decoration: none; }
+nav.site a:hover { text-decoration: underline; }
+nav.site .sep { margin: 0 .45em; color: #8c959f; }
+h1, h2, h3, h4 { line-height: 1.25; margin: 1.6em 0 .6em; }
+h1 { font-size: 1.9rem; border-bottom: 1px solid #d8dee4;
+     padding-bottom: .3em; margin-top: .2em; }
+h2 { font-size: 1.45rem; border-bottom: 1px solid #eaecef;
+     padding-bottom: .25em; }
+a { color: #0969da; }
+img { max-width: 100%; height: auto; }
+pre { background: #f6f8fa; padding: .9em 1.1em; overflow-x: auto;
+      border-radius: 6px; font-size: .85em; line-height: 1.45; }
+code { font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo,
+       Consolas, monospace; background: #f6f8fa; padding: .1em .3em;
+       border-radius: 4px; font-size: .9em; }
+pre code { background: none; padding: 0; font-size: 1em; }
+table { border-collapse: collapse; margin: 1em 0; display: block;
+        overflow-x: auto; max-width: 100%; }
+th, td { border: 1px solid #d0d7de; padding: .35em .7em; }
+th { background: #f6f8fa; }
+blockquote { margin: 0 0 1em; padding: 0 1em; color: #57606a;
+             border-left: .25em solid #d0d7de; }
+hr { border: none; border-top: 1px solid #d8dee4; margin: 2em 0; }
+.citation { color: #57606a; word-break: break-all; }
+mjx-container[jax="SVG"][display="true"] { overflow-x: auto;
+                                           overflow-y: hidden; }
+</style>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  options: {
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  svg: { fontCache: 'local' }
+};
+</script>
+<script defer src="../vendor/mathjax-tex-svg.js"></script>
+</head>
+<body>
+<div class="page">
+<nav class="site"><a href="../index.html">index</a><span class="sep">&middot;</span><a href="12-autoregressive-preconditioning.html">&larr; 12-autoregressive-preconditioning</a><span class="sep">&middot;</span><a href="14-hierarchical-inverse.html">14-hierarchical-inverse &rarr;</a></nav>
+<h1 id="preconditioning-is-decoupling">Preconditioning Is Decoupling</h1>
+<h3 id="coupling--cross-partials--off-diagonal-precision--conditional-dependence--and-every-preconditioner-is-a-scheme-for-splitting-one-entangled-minimization-into-subproblems-you-can-optimize-nearly-separately">Coupling = cross-partials = off-diagonal precision = conditional dependence — and every preconditioner is a scheme for splitting one entangled minimization into subproblems you can optimize (nearly) separately</h3>
+<p><em>The capstone reading of the suite. <a href="09-stiffness-as-precision.html">09</a> said the stiffness matrix is a precision matrix; <a href="11-regressions-and-multiscale.html">11</a> said a preconditioner is a statistical model of the field; <a href="12-autoregressive-preconditioning.html">12</a> ran every model bare and priced it as $\rho(I - CA)$, the per-sweep unexplained fraction. This report states what all of those were instances of: the difficulty of minimizing $J(u) = \tfrac12 u^\top A u - b^\top u$ is exactly the </em><em>coupling</em><em> $A_{ij} = \partial^2 J/\partial u_i \partial u_j$ — the cross-partials of the energy, the off-diagonal precision entries, the conditional dependencies of the Gibbs field $u \sim \mathcal N(A^{-1}b, A^{-1})$ — and a preconditioner is a change of coordinates or a splitting that turns the one heavily-coupled minimization into subproblems that can be optimized (nearly) separately, with "nearly" priced by $\rho(I - M^{-1}A)$ or $\kappa(M^{-1}A)$. Notation is 09/11/12's throughout: $h = 1/(n+1)$, $A = (I \otimes d_1 + d_1 \otimes I)/h^2$ (<code>poisson_2d</code>, $n = 32$, $N = 1024$, $\kappa(A) = 440.69$; <a href="01-code-walkthrough.html">01</a>/<a href="02-eigenvalues.html">02</a>), $B = I - \mathrm{diag}(A)^{-1}A$, $\Sigma = A^{-1}$, hot/cold-rod right-hand side of <a href="11-regressions-and-multiscale.html">11 §6</a>. Every claim below is machine-checked by <a href="../python/experiments/decoupling.py">python/experiments/decoupling.py</a> (</em><em>44 checks, all PASS</em><em>, fully deterministic — ten fixed seeds listed in the JSON meta — ~2.4 s; numbers in <a href="../results/decoupling.json">results/decoupling.json</a>) or independently by the Wolfram script <a href="../mathematica/decoupling_adi.wls">mathematica/decoupling_adi.wls</a> (</em><em>7 checks, all PASS</em><em>: the structural identities in exact integer arithmetic, the spectra by dense $1024\times1024$ eigensolve). Deviations from the idealized story are logged in <code>results/decoupling.json → deviations</code> and flagged inline. The schematic figures and animations below are generated by <a href="../python/experiments/make_report13_diagrams.py">make_report13_diagrams.py</a> and <a href="../python/experiments/make_report13_anims.py">make_report13_anims.py</a>, each with its own machine-checked assertions.</em></p>
+<hr />
+<h2 id="1-what-coupling-is-and-the-two-exact-decouplers">1. What coupling is, and the two exact decouplers</h2>
+<h3 id="11-the-decoupled-limit-a-diagonal-precision-is-xmathphx20xendx-independent-parabolas">1.1 The decoupled limit: a diagonal precision is $N$ independent parabolas</h3>
+<p>If $A$ is diagonal, the energy splits completely: $J(u) = \sum_i \big(\tfrac12 a_i u_i^2 - b_i u_i\big)$, $N$ scalar parabolas with no cross-terms, each minimized by $u_i = b_i/a_i$ independently of all the others. Statistically (<a href="09-stiffness-as-precision.html">09 §1–2</a>): a diagonal precision is a Gaussian with fully independent coordinates. The solver consequence is verified on a random diagonal system ($N = 400$, diagonal $\sim\mathcal U[0.5, 10]$): <strong>Jacobi-preconditioned gradient descent converges in one step from a random start</strong> — relative error after one iteration $7.7\times10^{-17}$ (PASS line 2). The mechanism is exact, not approximate: $z = \mathrm{diag}(A)^{-1}r = x^\star - x$ is the concatenation of the per-parabola Newton steps, and the line search accepts it whole ($\alpha = 1$).</p>
+<p><img alt="Coupled vs whitened energy landscape: tilted elliptical contours force gradient descent to zigzag; circular contours let it one-step to the minimum" src="../figures/diagram13_energy_contours.png" /></p>
+<p><em>Coupling as landscape: on a coupled quadratic (tilted ellipses, cross-partials nonzero) exact-line-search gradient descent zigzags — 12 steps still leave a $1.04\times10^{-3}$ fraction of the initial error — while in whitened coordinates the contours are circles and the same method lands on the minimizer in exactly one step, the mechanism behind the one-step $7.7\times10^{-17}$ check above.</em></p>
+<p>On the real $A$ the obstruction to this one-liner <em>is</em> the coupling, and "coupling" is not a metaphor for anything — it is the second cross-partial of the energy, measured directly: for five index pairs (grid-E/W neighbors, N/S neighbors, and far pairs), the second-order finite difference $J(u + e_i + e_j) - J(u + e_i) - J(u + e_j) + J(u)$ equals $A_{ij}$ to $4.7\times10^{-10}$ <strong>on entries of size $4/h^2 = 4356$</strong> (PASS line 3; the difference is exact for a quadratic — the residue is pure floating-point cancellation). Zero cross-partial $=$ zero precision entry $=$ conditional independence (<a href="09-stiffness-as-precision.html">09 §2</a>): the three vocabularies name one number.</p>
+<h3 id="12-why-jacobi-does-nothing-here-the-one-paragraph-recap-of-050912">1.2 Why Jacobi does nothing here (the one-paragraph recap of 05/09/12)</h3>
+<p>Poisson's diagonal is the constant $4/h^2$, so $\mathrm{diag}(A)^{-1}$ is a scalar — and a scalar decouples nothing, it only rescales the same entangled landscape. Verified as trajectories, not just algebra: Jacobi-GD and plain GD on the rod problem are <strong>the same iteration</strong> (1998 = 1998 iterations to $10^{-10}$; max relative trajectory deviation over the first 200 iterations $4.7\times10^{-15}$, PASS line 4), the stationary face of <a href="05-classical-preconditioners.html">05</a>'s CG no-op (116 = 116) explained statistically in <a href="09-stiffness-as-precision.html">09 §3</a> (an independence surrogate with homogeneous conditional variances carries zero correlation information) and priced in <a href="12-autoregressive-preconditioning.html">12 §2</a> ($\rho(B) = \cos(\pi h) = 0.9955$: the perfect two-sided regressions, wasted by a synchronous schedule). Two rate refinements, both verified: on the rod right-hand side GD's asymptotic $A$-norm rate is $0.988687$, matching $(\kappa_{\mathrm{eff}}-1)/(\kappa_{\mathrm{eff}}+1) = 0.988700$ at the <strong>parity-effective</strong> $\kappa_{\mathrm{eff}} = 176.00$ — the rod RHS is odd under the 180° rotation (<a href="11-regressions-and-multiscale.html">11 §5.2</a>), so the even eigenmodes are exactly unexcited and the lowest live mode is $(1,2)$ at $\lambda = \lambda_1 + \lambda_2 = 49.221$ (PASS lines 5–6); on a generic GRF right-hand side the full-$\kappa$ rate appears: measured $0.995464$ vs $(\kappa-1)/(\kappa+1) = 0.995472 = \cos(\pi h)$, 4753 iterations (PASS lines 7–8). $\kappa$ is a worst-case-RHS bound, and the parity subtlety is logged as a deviation.</p>
+<h3 id="13-the-exact-decoupler-rotate-to-the-eigenbasis--klpca-whitening">1.3 The exact decoupler: rotate to the eigenbasis (= KL/PCA whitening)</h3>
+<p>There is a basis in which Poisson <em>is</em> §1.1: the 2-D DST-I basis $V_2 = V_1 \otimes V_1$. Verified: $V_2$ is orthonormal ($\max\vert V_2^\top V_2 - I\vert  = 1.0\times10^{-14}$), diagonalizes $A$ (max off-diagonal of $V_2^\top A V_2$: $3.3\times10^{-15}$ relative; diagonal $= \lambda_i + \lambda_j$ to $5.3\times10^{-15}$), and the <strong>one-pass solve</strong> $x = V_2\big((V_2^\top b)/\lambda\big)$ matches <code>spsolve</code> to $1.3\times10^{-15}$ (PASS lines 9–10). In the eigenbasis the problem is 1024 independent scalar parabolas; solving is dividing by the per-mode variance. This is exactly <a href="09-stiffness-as-precision.html">09 §4.3</a>'s PCA/KL whitening — the eigenbasis is the Karhunen–Loève basis of the field, the frequency-axis representative of the whitener orbit — run as a solver (<a href="09-stiffness-as-precision.html">09 §5</a>'s "spectral solve = KL rotation", here with the measured receipt). Everything below is about what to do when you cannot afford the exact rotation: pick an <strong>axis of decoupling</strong> — coordinates, frequency, direction, space, scale — split along it cheaply, and let the iteration absorb what the split misses.</p>
+<hr />
+<h2 id="2-separable-heat-diffusion-is-row-coupling-plus-column-coupling">2. Separable: heat diffusion is row-coupling plus column-coupling</h2>
+<h3 id="21-the-kronecker-sum-exactly">2.1 The Kronecker sum, exactly</h3>
+<p>The requested worked example. The 2-D Laplacian is a <strong>Kronecker sum</strong> of two 1-D operators,</p>
+<p>$$A \;=\; H + V, \qquad H = (I \otimes d_1)/h^2, \qquad V = (d_1 \otimes I)/h^2,$$</p>
+<p>and on this grid the split is verified <em>exactly</em>, not to machine precision: $\max\vert H + V - A\vert  = 0.0$ and — the load-bearing structural fact — $H$ and $V$ <strong>commute exactly</strong>, $\max\vert HV - VH\vert  = 0.0$ (PASS lines 11–12; Kronecker algebra: $HV = VH = (d_1 \otimes d_1)/h^4$). The Wolfram script re-proves both in exact integer arithmetic: <code>max|A - (H+V)| (exact) = 0</code>, <code>max|H.V - V.H| (exact) = 0</code>. Commuting means simultaneously diagonalizable — one shared eigenbasis, the separable $\sin\otimes\sin$ modes — which is why the spectrum is the sum set $\{\lambda_i + \lambda_j\}$ (verified against the dense eigensolve to $3.1\times10^{-15}$, PASS line 13).</p>
+<p>Physically: <strong>heat diffusion on the grid is row-coupling plus column-coupling and nothing else.</strong> Verified block-anatomy (PASS lines 14–15): reshaped to grid indices, $H$ has <em>exactly zero</em> coupling mass between different grid rows, and all 32 of its diagonal blocks equal $d_1/h^2$ exactly — $H$ alone is <strong>32 independent 1-D heated rods</strong>, one per grid row, each of them the chain of <a href="09-stiffness-as-precision.html">09</a> — while $V$ couples only within grid columns (cross-column mass exactly 0). Each half, taken by itself, is embarrassingly decoupled: $(H + \sigma I)x = y$ splits into 32 <em>independent</em> tridiagonal solves, one per row (verified against <code>spsolve</code> to $2.9\times10^{-16}$; same for $V$ by columns, PASS line 16), each of them the $O(n)$ Thomas/Kalman pass of <a href="09-stiffness-as-precision.html">09 §5</a>. The whole difficulty of the 2-D problem is that the two trivially-solvable halves must hold simultaneously.</p>
+<h3 id="22-the-cheap-decoupler-one-adi-double-sweep-as-a-preconditioner">2.2 The cheap decoupler: one ADI double-sweep as a preconditioner</h3>
+<p>So build the preconditioner that solves the two halves in sequence — one rows pass, one columns pass:</p>
+<p>$$M^{-1} \;=\; 2\sigma\,(V + \sigma I)^{-1}(H + \sigma I)^{-1}, \qquad \sigma = \sqrt{\lambda_1 \lambda_n} = 207.032,$$</p>
+<p>with $\lambda_1 = 9.8622$, $\lambda_n = 4346.14$ the extreme 1-D eigenvalues. This is one double-sweep of the <strong>alternating-direction implicit</strong> iteration of Peaceman &amp; Rachford (1955) with a single geometric-mean shift, frozen into an SPD $M$. Cost: one apply = 32 row tridiagonal solves + 32 column tridiagonal solves = <strong>64 tridiagonal solves, $O(N)$</strong> — the same order as one sparse matvec with $A$. Verified: commuting SPD factors make $M^{-1}$ symmetric (asymmetry $4.9\times10^{-16}$) and positive (eigenvalues in $[2.0\times10^{-5}, 8.8\times10^{-3}]$), and the banded-solve apply agrees with the dense $M^{-1}r$ to $5.4\times10^{-16}$ (PASS line 17).</p>
+<p><img alt="ADI rows pass and columns pass: the grid decomposes into independent 1-D chain problems along each direction" src="../figures/diagram13_adi_rows_cols.png" /></p>
+<p><em>The two problems we are solving: the rows pass $(H + \sigma I)$ is a stack of independent 1-D chains, one per grid row, and the columns pass $(V + \sigma I)$ the same per column (schematic drawn on an $8\times8$ grid for legibility) — which is why one apply of $M^{-1}$ costs 64 tridiagonal solves, $O(N)$, on the real $32\times32$ problem.</em></p>
+<p>Because everything commutes, the preconditioned spectrum has a <strong>closed form</strong>, verified eigenvalue-by-eigenvalue (max dev $3.4\times10^{-15}$, PASS line 18; Wolfram independently: $8.0\times10^{-15}$ relative on the dense eigensolve):</p>
+<p>$$\mathrm{spec}(M^{-1}A) \;=\; \left\{ f(\lambda_i, \lambda_j) = \frac{2\sigma(\lambda_i + \lambda_j)}{(\lambda_i + \sigma)(\lambda_j + \sigma)} \right\}_{i,j=1}^{n}.$$</p>
+<p>The geometric-mean shift <strong>balances the corners</strong> (PASS line 19): $f(\lambda_1, \lambda_1) = f(\lambda_n, \lambda_n) = 0.173609$ exactly (rel dev $1.6\times10^{-16}$) — the all-smooth and all-rough modes, treated identically — with the minimum at those pure corners and the maximum $f(\lambda_1, \lambda_n) = 1.826391$ at the <strong>mixed corner</strong> $(1, 32)$: the surviving difficulty is exactly the modes that are smooth along one axis and rough along the other, the modes on which the rows-expert and the columns-expert disagree most. Two tidy consequences, both pure algebra confirmed by the measured numbers: $f_{\min} + f_{\max} = 0.173609 + 1.826391 = 2$ exactly (the 13-report echo of <a href="12-autoregressive-preconditioning.html">12 §2</a>'s $\lambda_{\min} + \lambda_{\max} = 8/h^2$ coincidence — so the <em>undamped</em> Richardson sweep with this $M$ is already optimally damped, $\rho(I - M^{-1}A) = 1 - f_{\min} = 0.826$), and</p>
+<p>$$\kappa(M^{-1}A) \;=\; \frac{f_{\max}}{f_{\min}} \;=\; \frac{1 + \kappa}{2\sqrt{\kappa}} \;=\; \frac{\sqrt{\kappa}}{2}\Big(1 + \frac{1}{\kappa}\Big).$$</p>
+<p><strong>The square-root effect, measured</strong>: $\kappa(M^{-1}A) = 10.5201 = 0.501\sqrt{\kappa(A)}$ (PASS line 20), against $\sqrt{440.6886}/2 = 10.4963$ — the Wolfram script checks the same two numbers independently and confirms the ratio to within its 2% tolerance (<code>kappa(Minv.A) = 10.520109666</code>, <code>Sqrt[kappa(A)]/2 = 10.496291730</code>); the residual factor is exactly the $1 + 1/\kappa$ above. One ADI double-sweep converts an $O(h^{-2})$ conditioning problem into an $O(h^{-1})$ one:</p>
+<p><img alt="ADI compresses the spectrum" src="../figures/decoupling_adi_spectrum.png" /></p>
+<p>(Independent Wolfram rendering: <img alt="mma spectrum" src="../figures/mma_decoupling_spectrum.png" />.) Solver receipts (error criterion $\Vert x_k - x^\star\Vert /\Vert x^\star\Vert  \le 10^{-10}$, rod problem): <strong>ADI-CG 32 iterations, ADI-GD 88</strong> — against 73 and 1998 unpreconditioned (§4's ladder). Read it as the thesis instructs: the rows pass optimizes the 32 row-subproblems <em>exactly and separately</em>, the columns pass the 32 column-subproblems; the coupling <strong>between the passes</strong> — the mixed modes — is what remains, and its price is $\kappa' \approx \tfrac12\sqrt{\kappa}$. (The literature completes the ladder rung: each <em>doubling</em> of a well-chosen cycled-shift ladder square-roots the effective condition number again — $2^{J-1}$ shifts give $\kappa' = O(\kappa^{1/2^J})$ — so $O(\log\kappa)$ sweeps reach $\kappa' = O(1)$ on commuting model problems: Wachspress's ADI model problem; our single-shift $M$ is the $J = 1$ rung, and the only one machine-checked here.)</p>
+<p><img alt="ADI sweep animation: the rows half-sweep flattens error along rows leaving horizontal stripes, then the columns half-sweep wipes the stripes" src="../figures/anim13_adi_sweep.gif" /></p>
+<p><em>Watch each half-sweep wipe the error along one direction on the real $32\times32$ rod problem ($\sigma = 207.032$): the rows half-sweep leaves bold horizontal stripes, the columns half-sweep erases them (the rel-error readout momentarily </em><em>rises</em><em> after a rows half-sweep — $\times 4.10$ on the first one, worst case $5.05\times$ — a genuine Peaceman–Rachford transient: half-steps are not contractions, only the full double sweep is), and the measured per-double-sweep tail rate 0.7885 approaches $(\sigma-\lambda_1)^2/(\sigma+\lambda_1)^2 = 0.8264 = 1 - f_{\min}$, exactly the $\rho(I - M^{-1}A) = 0.826$ quoted above. (Static key frames: <a href="../figures/anim13_adi_sweep_frames.png">anim13_adi_sweep_frames.png</a>; the schematic above is $8\times8$ for legibility, the experiments are $32\times32$.)</em></p>
+<p><strong>Interactive:</strong> <a href="../interactive/adi-sweep.html">drag through the sweeps yourself</a> — a slider over ADI half-sweeps on the hot-rod/cold-rod plate.</p>
+<hr />
+<h2 id="3-semiseparable-the-solution-operator-has-reduced-interactions-built-in">3. Semiseparable: the solution operator has reduced interactions built in</h2>
+<p>The previous section decoupled the <em>operator</em>. This one is about a structural fact of the <em>inverse</em> — the object every preconditioner is trying to imitate.</p>
+<p><img alt="The 1-D chain: nearest-neighbor springs between nodes, walls at both ends, and a node's two neighbors forming its Markov blanket" src="../figures/diagram13_chain.png" /></p>
+<p><em>The chain whose inverse this section dissects: each interior node's energy has cross-partials only with its two spring-coupled neighbors (entries $-1/h^2$ of the tridiagonal $d_1/h^2$), so those two neighbors are the node's Markov blanket — the 1-D miniature of §4's two-column separator.</em></p>
+<p><strong>1-D: the inverse of the tridiagonal chain is semiseparable — a rank-1 triangle.</strong> Verified (PASS line 21): for $A_{1\mathrm d} = d_1/h^2$,</p>
+<p>$$\big(A_{1\mathrm d}^{-1}\big)_{ij} \;=\; h\,x_i\,(1 - x_j) \quad \text{for } i \le j,$$</p>
+<p>max relative dev $1.4\times10^{-15}$ — and the Wolfram script proves it <strong>exactly</strong> in rationals (<code>max|Inverse(d1/h^2)_ij - h x_i (1 - x_j)|, i&lt;=j (exact) = 0</code>). This is <a href="09-stiffness-as-precision.html">09 §2</a>'s Brownian-bridge covariance $h(\min(s,t) - st)$ re-read structurally: the entire upper triangle of the dense inverse is the outer product of two vectors, $u_i = h x_i$ and $v_j = 1 - x_j$ (rank 1!), while the full matrix still has full rank 32. Dense does not mean unstructured: $n^2$ correlations are carried by $O(n)$ numbers. That is Gantmacher–Krein's classical "one-pair" (Green's) matrix theorem — the inverse of an irreducible tridiagonal is semiseparable — and it is <em>why</em> the $O(n)$ Thomas/Kalman solve of <a href="09-stiffness-as-precision.html">09 §5</a> exists at all.</p>
+<p><img alt="Rank-1 triangle identity: the dense inverse of the chain, the outer product h x_i (1-x_j), and their vanishing upper-triangle difference" src="../figures/diagram13_rank1_triangle.png" /></p>
+<p><em>The identity in pixels: the upper triangle of the dense $(d_1/h^2)^{-1}$ (left) coincides with the rank-1 outer product $h\,x_i(1-x_j)$ (middle, same color scale); the figure's own machine check crashes unless the upper-triangle deviation stays below $10^{-12}$ and measures $8.7\times10^{-18}$ absolute at $n=16$ (right) — the same identity verified above at $n=32$ to $1.4\times10^{-15}$ relative, and exactly in rationals by Wolfram.</em></p>
+<p><strong>2-D: far-field blocks of $\Sigma = A^{-1}$ are numerically low-rank.</strong> The exact rank-1 triangle does not survive the grid, but its shadow does (PASS line 22): the off-diagonal block of $A^{-1}$ coupling grid rows 0–7 to grid rows 24–31 (a $256\times256$ block, well-separated groups) has <strong>numerical rank 11 at the $10^{-8}$ threshold</strong> (leading singular value $1.76\times10^{-3}$; the decay curve is the right panel below) — even though $A^{-1}$ is entrywise dense and strictly positive (min entry $2.9\times10^{-9} &gt; 0$, the M-matrix positivity of <a href="11-regressions-and-multiscale.html">11 §1.1</a>) and full-rank ($\lambda_{\min} = 1.15\times10^{-4} &gt; 0$).</p>
+<p><img alt="Semiseparable 1-D inverse and low-rank 2-D far block" src="../figures/decoupling_semiseparable.png" /></p>
+<p>The statistical reading: between two well-separated regions, the $256^2$ pairwise covariances are routed through $\approx 11$ effective degrees of freedom — long-range dependence is <strong>low-dimensional</strong>, the far field interacts through a few smooth "factors" (the screening effect of <a href="12-autoregressive-preconditioning.html">12 §3</a>, seen from the covariance side). The numerical-analysis reading: this is the defining compression of <strong>hierarchical ($\mathcal H$-) matrices</strong> (Hackbusch): partition $A^{-1}$ by an admissibility condition and store far blocks as low-rank factors, giving $O(N\log N)$ approximate inverses — with the guarantee that elliptic inverses admit exactly this structure (Bebendorf–Hackbusch). The moral for the thesis: <em>reduced interactions are not only something you impose on the problem; the solution operator already has them.</em> Decoupling schemes work because the object they approximate is itself nearly decoupled at long range. (<a href="14-hierarchical-inverse.html">14</a> follows this section to its algorithmic conclusion: the separator theorem behind these ranks, the full HODLR anatomy of $A^{-1}$, and the compressed inverse run as a preconditioner.)</p>
+<hr />
+<h2 id="4-space-two-subdomains-one-interface-and-the-decoupling-ladder">4. Space: two subdomains, one interface, and the decoupling ladder</h2>
+<h3 id="41-conditional-independence-across-a-separator-is-exact-the-statistics-name-for-decoupling">4.1 Conditional independence across a separator is exact (the statistics name for decoupling)</h3>
+<p>Split the grid by the two middle columns: $L$ = columns 0–14, $I$ = columns 15–16, $R$ = columns 17–31. The 5-point stencil puts <strong>no precision edge across the separator</strong>: $\mathrm{nnz}(A_{LR}) = 0$ (PASS line 23). The GMRF global Markov property (Rue &amp; Held) then promises exact conditional decoupling, and the experiment collects it from the dense covariance (PASS line 24):</p>
+<p>$$\mathrm{Cov}(u_L, u_R \mid u_I) \;=\; \Sigma_{LR} - \Sigma_{LI}\Sigma_{II}^{-1}\Sigma_{IR} \;=\; 0 \quad\text{exactly: } \max\vert \cdot\vert  = 1.9\times10^{-19},$$</p>
+<p>against a <em>marginal</em> $\max\vert \Sigma_{LR}\vert  = 2.6\times10^{-4}$ — a ratio of $7.2\times10^{-16}$, i.e. fifteen orders of magnitude of dependence annihilated by conditioning on 64 interface values. Marginally the halves are thoroughly coupled (§3's dense positive $\Sigma$); given the interface they are <strong>independent</strong>. This is the same statement as §2's, on a different axis: there the two sub-physics shared an eigenbasis; here they share only a 2-column Markov blanket.</p>
+<p><img alt="Subdomain split L, separator I, subdomain R drawn on the stencil graph: every stencil edge from left to right passes through the separator columns" src="../figures/diagram13_subdomains.png" /></p>
+<p><em>The split drawn on the stencil graph (a $16\times16$ grid for legibility): every 5-point edge from $L$ to $R$ passes through the shaded separator columns, and the figure machine-checks $\mathrm{nnz}(A_{LR}) = 0$ on <code>poisson_2d(16)</code> before drawing — the same exact zero verified above at $n = 32$ (PASS line 23).</em></p>
+<h3 id="42-block-jacobi2-optimize-each-half-with-the-other-frozen">4.2 Block-Jacobi(2): optimize each half with the other frozen</h3>
+<p>The preconditioner this licenses: split into halves $L'$ = columns 0–15, $R'$ = columns 16–31 and take $M = \mathrm{blockdiag}(A_{L'L'}, A_{R'R'})$ — one exact $32\times16$ Poisson solve per subdomain, "optimize each half pretending the other is frozen" (the additive-Schwarz / nonoverlapping domain-decomposition move; Schwarz 1870, Smith–Bjørstad–Gropp, Toselli–Widlund). What remains is <em>provably only the interface</em>, and it is <strong>low-dimensional and localized</strong> (PASS lines 25–26):</p>
+<ul>
+<li>$A_{L'R'}$ has exactly <strong>32 nonzeros — one column of edges — and rank 32</strong>. Since $A - M$ is this rank-64 (two-sided) perturbation, $M^{-1}A$ has eigenvalue <strong>1 with multiplicity $960 = N - 2\cdot32$</strong>: on a 960-dimensional subspace the frozen-half model is already <em>exact</em>. The remaining 64 eigenvalues split symmetrically in pairs $1 \pm \mu$ (pairing deviation $4.4\times10^{-15}$), 32 distinct $\mu$'s running up to $\mu_{\max} = 0.9014$: $\mathrm{spec}(M^{-1}A) \subset [0.0986, 1.9014]$ with $\lambda_{\min} = 1 - \mu_{\max} = 0.0986$, $\kappa(M^{-1}A) = 19.29$. (Again $\lambda_{\min} + \lambda_{\max} = 2$: the undamped Richardson sweep is optimally damped, $\rho(I - M^{-1}A) = 0.9014$ — one frozen-halves sweep leaves 90% of the worst mode, <a href="12-autoregressive-preconditioning.html">12 §1</a>'s currency.)</li>
+<li>The extreme eigenvectors of the preconditioned operator <strong>localize at the interface</strong>: the $\lambda_{\min} = 0.0986$ eigenvector's column-energy profile peaks at column 16 and the $\lambda_{\max} = 1.9014$ one at column 15, with columns 14–17 carrying 39% of the $\lambda_{\min}$ mode's energy:</li>
+</ul>
+<p><img alt="The residual coupling lives on the interface" src="../figures/decoupling_interface_mode.png" /></p>
+<p>Solver receipts: <strong>blockJacobi2-CG 12 iterations</strong> (GD: 98). Twelve is far below the $\sqrt{\kappa'}$ heuristic and even below ADI's 32 at <em>smaller</em> $\kappa'$ — because the spectrum is 960 exact 1's plus 64 stragglers, at most 65 distinct eigenvalues, and CG's currency is clusters (§5.3). The eliminated-interior view is the Schur complement: solving the halves exactly reduces the global problem to an effective equation on the interface (the Dirichlet-to-Neumann operator, <a href="12-autoregressive-preconditioning.html">12 §3</a>'s decimation row) — a rank-32 problem, which is what those 64 non-unit eigenvalues are the spectrum of. Domain decomposition is the industrialization of exactly this move; and the reason practical DD adds a <em>coarse space</em> is <a href="11-regressions-and-multiscale.html">11 §5</a>'s reason: the interface modes that survive are smooth along the interface, i.e. the residual coupling is not only low-rank but low-<em>frequency</em> — the space axis hands off to the scale axis.</p>
+<p><img alt="Block-Jacobi Richardson iteration: subdomain interiors converge within a few sweeps while an error mode pinned to the interface columns decays slowly" src="../figures/anim13_interface.gif" /></p>
+<p><em>The frozen-halves iteration in motion (rod problem): the subdomain interiors die within a few sweeps while the interface mode lingers — columns 14–17 still carry 42% of the error energy at iteration 30 — and continuing the same iteration to 200 sweeps measures a tail rate of 0.901444, matching the $\rho(I - M^{-1}A) = 0.9014$ above to six digits. (Static key frames: <a href="../figures/anim13_interface_frames.png">anim13_interface_frames.png</a>.)</em></p>
+<h3 id="43-the-decoupling-ladder">4.3 The decoupling ladder</h3>
+<p>One move — <em>pick an axis, split exactly along it, approximate the rest</em> — five axes. All numbers measured on the canonical problem (rod RHS, error criterion $10^{-10}$; $\rho$ = spectral radius of the optimally-damped Richardson sweep, computed from the measured spectral extremes; Jacobi's from <a href="12-autoregressive-preconditioning.html">12 §2</a>):</p>
+<table>
+<thead>
+<tr>
+<th>axis</th>
+<th>exact decoupling condition</th>
+<th>verified here as</th>
+<th>cheap approximation</th>
+<th style="text-align: right;">$\kappa(M^{-1}A)$</th>
+<th style="text-align: right;">$\rho(I - M^{-1}A)$</th>
+<th style="text-align: right;">CG its</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>coordinates</strong></td>
+<td>$A$ diagonal (all coordinates conditionally independent)</td>
+<td>diagonal system one-steps ($7.7\times10^{-17}$)</td>
+<td>Jacobi $\mathrm{diag}(A)^{-1}$</td>
+<td style="text-align: right;">440.69 (unchanged)</td>
+<td style="text-align: right;">0.9955</td>
+<td style="text-align: right;">73 (inert)</td>
+</tr>
+<tr>
+<td><strong>frequency</strong></td>
+<td>known eigenbasis: DST-I diagonalizes $A$ ($3.3\times10^{-15}$)</td>
+<td>one-pass KL solve ($1.3\times10^{-15}$)</td>
+<td>— (exact; FFT-able)</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;"><strong>1 pass</strong></td>
+</tr>
+<tr>
+<td><strong>direction</strong></td>
+<td>$A = H + V$, $[H, V] = 0$ (both exact)</td>
+<td>closed-form ADI spectrum ($3.4\times10^{-15}$)</td>
+<td>ADI double-sweep, 64 tridiag solves</td>
+<td style="text-align: right;">10.52 $= 0.50\sqrt{\kappa}$</td>
+<td style="text-align: right;">0.826</td>
+<td style="text-align: right;">32</td>
+</tr>
+<tr>
+<td><strong>space</strong></td>
+<td>$\mathrm{Cov}(L, R \mid I) = 0$ (ratio $7.2\times10^{-16}$)</td>
+<td>rank-32 interface, 960 unit eigenvalues</td>
+<td>block-Jacobi(2), frozen halves</td>
+<td style="text-align: right;">19.29</td>
+<td style="text-align: right;">0.901</td>
+<td style="text-align: right;"><strong>12</strong></td>
+</tr>
+<tr>
+<td><strong>scale</strong></td>
+<td>coarse field ⊥ fine residual (approx.; <a href="11-regressions-and-multiscale.html">11 §5.1</a>)</td>
+<td><a href="11-regressions-and-multiscale.html">11</a>/<a href="12-autoregressive-preconditioning.html">12</a>'s two-level</td>
+<td>IC(0) + 4×4 coarse (additive)</td>
+<td style="text-align: right;">11.05</td>
+<td style="text-align: right;">0.834</td>
+<td style="text-align: right;">31</td>
+</tr>
+</tbody>
+</table>
+<p>(PASS line 28 records all the ladder counts and asserts the chains GD &gt; CG &gt; ADI-CG $\ge$ twolevel-CG &gt; 1 and CG &gt; blockJacobi2-CG — the five axes do not order linearly, blockJacobi2's 12 undercutting twolevel's 31; the two-level row is <a href="11-regressions-and-multiscale.html">11 §5.2</a>'s best fixed-$M$ method rebuilt verbatim, 31 error-based / 32 residual-based iterations, consistent with 11's table. Scale's "exact condition" is the one axis with no finite exact version — hence multigrid recurses it, <a href="05-classical-preconditioners.html">05 §5</a>.) The whole ladder on one plot, GD and CG variants together, with the DST one-pass star at the bottom left:</p>
+<p><img alt="The decoupling ladder on the hot/cold-rod problem" src="../figures/decoupling_error_curves.png" /></p>
+<hr />
+<h2 id="5-gd-vs-cg-pre-decoupling-vs-decoupling-on-the-fly">5. GD vs CG: pre-decoupling vs decoupling on the fly</h2>
+<p>The suite's remaining question (<a href="04-krylov-and-pcg.html">04</a> proved the polynomial bounds; here is the decoupling reading, fully measured).</p>
+<h3 id="51-gd-is-memoryless-it-pays-the-full-eigenvalue-range-forever">5.1 GD is memoryless: it pays the full eigenvalue range, forever</h3>
+<p>Steepest descent keeps no state but $x_k$: each step re-solves a 1-D problem along the current gradient and forgets the direction it just optimized. Its asymptotic contraction is set by the <strong>range</strong> of the spectrum, $(\kappa-1)/(\kappa+1)$ — verified three independent ways in this report: on Poisson ($0.995464$ measured vs $0.995472$, §1.2), and on the rank-1 family below, where the worst-case-RHS rates match $(\kappa-1)/(\kappa+1)$ to seven digits at $\kappa = 101$ ($0.98039214$ measured vs $0.98039216$, rel. dev $1.4\times10^{-8}$) and to all eight printed digits at $10^4{+}1$ and $10^6{+}1$ ($0.99980004$, $0.99999800$; PASS lines 30/33/36). The one thing diagonal preconditioning buys GD — one-stepping — it buys only on the <em>already decoupled</em> problem (§1.1 vs §1.2: $7.7\times10^{-17}$ in one step there, 1998 identical iterations here). A refinement the experiment forced (deviations log): for a <em>generic</em> RHS on a two-eigenvalue problem the textbook rate is provably not attained — the per-step $A$-norm contraction is the exact closed form $\sqrt{f(m_0)}$, $f(m) = (\kappa-1)^2 m /((1+\kappa^2 m)(1+m))$ with $m$ the $\kappa$-weighted mixing ratio of the error components ($m \mapsto 1/(\kappa^2 m)$ is an involution of the GD map and $f$ is invariant under it), verified to the printed digits at all three $\kappa$'s (PASS lines 31/34/37: e.g. measured $0.19548504$ vs predicted $0.19548494$ at $\rho = 10^2$). The worst case is realized exactly by $b = v + w_\perp$ ($m_0 = 1/\kappa$), and that RHS is what the headline numbers below use.</p>
+<p><img alt="GD zigzagging across tilted elliptical contours while CG reaches the minimum in two steps" src="../figures/anim13_gd_vs_cg.gif" /></p>
+<p><em>The contrast in one cross-section ($\kappa = 25$, axes rotated 30°, equal-energy error mix $m_0 = 1$): GD zigzags at the constant measured per-step rate 0.6783 — exactly $\sqrt{f(m_0)}$ from the closed form above — reaching only $8.76\times10^{-6}$ after 30 steps, while CG finishes in exactly 2 steps ($7.4\times10^{-16}$), one per distinct eigenvalue. (Static key frames: <a href="../figures/anim13_gd_vs_cg_frames.png">anim13_gd_vs_cg_frames.png</a>.)</em></p>
+<h3 id="52-one-global-factor-is-fatal-for-gd-and-free-for-cg">5.2 One global factor is fatal for GD and free for CG</h3>
+<p>Couple 400 coordinates through a single common factor — the rank-1 perturbation $A = I + \rho\,vv^\top$, a 1-factor covariance model (<a href="07-nystrom-preconditioning.html">07</a>'s favorable case, <a href="09-stiffness-as-precision.html">09 §6</a>'s factor analysis), with coupling strength $\rho = 10^2, 10^4, 10^6$. The spectrum is two points, $\{1, 1+\rho\}$; $\kappa = 1 + \rho$ is <em>arbitrarily bad while the problem is only one direction away from the identity</em>. Measured (PASS lines 29/32/35/38, <a href="../figures/decoupling_gd_vs_cg.png">figure</a> left panel):</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">$\rho$</th>
+<th style="text-align: right;">$\kappa$</th>
+<th style="text-align: right;">CG its (rel err after 2, worst-case RHS)</th>
+<th style="text-align: right;">GD its to $10^{-10}$ (worst-case RHS)</th>
+<th style="text-align: right;">$\tfrac{\kappa}{2}\ln 10^{10}$</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">$10^2$</td>
+<td style="text-align: right;">$101$</td>
+<td style="text-align: right;"><strong>2</strong> ($1.3\times10^{-15}$)</td>
+<td style="text-align: right;">1163</td>
+<td style="text-align: right;">1162.8</td>
+</tr>
+<tr>
+<td style="text-align: right;">$10^4$</td>
+<td style="text-align: right;">$10^4{+}1$</td>
+<td style="text-align: right;"><strong>2</strong> ($3.7\times10^{-14}$)</td>
+<td style="text-align: right;">115 141</td>
+<td style="text-align: right;">115 140.8</td>
+</tr>
+<tr>
+<td style="text-align: right;">$10^6$</td>
+<td style="text-align: right;">$10^6{+}1$</td>
+<td style="text-align: right;"><strong>2</strong> ($3.6\times10^{-12}$)</td>
+<td style="text-align: right;">11 512 937*</td>
+<td style="text-align: right;">11 512 937.0</td>
+</tr>
+</tbody>
+</table>
+<p><strong>CG converges in exactly 2 iterations at every strength, for both random and worst-case RHS</strong> (two distinct eigenvalues ⟹ a degree-2 polynomial annihilates the error: the finite-termination clause of CG's minimax optimality, <a href="04-krylov-and-pcg.html">04</a>, Hestenes–Stiefel). GD's count grows <em>linearly in $\kappa$</em> — the measured counts match $\tfrac{\kappa}{2}\ln(10^{10})$ to $\le 0.02\%$ (last column — the asymptotic of the exact $\ln(10^{10})/{-\ln\tfrac{\kappa-1}{\kappa+1}}$, which itself rounds to precisely the measured counts). *The $\rho = 10^6$ run hit the 120 000-iteration cap at relative error 0.79 and is extrapolated from the measured (provably constant) per-step rate — deviations log, entry 1.</p>
+<h3 id="53-clusters-not-range-the-3-cluster-spectrum">5.3 Clusters, not range: the 3-cluster spectrum</h3>
+<p>Now three clusters — eigenvalue centers $\{1, 10^3, 10^6\}$ with multiplicities $\{300, 80, 20\}$ and relative widths $w$, so $\kappa \approx 10^6$ throughout (PASS lines 39–40, figure right panel):</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">cluster width $w$</th>
+<th style="text-align: right;">$\kappa$</th>
+<th style="text-align: right;">CG its to $10^{-10}$</th>
+<th>GD</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">$10^{-3}$</td>
+<td style="text-align: right;">$1.001\times10^6$</td>
+<td style="text-align: right;"><strong>18</strong></td>
+<td>rel err <strong>0.72</strong> after 30 000 its; projected $2.1\times10^6$ its</td>
+</tr>
+<tr>
+<td style="text-align: right;">$10^{-2}$</td>
+<td style="text-align: right;">$1.009\times10^6$</td>
+<td style="text-align: right;">31</td>
+<td>—</td>
+</tr>
+<tr>
+<td style="text-align: right;">$10^{-1}$</td>
+<td style="text-align: right;">$1.096\times10^6$</td>
+<td style="text-align: right;">72</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>At zero width this would be 3 iterations (three distinct eigenvalues); at width $10^{-3}$ it is 18, degrading only gently as the clusters smear ($18 \to 31 \to 72$) while $\kappa$ sits at $10^6$ the whole time (honesty note: the "$\approx 3$" idealization vs measured 18 is deviations-log entry 5 — CG's first three sweeps barely move the $\ell_2$ error, 0.996 after 3 iterations, then the largest single sweep drops it <strong>2935×</strong> once the Ritz values have found all three clusters). GD, whose only input is the range, is hopeless at <em>any</em> width: measured tail rate 0.9999890 against the worst-case 0.9999980. <strong>CG's currency is the number of (clusters of) distinct eigenvalues; GD's is the range.</strong></p>
+<p><img alt="GD vs CG on coupled problems" src="../figures/decoupling_gd_vs_cg.png" /></p>
+<p><img alt="CG on the 3-cluster spectrum: per-cluster eigencomponent bars die one cluster per effective iteration, with a single-sweep plunge once all clusters are found" src="../figures/anim13_cg_clusters.gif" /></p>
+<p><em>One new variance scale = one CG iteration ($w = 10^{-3}$): the per-cluster eigencomponent bars die cluster by cluster, and the largest single sweep is the 2935× plunge at iteration 4 ($0.99557 \to 3.39\times10^{-4}$) quoted above, once the Ritz values have found all three clusters. (Static key frames: <a href="../figures/anim13_cg_clusters_frames.png">anim13_cg_clusters_frames.png</a>.)</em></p>
+<h3 id="54-why-cg-is-an-on-the-fly-sequential-decoupler">5.4 Why: CG is an on-the-fly sequential decoupler</h3>
+<p>The mechanism is <a href="09-stiffness-as-precision.html">09 §5</a>'s row of the dictionary, now with the receipt. CG's directions satisfy $p_i^\top A p_j = 0$ — measured: max $\vert p_i^\top A p_j\vert /(\Vert p_i\Vert _A\Vert p_j\Vert _A) = 7.3\times10^{-16}$ over the first 10 directions, $1.8\times10^{-15}$ over the first 30 (finite-precision loss growing with depth; PASS line 44). $A$-orthogonality is exactly what "decoupled" means in this report: in the coordinates $\{p_i\}$, the energy has <strong>no cross-partials</strong> — $J(x_0 + \sum_i \alpha_i p_i)$ separates into independent scalar parabolas in the $\alpha_i$, so each 1-D minimization is final and never needs revisiting. CG is Gram–Schmidt in the $A$-inner product, run incrementally on the Krylov vectors: statistically, sequential regression on directions that are <em>uncorrelated under the field's own precision</em> (<a href="09-stiffness-as-precision.html">09 §5</a>: $\mathrm{Cov}(p_i^\top Au, p_j^\top Au) = p_i^\top A p_j$), i.e. the same sequential-whitening move as Cholesky (<a href="09-stiffness-as-precision.html">09 §4.2</a>) but built adaptively from the residuals it encounters. GD, memoryless, keeps re-optimizing directions it has already visited (the classical zigzag); CG never does. That is why the <em>number</em> of distinct variance scales — not their spread — is what CG pays for: each new cluster is one new scalar problem to whiten.</p>
+<h3 id="55-pre-decoupling-and-on-the-fly-decoupling-compose">5.5 Pre-decoupling and on-the-fly decoupling compose</h3>
+<p>Both mechanisms at once, on the ladder (PASS lines 42–43; Chebyshev bound $k \ge \sqrt{\kappa'}\,\ln(2/\varepsilon)/2$ at $\varepsilon = 10^{-10}$, $A$-norm iteration counts; residual-based counts kept comparable to <a href="08-results.html">08</a>'s 116-iteration GRF anchor, re-verified here, PASS line 41):</p>
+<table>
+<thead>
+<tr>
+<th>$M$</th>
+<th style="text-align: right;">$\kappa(M^{-1}A)$</th>
+<th style="text-align: right;">$\sqrt{\kappa'}$</th>
+<th style="text-align: right;">its ($A$-norm)</th>
+<th style="text-align: right;">Chebyshev bound</th>
+<th style="text-align: right;">bound used</th>
+<th style="text-align: right;">eigenvalues at 1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>none</td>
+<td style="text-align: right;">440.69</td>
+<td style="text-align: right;">20.99</td>
+<td style="text-align: right;">75</td>
+<td style="text-align: right;">249</td>
+<td style="text-align: right;">30%</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>ADI</td>
+<td style="text-align: right;">10.52</td>
+<td style="text-align: right;">3.24</td>
+<td style="text-align: right;">34</td>
+<td style="text-align: right;">38</td>
+<td style="text-align: right;"><strong>88%</strong></td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>blockJacobi(2)</td>
+<td style="text-align: right;">19.29</td>
+<td style="text-align: right;">4.39</td>
+<td style="text-align: right;"><strong>12</strong></td>
+<td style="text-align: right;">52</td>
+<td style="text-align: right;">23%</td>
+<td style="text-align: right;"><strong>960</strong></td>
+</tr>
+<tr>
+<td>two-level IC(0)+coarse</td>
+<td style="text-align: right;">11.05</td>
+<td style="text-align: right;">3.32</td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">39</td>
+<td style="text-align: right;">81%</td>
+<td style="text-align: right;">9</td>
+</tr>
+</tbody>
+</table>
+<p>$\sqrt{\kappa'}$ <strong>bounds</strong> every method (all four counts under their Chebyshev ceilings) — but it does not <em>rank</em> them: the fitted $c = \mathrm{its}/\sqrt{\kappa'}$ spans $[2.96, 11.10]$ and the orderings disagree (<code>ordering_match = False</code> in the JSON). The instructive pair: ADI's spectrum is a smooth arch with <em>zero</em> eigenvalues at 1 — it burns 88% of its Chebyshev budget, the near-worst-case shape — while blockJacobi(2), with 1.8× <em>larger</em> $\kappa'$, needs a third of ADI's iterations because 960 of its 1024 eigenvalues sit exactly at 1 and CG only has to learn the 64 stragglers. Spectral <em>shape</em> decides within the bound (deviations-log entry 7 records that this section was reframed after measurement — the data rejected "iterations $= c\sqrt{\kappa'}$" as a fine-grained law). This is the suite's oldest scar, finally explained end-to-end: <a href="06-neural-preconditioner.html">06</a>'s NPO wins 3.87× <em>entirely</em> by clustering, and <a href="07-nystrom-preconditioning.html">07</a>'s Nyström fails <em>despite</em> attacking $\kappa$, because Krylov methods buy convergence with clusters, and $\kappa$ is merely the crudest summary of clustering. <strong>Punchline: a preconditioner decouples ahead of time; CG decouples as it goes; and they compose</strong> — the preconditioner collapses the spectrum toward few effective scales, CG whitens whatever scales are left, one per (cluster of) eigenvalue.</p>
+<hr />
+<h2 id="6-dictionary-delta">6. Dictionary delta</h2>
+<p>Rows appended to <a href="09-stiffness-as-precision.html">09 §8</a>, <a href="11-regressions-and-multiscale.html">11 §7</a>, <a href="12-autoregressive-preconditioning.html">12 §6</a> — all machine-checked in <a href="../python/experiments/decoupling.py">decoupling.py</a> / <a href="../mathematica/decoupling_adi.wls">decoupling_adi.wls</a> except the row marked †, which is the standard structural analogy:</p>
+<table>
+<thead>
+<tr>
+<th>Numerical linear algebra / PDE</th>
+<th>Statistics / probability</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cross-partial $\partial^2 J/\partial u_i\partial u_j = A_{ij}$ (FD-verified, $4.7\times10^{-10}$ on entries of size 4356)</td>
+<td>Conditional dependence of $u_i, u_j$ given the rest; off-diagonal precision</td>
+</tr>
+<tr>
+<td>Diagonal $A$: $N$ independent parabolas, GD one-steps ($7.7\times10^{-17}$)</td>
+<td>Fully independent coordinates; inference = $N$ scalar problems</td>
+</tr>
+<tr>
+<td>Separable (Kronecker-sum) operator $A = H + V$, $[H,V] = 0$ exactly</td>
+<td>Two commuting sub-physics = two independent Gaussian information sources about one field; precision adds, one shared KL basis diagonalizes both</td>
+</tr>
+<tr>
+<td>ADI double-sweep $2\sigma(V{+}\sigma I)^{-1}(H{+}\sigma I)^{-1}$</td>
+<td>Alternating conditional optimization — coordinate descent by <em>direction</em> (rows pass, then columns pass), backfitting the two sub-models</td>
+</tr>
+<tr>
+<td>Geometric-mean shift $\sigma = \sqrt{\lambda_1\lambda_n}$; $f_{\min}{+}f_{\max} = 2$</td>
+<td>Equalizing the two experts' worst mismatch; hardest surviving modes = where the experts disagree (mixed corner $(1, 32)$)</td>
+</tr>
+<tr>
+<td>Semiseparable inverse: $h\,x_i(1-x_j)$ rank-1 triangle (exact); far blocks of $\Sigma$ rank-11/256</td>
+<td>Long-range dependence carried by few effective factors; screening from the covariance side; $\mathcal H$-matrix admissibility†</td>
+</tr>
+<tr>
+<td>Separator (columns 15–16); $\mathrm{nnz}(A_{LR}) = 0$</td>
+<td>Markov blanket: $\mathrm{Cov}(L, R \mid I) = 0$ exactly ($7.2\times10^{-16}$)</td>
+</tr>
+<tr>
+<td>Block-Jacobi(2): frozen-halves solves; eigenvalue 1, multiplicity $960 = N - 2\,\mathrm{rank}(A_{LR})$</td>
+<td>Optimize each half with the other clamped; directions the surrogate already whitens exactly</td>
+</tr>
+<tr>
+<td>Schur complement / interface problem; extreme modes localized at columns 15/16</td>
+<td>Effective interface physics after marginalizing the interiors; residual coupling is low-dimensional (rank 32) and lives on the blanket</td>
+</tr>
+<tr>
+<td>CG conjugacy $p_i^\top A p_j = 0$ ($1.8\times10^{-15}$ over 30 directions)</td>
+<td>Sequential decorrelation: on-the-fly Gram–Schmidt in the precision metric = adaptive sequential regression (<a href="09-stiffness-as-precision.html">09 §5</a>)</td>
+</tr>
+<tr>
+<td>Two distinct eigenvalues ⟹ CG = 2 its (measured at $\kappa$ up to $10^6$)</td>
+<td>One common factor + noise: two variance scales = two regressions, however strong the factor</td>
+</tr>
+<tr>
+<td>GD rate $(\kappa-1)/(\kappa+1)$ (measured to 7–8 digits); its $\approx \tfrac{\kappa}{2}\ln\tfrac1\varepsilon$</td>
+<td>Memoryless learner: pays the full variance <em>range</em> every step, relearns old directions; refinement $\sqrt{f(m_0)}$ for generic data</td>
+</tr>
+<tr>
+<td>$\kappa$ bound vs clustering (88% vs 23% Chebyshev utilization)</td>
+<td>Worst-case spread vs number of distinct variance scales actually present</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7-pointers">7. Pointers</h2>
+<p>ADI is Peaceman &amp; Rachford (<em>J. SIAM</em> 3, 1955) and Douglas &amp; Rachford (1956); the shift theory and the $O(\log\kappa)$ multi-shift result are Wachspress (<em>The ADI Model Problem</em>, 1995; also Varga, <em>Matrix Iterative Analysis</em>, ch. 7). Semiseparability of tridiagonal inverses is Gantmacher &amp; Krein (<em>Oscillation Matrices and Kernels</em>, 1941/2002); the modern treatment is Vandebril, Van Barel &amp; Mastronardi (<em>Matrix Computations and Semiseparable Matrices</em>, 2008); hierarchical matrices are Hackbusch (<em>Computing</em> 62, 1999; <em>Hierarchical Matrices</em>, 2015), with the elliptic-inverse approximability theorem in Bebendorf &amp; Hackbusch (<em>Numer. Math.</em> 95, 2003). The GMRF Markov property and separator calculus are Rue &amp; Held (<em>Gaussian Markov Random Fields</em>, 2005) — the same source as <a href="09-stiffness-as-precision.html">09</a>'s half of the dictionary. Domain decomposition: Schwarz (1870), the modern theory in Smith, Bjørstad &amp; Gropp (1996) and Toselli &amp; Widlund (<em>Domain Decomposition Methods</em>, 2005) — including why two-level (coarse-space) corrections are mandatory, which is <a href="11-regressions-and-multiscale.html">11 §5</a>'s measurement wearing DD clothes. CG's minimax optimality and finite termination are Hestenes &amp; Stiefel (1952) via <a href="04-krylov-and-pcg.html">04</a>; the clustering refinements are Axelsson &amp; Lindskog (1986) and van der Sluis &amp; van der Vorst (1986); Greenbaum (<em>Iterative Methods for Solving Linear Systems</em>, 1997) for both. The GD zigzag asymptotics go back to Akaike (1959). Siblings: the operator and spectrum, <a href="01-code-walkthrough.html">01</a>/<a href="02-eigenvalues.html">02</a>; the GRF RHS, <a href="03-gaussian-random-fields.html">03</a>; the baselines, <a href="05-classical-preconditioners.html">05</a>; the clustering win and the $\kappa$-reduction failure, <a href="06-neural-preconditioner.html">06</a>/<a href="07-nystrom-preconditioning.html">07</a>; consolidated tables, <a href="08-results.html">08</a>; the dictionary, physics, grid, and Richardson readings, <a href="09-stiffness-as-precision.html">09</a>/<a href="10-fluctuation-dissipation.html">10</a>/<a href="11-regressions-and-multiscale.html">11</a>/<a href="12-autoregressive-preconditioning.html">12</a>; the roadmap, <a href="00-overview.html">00</a>.</p>
+<hr />
+<p><strong>Coda.</strong> Reports <a href="05-classical-preconditioners.html">05</a>–<a href="13-preconditioning-as-decoupling.html">13</a> are one statement. The energy $J$ has cross-partials; the cross-partials are the precision's off-diagonal; the off-diagonal is conditional dependence — and every solver move in the suite is a decision about <strong>which of those interactions to model exactly, which to approximate, and which to leave for the iteration to discover</strong>. Model none of them: Jacobi, and the iteration discovers everything at $\cos(\pi h)$ per sweep. Model them all: the DST rotation or the perfect autoregression, one pass, nothing left to discover. In between, choose an axis and split: rows from columns (ADI, exactly separable, $\kappa \to \tfrac12\sqrt\kappa$), left from right (block-Jacobi, halves exactly conditionally independent given the 64 interface values of §4.1's two-column separator, all residual coupling localized there), coarse from fine (<a href="11-regressions-and-multiscale.html">11</a>/<a href="12-autoregressive-preconditioning.html">12</a>'s two-level, the one axis that must be recursed). What the split leaves unmodeled is a number — $\rho(I - M^{-1}A)$ per sweep, or $\kappa(M^{-1}A)$ with its clusters for CG — and CG itself is the same move made adaptive: a sequential decoupler that whitens one surviving scale per iteration and therefore counts clusters where gradient descent counts the whole range. Solving a coupled system <em>is</em> uncoupling it; the only choices are the axis, the price, and whether you pay before the iteration or during it.</p>
+</div>
+</body>
+</html>

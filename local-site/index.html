@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>poisson-solvers</title>
+<style>
+body { margin: 0; color: #1b1f23; background: #fff;
+       font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI",
+             Helvetica, Arial, sans-serif; }
+.page { max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+nav.site { font-size: .85rem; color: #57606a; margin-bottom: 1.5rem;
+           border-bottom: 1px solid #d8dee4; padding-bottom: .5rem; }
+nav.site a { color: #0969da; text-decoration: none; }
+nav.site a:hover { text-decoration: underline; }
+nav.site .sep { margin: 0 .45em; color: #8c959f; }
+h1, h2, h3, h4 { line-height: 1.25; margin: 1.6em 0 .6em; }
+h1 { font-size: 1.9rem; border-bottom: 1px solid #d8dee4;
+     padding-bottom: .3em; margin-top: .2em; }
+h2 { font-size: 1.45rem; border-bottom: 1px solid #eaecef;
+     padding-bottom: .25em; }
+a { color: #0969da; }
+img { max-width: 100%; height: auto; }
+pre { background: #f6f8fa; padding: .9em 1.1em; overflow-x: auto;
+      border-radius: 6px; font-size: .85em; line-height: 1.45; }
+code { font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo,
+       Consolas, monospace; background: #f6f8fa; padding: .1em .3em;
+       border-radius: 4px; font-size: .9em; }
+pre code { background: none; padding: 0; font-size: 1em; }
+table { border-collapse: collapse; margin: 1em 0; display: block;
+        overflow-x: auto; max-width: 100%; }
+th, td { border: 1px solid #d0d7de; padding: .35em .7em; }
+th { background: #f6f8fa; }
+blockquote { margin: 0 0 1em; padding: 0 1em; color: #57606a;
+             border-left: .25em solid #d0d7de; }
+hr { border: none; border-top: 1px solid #d8dee4; margin: 2em 0; }
+.citation { color: #57606a; word-break: break-all; }
+mjx-container[jax="SVG"][display="true"] { overflow-x: auto;
+                                           overflow-y: hidden; }
+</style>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  options: {
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  svg: { fontCache: 'local' }
+};
+</script>
+<script defer src="vendor/mathjax-tex-svg.js"></script>
+</head>
+<body>
+<div class="page">
+<nav class="site">poisson-solvers &mdash; offline mirror (built by tools/build_local_site.py)</nav>
+<h1 id="poisson-solvers">poisson-solvers</h1>
+<p>Implementation and study of <strong>preconditioned conjugate gradients for the 2-D Poisson equation</strong>: a Mathematica reference program ported line-by-line to Python, then used as a fully-instrumented testbed for classical (Jacobi, ILU), randomized (Nyström, arXiv:2110.02820<span class="citation"> (https://arxiv.org/abs/2110.02820)</span>), and neural (NPO, arXiv:2502.01337<span class="citation"> (https://arxiv.org/abs/2502.01337)</span>) preconditioners.</p>
+<p><strong>Problem</strong>: $A = (d_1 \otimes I + I \otimes d_1)/h^2$ — the 5-point Dirichlet Laplacian on a $32\times32$ interior grid ($h = 1/(n+1)$, $N = n^2 = 1024$, $\kappa(A) = 440.69$ exactly) — solved against a standardized Gaussian-random-field right-hand side to $\|r\|/\|b\| \le 10^{-10}$. Plus a variable-coefficient variant (100:1 coefficient jump) that makes Jacobi nontrivial.</p>
+<p><strong>Why</strong>: at this scale every quantity is exactly computable (analytic spectrum, dense eigensolves, direct-solve ground truth), so each preconditioner's behavior can be <em>explained</em>, not just measured — including two instructive failures: Nyström losing to plain CG on a flat-topped spectrum, and plain PCG stalling on a nonlinear neural preconditioner.</p>
+<h2 id="interactive-demo--rendered-reports">Interactive demo &amp; rendered reports</h2>
+<ul>
+<li><strong><a href="cg-explorer/index.html">Iterative solvers explorer</a></strong> — interactive dashboard for a 1D heat-conduction Poisson problem (heater at one end, chiller at the other): scrub through the iteration history of CG, SOR, gradient descent, and CG with a toy in-browser neural preconditioner (arXiv:2502.01337<span class="citation"> (https://arxiv.org/abs/2502.01337)</span>, trained by <a href="python/neural/train_npo_1d.py">python/neural/train_npo_1d.py</a>).</li>
+<li><strong><a href="interactive/hierarchical-solvers.html">Hierarchical solver race</a></strong> — five solvers (GD, CG, PCG with the <em>actual</em> HODLR rank-2/rank-8 compressed inverses, damped Richardson) racing live in the browser on the hot/cold-rod problem of <a href="reports/14-hierarchical-inverse.html">report 14</a> §5; runs locally too (<a href="interactive/hierarchical-solvers.html">interactive/hierarchical-solvers.html</a>, serve the repo root over HTTP).</li>
+<li><strong><a href="index.html">Rendered report suite</a></strong> — the reports below as web pages (GitHub Pages).</li>
+</ul>
+<h2 id="reading-offline">Reading offline</h2>
+<p>The whole suite (reports, figures, both interactive pages, vendored MathJax) is mirrored as a self-contained static site in <code>local-site/</code> — open <code>local-site/index.html</code> directly in a browser (<code>file://</code>, no server, no network needed). Regenerate it with <code>uv run python tools/build_local_site.py</code>.</p>
+<h2 id="quickstart">Quickstart</h2>
+<p>Python env is managed by <code>uv</code> (Python 3.12; numpy, scipy, matplotlib, torch). Run from the repo root:</p>
+<pre><code class="language-bash">uv run python python/experiments/run_all.py        # full benchmark -&gt; results/results.json + figures
+uv run python python/experiments/spectra.py        # eigenvalue verification + kappa(n) scaling
+uv run python python/neural/train_npo.py           # train the neural preconditioner (~216 s CPU)
+uv run python python/neural/eval_npo.py            # evaluate it (FCG vs plain PCG vs CG)
+
+wolframscript -file mathematica/poisson_pcg.wls    # Mathematica reference run
+wolframscript -file mathematica/eigen_check.wls    # analytic-spectrum cross-check
+wolframscript -file mathematica/nystrom_pcg.wls    # Wolfram Nystrom implementation
+</code></pre>
+<p>All Python runs are bit-deterministic (fixed seeds) and reproduce the committed <code>results/*.json</code> exactly.</p>
+<h2 id="results-at-a-glance">Results at a glance</h2>
+<p>Canonical problem, from <a href="results/results.json">results/results.json</a>:</p>
+<table>
+<thead>
+<tr>
+<th>method</th>
+<th style="text-align: right;">iterations</th>
+<th style="text-align: right;">wall (setup + solve) [s]</th>
+<th>note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CG (none)</td>
+<td style="text-align: right;">116</td>
+<td style="text-align: right;">0.0012</td>
+<td>baseline</td>
+</tr>
+<tr>
+<td>CG (Jacobi)</td>
+<td style="text-align: right;">116</td>
+<td style="text-align: right;">0.0012</td>
+<td>provably identical to plain CG (constant diagonal)</td>
+</tr>
+<tr>
+<td>CG (ILU)</td>
+<td style="text-align: right;"><strong>5</strong></td>
+<td style="text-align: right;">0.0012</td>
+<td>near-direct factorization at this scale</td>
+</tr>
+<tr>
+<td>CG (Nyström, ranks 16–256)</td>
+<td style="text-align: right;">123–119</td>
+<td style="text-align: right;">0.0026–0.026</td>
+<td><em>worse</em> than plain CG — flat-top spectrum is its adversarial case</td>
+</tr>
+<tr>
+<td><strong>FCG (NPO, Notay)</strong></td>
+<td style="text-align: right;"><strong>30</strong></td>
+<td style="text-align: right;">0.030</td>
+<td>3.87× fewer iterations via spectral clustering (12.56 spread vs κ = 440.69)</td>
+</tr>
+<tr>
+<td>CG (NPO, plain PCG)</td>
+<td style="text-align: right;">2000</td>
+<td style="text-align: right;">1.68</td>
+<td><strong>did not converge</strong> — negative control: FR-β breaks on a nonlinear M</td>
+</tr>
+</tbody>
+</table>
+<p>Variable-coefficient problem (contrast 100): CG 771 iterations → Jacobi-CG <strong>137</strong> (5.6×).</p>
+<h2 id="reports">Reports</h2>
+<p>Start with <a href="reports/00-overview.html">reports/00-overview.md</a> (full repo map, run instructions, annotated reading order), then:</p>
+<ol>
+<li><a href="reports/01-code-walkthrough.html">01 — Code Walkthrough</a> — Mathematica reference + Python port, divergence ledger</li>
+<li><a href="reports/02-eigenvalues.html">02 — The Eigenvalue Story</a> — closed-form spectra, DST-I, exact κ, verified to float64</li>
+<li><a href="reports/03-gaussian-random-fields.html">03 — The GRF Right-Hand Side</a> — spectral sampler, Matérn interpretation, Re(IFFT) proof</li>
+<li><a href="reports/04-krylov-and-pcg.html">04 — Krylov and PCG</a> — CG theory, √κ bound vs reality, flexible CG (Notay)</li>
+<li><a href="reports/05-classical-preconditioners.html">05 — Classical Preconditioners</a> — Jacobi (theorem + 5.6× contrast case), ILU, road to multigrid</li>
+<li><a href="reports/06-neural-preconditioner.html">06 — Neural Preconditioning Operator</a> — NPO paper digest, toy NAMG, 116 → 30, why FCG is required</li>
+<li><a href="reports/07-nystrom-preconditioning.html">07 — Randomized Nyström Preconditioning</a> — exact implementation, the instructive negative result</li>
+<li><a href="reports/08-results.html">08 — Consolidated Results</a> — full matrix, timings, sanity checks, limitations, next steps</li>
+<li><a href="reports/09-stiffness-as-precision.html">09 — The Statistical Dictionary</a> — stiffness matrix = precision matrix: Green's function as Brownian-bridge covariance, solvers as Gaussian inference, preconditioners as surrogate models (incomplete Cholesky = Vecchia, Nyström = factor analysis)</li>
+<li><a href="reports/10-fluctuation-dissipation.html">10 — Kick It, or Watch It Jitter</a> — fluctuation–dissipation for the discrete Laplacian: kick response = jitter covariance, the Cholesky factors read out of thermal snapshots, and a Vecchia preconditioner learned from noise alone that cuts the canonical solve 116 → 30 (κ 440.69 → 13.7)</li>
+<li><a href="reports/11-regressions-and-multiscale.html">11 — Predict Thy Neighbor, Subtract the Average</a> — the 09/10 dictionary worked on the 8×8 grid: Cholesky fill as wavefront regressions, the IC(0)-vs-Vecchia gap measured (~22%), block averages as coarse regressors, and an additive two-level IC(0)+coarse preconditioner that takes the hot/cold-rod solve 76 → 32 (κ 440.69 → 11.05)</li>
+<li><a href="reports/12-autoregressive-preconditioning.html">12 — The Preconditioner Is an Autoregressive Predictor</a> — the synthesis: CG removed, every preconditioner run as the same stationary predict-and-correct Richardson iteration, quality read as ρ(I − CA) — perfect two-sided regressions scheduled synchronously = Jacobi (ρ = cos πh), sequentially = Gauss–Seidel (rate exponent exactly doubles), the perfect causal predictor solving in one step, and the truncation ladder down to a mesh-independent two-grid ρ = 0.357 (17 sweeps vs Jacobi's 4777)</li>
+<li><a href="reports/13-preconditioning-as-decoupling.html">13 — Preconditioning Is Decoupling</a> — the capstone: coupling = cross-partials = off-diagonal precision = conditional dependence, and every preconditioner is a scheme for splitting one entangled minimization into (nearly) independent subproblems — five decoupling axes (coordinates, frequency, direction, space, scale) raced on one ladder (ADI cuts κ 440.69 → 10.52 = 0.50√κ; block-Jacobi(2) leaves 960 of 1024 eigenvalues at exactly 1 and CG needs just 12 iterations), plus the measured GD-vs-CG verdict — two distinct eigenvalues mean CG finishes in exactly 2 steps even at κ = 10⁶ (GD: 11.5 million): clusters, not range, are CG's currency</li>
+<li><a href="reports/14-hierarchical-inverse.html">14 — The Hierarchical Structure of the Inverse</a> — the structural sequel: conditional independence across a separator is a <em>rank bound</em> on covariance blocks ($\Sigma_{LR} = \Sigma_{LI}\Sigma_{II}^{-1}\Sigma_{IR}$, rank ≤ |I|), measured as a machine-precision cliff at exactly the separator width 32 at every level of a HODLR partition of $A^{-1}$ — so the dense inverse compresses to $O(Nr\log N)$ (8× at rank 8) and runs as an apply-ready preconditioner (κ 440.69 → 3.85 at rank 8; rank 16 takes the iteration lead, 11 vs block-Jacobi's 12) — plus an <strong>interactive in-browser solver race</strong> (<a href="interactive/hierarchical-solvers.html">interactive/hierarchical-solvers.html</a>) driving the actual exported rank-2/rank-8 blocks against GD and CG</li>
+</ol>
+<h2 id="layout">Layout</h2>
+<ul>
+<li><code>mathematica/</code> — reference <code>.wls</code> scripts (problem, PCG, eigen checks, Nyström)</li>
+<li><code>python/</code> — <code>poisson.py</code>, <code>pcg.py</code>, <code>preconditioners.py</code>, <code>nystrom.py</code>, <code>neural/</code>, <code>experiments/</code></li>
+<li><code>reports/</code> — the report suite (00–14)</li>
+<li><code>interactive/</code> — self-contained browser demos (<code>hierarchical-solvers.html</code>, <code>adi-sweep.html</code>)</li>
+<li><code>results/</code> — JSON summaries + NPO checkpoint (deterministic, reproducible)</li>
+<li><code>figures/</code> — PNGs at dpi=150; <code>mma_*</code> are Mathematica exports</li>
+</ul>
+</div>
+</body>
+</html>

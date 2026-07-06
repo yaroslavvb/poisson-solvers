@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01 — Code Walkthrough</title>
+<style>
+body { margin: 0; color: #1b1f23; background: #fff;
+       font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI",
+             Helvetica, Arial, sans-serif; }
+.page { max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+nav.site { font-size: .85rem; color: #57606a; margin-bottom: 1.5rem;
+           border-bottom: 1px solid #d8dee4; padding-bottom: .5rem; }
+nav.site a { color: #0969da; text-decoration: none; }
+nav.site a:hover { text-decoration: underline; }
+nav.site .sep { margin: 0 .45em; color: #8c959f; }
+h1, h2, h3, h4 { line-height: 1.25; margin: 1.6em 0 .6em; }
+h1 { font-size: 1.9rem; border-bottom: 1px solid #d8dee4;
+     padding-bottom: .3em; margin-top: .2em; }
+h2 { font-size: 1.45rem; border-bottom: 1px solid #eaecef;
+     padding-bottom: .25em; }
+a { color: #0969da; }
+img { max-width: 100%; height: auto; }
+pre { background: #f6f8fa; padding: .9em 1.1em; overflow-x: auto;
+      border-radius: 6px; font-size: .85em; line-height: 1.45; }
+code { font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo,
+       Consolas, monospace; background: #f6f8fa; padding: .1em .3em;
+       border-radius: 4px; font-size: .9em; }
+pre code { background: none; padding: 0; font-size: 1em; }
+table { border-collapse: collapse; margin: 1em 0; display: block;
+        overflow-x: auto; max-width: 100%; }
+th, td { border: 1px solid #d0d7de; padding: .35em .7em; }
+th { background: #f6f8fa; }
+blockquote { margin: 0 0 1em; padding: 0 1em; color: #57606a;
+             border-left: .25em solid #d0d7de; }
+hr { border: none; border-top: 1px solid #d8dee4; margin: 2em 0; }
+.citation { color: #57606a; word-break: break-all; }
+mjx-container[jax="SVG"][display="true"] { overflow-x: auto;
+                                           overflow-y: hidden; }
+</style>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  options: {
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  svg: { fontCache: 'local' }
+};
+</script>
+<script defer src="../vendor/mathjax-tex-svg.js"></script>
+</head>
+<body>
+<div class="page">
+<nav class="site"><a href="../index.html">index</a><span class="sep">&middot;</span><a href="00-overview.html">&larr; 00-overview</a><span class="sep">&middot;</span><a href="02-eigenvalues.html">02-eigenvalues &rarr;</a></nav>
+<h1 id="01--code-walkthrough">01 — Code Walkthrough</h1>
+<p>Complete construct-by-construct walkthrough of every piece of code in the repo: the Mathematica reference program, the Python port (with an explicit accounting of every place the port deviates and why the results are statistically equivalent but not bit-identical), and the two auxiliary Mathematica scripts. The mathematics behind the code is covered in the sibling reports — <a href="02-eigenvalues.html">02-eigenvalues.md</a> (spectra), <a href="03-gaussian-random-fields.html">03-gaussian-random-fields.md</a> (the GRF right-hand side), <a href="04-krylov-and-pcg.html">04-krylov-and-pcg.md</a> (CG/PCG/FCG theory), <a href="05-classical-preconditioners.html">05-classical-preconditioners.md</a>, <a href="06-neural-preconditioner.html">06-neural-preconditioner.md</a>, <a href="07-nystrom-preconditioning.html">07-nystrom-preconditioning.md</a>, and <a href="08-results.html">08-results.md</a> (all numbers in context). This report is about <em>the code itself</em>.</p>
+<h2 id="0-repo-map">0. Repo map</h2>
+<pre><code>mathematica/
+  poisson_pcg.wls      # the reference program: problem + GRF + functional PCG (this report, §1)
+  eigen_check.wls      # analytic-spectrum verification (§4; math in report 02)
+  nystrom_pcg.wls      # randomized Nystrom preconditioner in Wolfram (§5; math in report 07)
+python/
+  poisson.py           # operators + GRF RHS — port of poisson_pcg.wls setup (§2.1)
+  pcg.py               # pcg (classical) + flexible_pcg (Notay) (§2.2)
+  preconditioners.py   # identity / jacobi / ilu factories (§2.3)
+  nystrom.py           # NystromPreconditioner class (§6; full treatment in report 07)
+  neural/
+    npo.py             # NAMG-lite network + NPOPreconditioner wrapper (§6; report 06)
+    train_npo.py       # NPO training (report 06)
+    eval_npo.py        # NPO vs CG evaluation (report 06)
+  experiments/
+    run_baseline.py    # CG vs Jacobi baseline — port of poisson_pcg.wls driver (§2.4)
+    spectra.py         # eigenvalue verification — Python analogue of eigen_check.wls (report 02)
+    run_nystrom.py     # Nystrom ranks 16..256 + exact preconditioned kappa (report 07)
+    npo_spectrum.py    # column-linearized NPO spectrum (report 06)
+    run_all.py         # consolidated benchmark -&gt; results/results.json (report 08)
+results/               # *.json summaries + npo_checkpoint.pt
+figures/               # all PNGs; mma_* are Mathematica exports
+</code></pre>
+<hr />
+<h2 id="1-the-mathematica-reference-mathematicapoisson_pcgwls">1. The Mathematica reference: <a href="../mathematica/poisson_pcg.wls">mathematica/poisson_pcg.wls</a></h2>
+<p>A single <code>wolframscript</code> file that (i) builds the 5-point discrete Laplacian on a $32\times32$ interior grid, (ii) samples a Gaussian-random-field right-hand side, (iii) solves with CG and Jacobi-PCG using a purely functional PCG written around <code>NestWhile</code>, and (iv) exports three figures (<code>figures/mma_source_grf.png</code>, <code>figures/mma_solution.png</code>, <code>figures/mma_convergence.png</code>).</p>
+<h3 id="11-problem-setup-lines-2636-band-sparsearray-kroneckerproduct">1.1 Problem setup (lines 26–36): <code>Band</code>, <code>SparseArray</code>, <code>KroneckerProduct</code></h3>
+<pre><code class="language-wolfram">n = 32;
+h = 1.0/(n + 1);
+
+d1 = SparseArray[
+  {Band[{1, 1}] -&gt; 2.0, Band[{2, 1}] -&gt; -1.0, Band[{1, 2}] -&gt; -1.0},
+  {n, n}];
+id = IdentityMatrix[n, SparseArray];
+
+A = (KroneckerProduct[d1, id] + KroneckerProduct[id, d1])/h^2;
+</code></pre>
+<ul>
+<li><strong><code>Band[{i, j}] -&gt; v</code></strong> inside <code>SparseArray</code> fills the diagonal band <em>starting</em> at position $(i,j)$ and stepping by $(+1,+1)$ with the constant <code>v</code>. So <code>Band[{1,1}] -&gt; 2.0</code> is the main diagonal, <code>Band[{2,1}] -&gt; -1.0</code> the first subdiagonal, <code>Band[{1,2}] -&gt; -1.0</code> the first superdiagonal. Result: the tridiagonal $[-1, 2, -1]$ second-difference stencil for a homogeneous Dirichlet problem on $n$ interior nodes, <strong>without</strong> the $1/h^2$ scaling:</li>
+</ul>
+<p>$$
+d_1 = \begin{pmatrix} 2 &amp; -1 &amp; &amp; \\ -1 &amp; 2 &amp; -1 &amp; \\ &amp; \ddots &amp; \ddots &amp; \ddots \\ &amp; &amp; -1 &amp; 2 \end{pmatrix} \in \mathbb{R}^{n\times n}.
+$$</p>
+<p>The values are written as machine reals (<code>2.0</code>, not <code>2</code>) so the <code>SparseArray</code> is packed real from the start — no exact-integer arithmetic leaks into the solver.
+- <strong><code>IdentityMatrix[n, SparseArray]</code></strong> — the second argument requests a sparse representation (a long-standing form, available since at least the 11.3-era releases); a dense identity would make the Kronecker products dense $1024\times1024$ blocks.
+- <strong><code>KroneckerProduct</code> sum.</strong> The 2-D operator is the standard tensor-sum construction
+$$
+A \;=\; \frac{1}{h^2}\left(d_1 \otimes I \;+\; I \otimes d_1\right) \in \mathbb{R}^{n^2 \times n^2},
+$$
+  which is exactly the 5-point stencil $\frac{1}{h^2}[4u_{ij} - u_{i\pm1,j} - u_{i,j\pm1}]$ acting on grid functions flattened with the <strong>first index slowest</strong> (Mathematica <code>Flatten</code> order = row-major = C order; flat index $k = i\,n + j$). The tensor-sum structure is what makes the eigenvalues separable, $\Lambda_{k,l} = (\lambda_k + \lambda_l)/h^2$ — verified numerically in <a href="../mathematica/eigen_check.wls">eigen_check.wls</a> (§4) and derived in <a href="02-eigenvalues.html">02-eigenvalues.md</a>. $A$ is SPD with <strong>constant diagonal</strong> $4/h^2 = 4\cdot 33^2 = 4356$; this single fact drives the Jacobi-equals-CG result in §1.4.</p>
+<h3 id="12-gaussian-random-field-rhs-lines-4048">1.2 Gaussian random field RHS (lines 40–48)</h3>
+<pre><code class="language-wolfram">alpha = 2.0;
+tau = 3.0;
+freqs = N@RotateRight[Range[-n/2, n/2 - 1], n/2]*n;
+spectrum = 1.0/(Outer[Plus, freqs^2, freqs^2] + tau^2)^(alpha/2.0);
+SeedRandom[42];
+noise = RandomVariate[NormalDistribution[], {n, n, 2}] . {1, I};
+grfRaw = Re@InverseFourier[noise*spectrum, FourierParameters -&gt; {-1, -1}];
+b = Standardize@Flatten@grfRaw;
+grf = ArrayReshape[b, {n, n}];
+</code></pre>
+<p>This samples a mean-zero GRF with Matérn-like spectral density $(\vert k\vert ^2+\tau^2)^{-\alpha/2}$, the RHS distribution used for Poisson benchmarks in the FNO paper (Li et al., ICLR 2021), and the training/test distribution for the NPO (<a href="06-neural-preconditioner.html">06-neural-preconditioner.md</a>). The math is in <a href="03-gaussian-random-fields.html">03-gaussian-random-fields.md</a>; here is what each construct does:</p>
+<ul>
+<li><strong>The frequency grid <code>RotateRight</code> trick.</strong> <code>Range[-n/2, n/2-1]</code> is $[-16,-15,\dots,15]$. <code>RotateRight[list, n/2]</code> moves the <strong>last</strong> $n/2 = 16$ elements to the front, giving
+$$
+[\,0, 1, \dots, 15,\; -16, -15, \dots, -1\,],
+$$
+  i.e. exactly the DFT frequency-bin ordering (<code>numpy.fft.fftfreq(n)*n</code> ordering): non-negative frequencies first, then the negative ones. This is required because <code>InverseFourier</code> consumes coefficients in standard DFT bin order, not in "sorted frequency" order. The whole list is then multiplied by <code>n</code> (so the entries are $\{0, n, 2n, \dots\} \cup \{-n^2/2, \dots\}$) and wrapped in <code>N@</code> to force machine reals. The <code>*n</code> scaling only changes the <em>effective</em> $\tau$ (the spectrum shape parameter); it is reproduced verbatim in the port.</li>
+<li><strong><code>spectrum</code></strong> — <code>Outer[Plus, freqs^2, freqs^2]</code> is the $n\times n$ matrix $f_x^2 + f_y^2 = \vert k\vert ^2$; the spectrum is $(\vert k\vert ^2+\tau^2)^{-\alpha/2}$ elementwise, with $\alpha = 2$, $\tau = 3$.</li>
+<li><strong>Complex white noise via a dot with <code>{1, I}</code>.</strong> <code>RandomVariate[NormalDistribution[], {n, n, 2}]</code> draws an $n\times n\times 2$ real standard-normal tensor; dotting the last axis with <code>{1, I}</code> forms $\xi = \xi_{\mathrm{re}} + i\,\xi_{\mathrm{im}}$ — an $n\times n$ complex circular Gaussian with $\mathbb{E}\vert \xi\vert ^2 = 2$. This is a compact idiom for complex noise: one <code>RandomVariate</code> call, one <code>Dot</code>, and the draw order (all reals for the field, real/imag interleaved along the last axis) is fully determined — which matters for RNG-reproducibility of the Mathematica run itself. Note the noise is <strong>not</strong> Hermitian-symmetrized, so <code>InverseFourier</code> of <code>noise*spectrum</code> is genuinely complex; the <code>Re@</code> projection is what makes the field real (this halves the variance relative to a Hermitian construction — irrelevant here because of the final standardization; see <a href="03-gaussian-random-fields.html">03-gaussian-random-fields.md</a>).</li>
+<li><strong><code>FourierParameters -&gt; {-1, -1}</code> conventions.</strong> Mathematica's transforms are a two-parameter family $\{a, b\}$:
+$$
+\text{Fourier: } v_s = \frac{1}{n^{(1-a)/2}} \sum_{r=1}^{n} u_r\, e^{2\pi i\, b\,(r-1)(s-1)/n},
+\qquad
+\text{InverseFourier: } u_r = \frac{1}{n^{(1+a)/2}} \sum_{s=1}^{n} v_s\, e^{-2\pi i\, b\,(r-1)(s-1)/n}.
+$$
+  With $a = -1$, $b = -1$: <code>InverseFourier</code> has prefactor $n^{-(1+a)/2} = n^0 = 1$ (<strong>no normalization</strong>) and kernel $e^{+2\pi i (r-1)(s-1)/n}$ (<strong>plus sign</strong>, because $b=-1$ flips the inverse kernel's sign). So <code>InverseFourier[..., FourierParameters -&gt; {-1,-1}]</code> is the <em>unnormalized</em> synthesis DFT — the same kernel as <code>numpy.fft.ifft2</code> but <strong>larger by the factor $n^2$</strong> (NumPy divides by $n$ per axis). $\{-1,-1\}$ is not one of Wolfram's named conventions ($\{0,1\}$ default, $\{-1,1\}$ "data analysis", $\{1,-1\}$ "signal processing"): it borrows the signal-processing kernel sign $b=-1$ but, via $a=-1$, puts the entire $1/n$-per-axis normalization on <code>Fourier</code> instead of splitting it. The default $\{0,1\}$ would give a $1/\sqrt{n}$ symmetric normalization and a minus-sign inverse kernel.</li>
+<li><strong><code>Standardize@Flatten@grfRaw</code></strong> — flatten row-major, then <code>Standardize</code> subtracts the mean and divides by the <strong>sample</strong> standard deviation (the $1/(m-1)$ estimator). Two consequences: (i) any overall constant — including the $n^2$ FFT normalization and the $\mathrm{Re}$-projection variance factor — is annihilated, and (ii) the Python port must use <code>ddof=1</code>, not NumPy's default <code>ddof=0</code> (§2.1). The standardized flat vector <code>b</code> is the RHS; <code>grf</code> reshapes it back only for plotting.</li>
+</ul>
+<h3 id="13-the-functional-pcg-lines-5774-pcgsolve">1.3 The functional PCG (lines 57–74): <code>PCGSolve</code></h3>
+<pre><code class="language-wolfram">PCGSolve[matA_, vecB_, precondFunc_, maxIter_ : 1000, tol_ : 10^-10] :=
+  Module[{bNorm = Norm[vecB], pcgStep, result},
+    pcgStep[{x_, r_, p_, rz_, _}] :=
+      Module[{Ap = matA . p, aStep, xNew, rNew, zNew, rzNew, relRes},
+        aStep = rz/(p . Ap);          (* alpha_k = (r.z)/(p.Ap) *)
+        xNew = x + aStep*p;
+        rNew = r - aStep*Ap;
+        relRes = Norm[rNew]/bNorm;
+        Sow[relRes];
+        zNew = precondFunc[rNew];
+        rzNew = rNew . zNew;
+        {xNew, rNew, zNew + (rzNew/rz)*p, rzNew, relRes}];
+    result = Reap[
+      Sow[1.0];
+      NestWhile[pcgStep,
+        {0.*vecB, vecB, precondFunc[vecB], vecB . precondFunc[vecB], 1.0},
+        (#[[5]] &gt; tol &amp;), 1, maxIter]];
+    {result[[1, 1]], result[[2, 1]]}];
+</code></pre>
+<p>This is Saad's Algorithm 9.1 (PCG) written with <strong>no mutable state</strong>: the entire iteration is a pure function <code>pcgStep</code> from a 5-tuple to a 5-tuple, driven by <code>NestWhile</code>. Dissection:</p>
+<ul>
+<li><strong>The state tuple $\{x, r, p, rz, \mathit{relres}\}$.</strong> Everything CG needs to advance one step: the iterate $x_k$, residual $r_k = b - Ax_k$, search direction $p_k$, the cached inner product $rz = r_k^\top z_k = r_k^\top M^{-1} r_k$ (avoids recomputing it in both $\alpha_k$ and $\beta_k$ — it is the <em>denominator</em> of the next $\beta$), and the last relative residual — carried <strong>solely so the halting predicate can see it</strong> (note the input pattern <code>{x_, r_, p_, rz_, _}</code> deliberately ignores slot 5 with a blank <code>_</code>: the step never reads it, only writes it).</li>
+<li><strong><code>pcgStep</code> as a local downvalue.</strong> <code>pcgStep</code> is a <code>Module</code>-local symbol given a delayed definition on the tuple pattern. Per application it does exactly one sparse matvec (<code>Ap = matA . p</code>), one preconditioner apply (<code>precondFunc[rNew]</code>), two inner products (<code>p.Ap</code>, <code>rNew.zNew</code>), and three AXPYs — the canonical PCG cost. The recurrences implemented:
+$$
+\alpha_k = \frac{r_k^\top z_k}{p_k^\top A p_k},\quad
+x_{k+1} = x_k + \alpha_k p_k,\quad
+r_{k+1} = r_k - \alpha_k A p_k,\quad
+z_{k+1} = M^{-1} r_{k+1},\quad
+\beta_k = \frac{r_{k+1}^\top z_{k+1}}{r_k^\top z_k},\quad
+p_{k+1} = z_{k+1} + \beta_k p_k .
+$$
+  The $\beta$ is the standard PCG ("Fletcher–Reeves-form") ratio of successive $r^\top z$ products; see <a href="04-krylov-and-pcg.html">04-krylov-and-pcg.md</a> for why this is only valid when $M$ is a <em>fixed SPD linear operator</em> — the precise property the neural preconditioner violates (<a href="06-neural-preconditioner.html">06-neural-preconditioner.md</a>).</li>
+<li><strong><code>Sow</code>/<code>Reap</code> residual collection.</strong> Rather than threading a growing list through the state (which would make each step $O(\text{hist})$ in rewriting), the step <code>Sow</code>s one scalar <code>relRes</code> per iteration into the dynamically-scoped <code>Reap</code> surrounding the <code>NestWhile</code>. <code>Sow[1.0]</code> before the loop seeds the history with the $k=0$ value $\Vert r_0\Vert /\Vert b\Vert  = 1$ (since $x_0=0 \Rightarrow r_0=b$). <code>Reap[expr]</code> returns <code>{expr, {sownLists}}</code>; hence <code>result[[1, 1]]</code> is the first component of the final state tuple ($x$) and <code>result[[2, 1]]</code> the flat list of sown residuals. <strong>Convention: iterations performed = <code>Length[resHist] - 1</code></strong> — used in the driver's <code>Length[resNone] - 1</code> and preserved verbatim in the Python port.</li>
+<li><strong><code>NestWhile</code> as the driver / halting semantics.</strong> <code>NestWhile[f, init, test, 1, maxIter]</code> repeatedly applies <code>f</code> while <code>test</code> — applied to the most recent <code>1</code> result (the fourth argument) — returns <code>True</code>, but at most <code>maxIter</code> times. The predicate is <code>(#[[5]] &gt; tol &amp;)</code>: continue while the state's 5th slot (last relres) exceeds <code>tol</code>. Two subtleties: (i) the test is evaluated on the <strong>initial</strong> state too, so a <code>b</code> with <code>relres = 1.0 &lt;= tol</code> would return immediately with zero iterations — irrelevant in practice but semantically clean; (ii) when <code>maxIter</code> is exhausted, <code>NestWhile</code> simply returns the current state — no error — so a non-converged run is distinguishable only by its final relres (the Python port makes the same choice; <code>run_all.py</code> records an explicit <code>converged</code> flag instead).</li>
+<li><strong>Initial state</strong> <code>{0.*vecB, vecB, precondFunc[vecB], vecB . precondFunc[vecB], 1.0}</code>: $x_0 = 0$ (written <code>0.*vecB</code> so it stays a packed real array of the right shape), $r_0 = b$, $p_0 = z_0 = M^{-1}b$, $rz_0 = b^\top M^{-1} b$, relres $=1$. Note <code>precondFunc[vecB]</code> is evaluated twice here (once for $p_0$, once inside the inner product) — a 1-extra-apply inefficiency at setup that the Python port removes by storing <code>z</code>.</li>
+<li><strong>One "wasted" preconditioner apply at the end.</strong> The step computes <code>zNew = precondFunc[rNew]</code> <em>before</em> the halting test can see the new relres, so the final iteration performs an $M$-apply whose result is never used. The Python port has the identical property (it appends <code>relres</code>, computes <code>z = M(r)</code>, updates <code>p</code>, and only then breaks) — deliberate, to keep the two residual histories aligned index-by-index.</li>
+<li><strong>Defaults</strong>: <code>maxIter_ : 1000</code>, <code>tol_ : 10^-10</code>. <code>10^-10</code> is an exact rational; comparing a machine real against it is fine (it gets numericized in the comparison). The Python port uses <code>tol=1e-10</code> but <code>maxiter=2000</code> — see the divergence table in §3.</li>
+</ul>
+<h3 id="14-the-solves-lines-7888-and-the-jacobi-construction">1.4 The solves (lines 78–88) and the Jacobi construction</h3>
+<pre><code class="language-wolfram">{xNone, resNone} = PCGSolve[A, b, Identity];
+...
+invDiag = 1.0/Normal[Diagonal[A]];
+{xJacobi, resJacobi} = PCGSolve[A, b, invDiag*# &amp;];
+</code></pre>
+<ul>
+<li>Plain CG is PCG with <code>precondFunc = Identity</code> — the built-in identity <em>function</em>, cute and exact.</li>
+<li><strong><code>Normal[Diagonal[A]]</code> — the sparse-background gotcha.</strong> <code>Diagonal[A]</code> of a <code>SparseArray</code> is itself a <code>SparseArray</code> with background (default) element <code>0.</code>. Evaluating <code>1.0/sparseVector</code> would map the <em>background</em> through the reciprocal too, producing <code>ComplexInfinity</code> on any structurally-unstored entry. <code>Normal</code> densifies first so the elementwise reciprocal is safe. (Here the diagonal is the constant 4356 and dense anyway, but the idiom is written defensively — and it matters for <code>variable_poisson_2d</code> where the port applies the same construction to a genuinely non-constant diagonal.)</li>
+<li>The Jacobi preconditioner is the closure <code>invDiag*# &amp;</code>, i.e. $z = D^{-1} r$ elementwise. Since $D = (4/h^2) I$ <strong>exactly</strong> for this operator, Jacobi is a positive scalar multiple of the identity, and PCG iterates are invariant under positive scaling of $M$ — so Jacobi-PCG must reproduce plain CG <em>iteration-for-iteration up to float rounding</em>. The Python run confirms this to machine precision: both take <strong>116 iterations</strong>, final relres <code>6.666547523655469e-11</code> (none) vs <code>6.666547523655465e-11</code> (Jacobi), max residual-history deviation <code>4.441e-16</code> (from <a href="../results/baseline.json">results/baseline.json</a>). Full discussion in <a href="05-classical-preconditioners.html">05-classical-preconditioners.md</a>.</li>
+<li>Line 88 prints <code>Norm[xNone - xJacobi]</code> as a direct solution-mismatch check.</li>
+</ul>
+<h3 id="15-figures-lines-93116">1.5 Figures (lines 93–116)</h3>
+<p>Wolfram 15.0 has no built-in <code>"Viridis"</code> color function, so lines 93–97 build one as a <code>Blend</code> over nine sampled matplotlib-viridis anchors (<code>RGBColor[0.267, 0.005, 0.329]</code> … <code>RGBColor[0.993, 0.906, 0.144]</code>) — purely cosmetic, to make <img alt="mma_source_grf" src="../figures/mma_source_grf.png" /> visually comparable with the matplotlib default in <img alt="grf_field" src="../figures/grf_field.png" />. Exports: <code>ArrayPlot</code> of the GRF and of the reshaped Jacobi solution, and a <code>ListLogPlot</code> of both residual histories (<img alt="mma_convergence" src="../figures/mma_convergence.png" />), each at <code>ImageResolution -&gt; 150</code> to match the Python <code>dpi=150</code>.</p>
+<hr />
+<h2 id="2-the-python-port">2. The Python port</h2>
+<h3 id="21-pythonpoissonpy--operators-and-grf">2.1 <a href="../python/poisson.py">python/poisson.py</a> — operators and GRF</h3>
+<p><strong><code>laplacian_1d(n)</code></strong> (lines 18–40): <code>scipy.sparse.diags([-1s, 2s, -1s], offsets=[-1,0,1], format="csr")</code> — the exact <code>Band</code> construction of §1.1. Returns CSR.</p>
+<p><strong><code>poisson_2d(n)</code></strong> (lines 43–68): <code>h = 1/(n+1)</code>, then</p>
+<pre><code class="language-python">a = (sp.kron(d1, eye) + sp.kron(eye, d1)) / h**2
+</code></pre>
+<p>— literally the <code>KroneckerProduct</code> line. The module docstring (lines 9–11) pins down the flattening convention: matrices act on grid functions flattened row-major (C order), flat index $k = i\,n + j$ with the first axis slowest — <strong>the same as Mathematica's <code>Flatten</code></strong> — so the operator, RHS, and any reshape-for-plotting agree between the two languages with no permutation.</p>
+<p><strong><code>variable_poisson_2d(n, contrast=100.0)</code></strong> (lines 71–128): new in the port (no Mathematica counterpart) — a finite-volume discretization of $-\nabla\!\cdot(a\nabla u)$ with the piecewise coefficient $a = 1$ for $x&lt;\tfrac12$, $a = \text{contrast}$ for $x\ge\tfrac12$. Construction:</p>
+<ul>
+<li>nodal coefficients <code>a_nodes = where(x &lt; 0.5, 1, contrast)</code> at $x_i = ih$ (lines 111–112);</li>
+<li><strong>harmonic-mean face transmissibilities</strong> in $x$ (lines 116–119):
+$$
+w_{i+1/2} = \frac{2\,a_i\,a_{i+1}}{a_i + a_{i+1}},
+$$
+  the flux-continuity-preserving average at a material interface (LeVeque, Sec. 2.15); boundary faces copy the adjacent nodal value since $a$ is constant near each boundary;</li>
+<li>the $x$-direction tridiagonal <code>tx = diags([-w[1:-1], w[:-1]+w[1:], -w[1:-1]])</code> (lines 121–125): row $i$ has diagonal $w_{i-1/2}+w_{i+1/2}$ and off-diagonals $-w_{i\pm 1/2}$;</li>
+<li>because $a$ depends only on $x$, the $y$-direction stencil at row $i$ is just $a_i \cdot [-1,2,-1]$, so the assembly is the Kronecker sum (line 127)
+$$
+A = \frac{1}{h^2}\Bigl(T_x \otimes I + \operatorname{diag}(a)\otimes d_1\Bigr).
+$$</li>
+</ul>
+<p>The purpose is stated in the docstring (lines 94–96): with contrast 100, $\operatorname{diag}(A)$ jumps from $(2\cdot 1 + 2\cdot 1)/h^2 = 4356$ in the $a{=}1$ region to $(2\cdot 100 + 2\cdot 100)/h^2 = 435{,}600$ in the $a{=}100$ region, so Jacobi is no longer a scalar multiple of the identity and becomes a real preconditioner: 137 vs 771 iterations, a 5.6× reduction (<a href="../results/results.json">results/results.json</a>, <code>variable</code>; analysis in <a href="05-classical-preconditioners.html">05-classical-preconditioners.md</a> and <a href="08-results.html">08-results.md</a>).</p>
+<p><strong><code>grf_rhs(n, alpha=2.0, tau=3.0, seed=42)</code></strong> (lines 131–184) — the port of §1.2, with the three deliberate deviations documented in its <code>Notes</code> block (lines 147–157):</p>
+<pre><code class="language-python">f = np.roll(np.arange(-n // 2, n // 2), n // 2) * n
+spectrum = 1.0 / (f[:, None] ** 2 + f[None, :] ** 2 + tau**2) ** (alpha / 2.0)
+rng = np.random.default_rng(seed)
+noise = rng.standard_normal((n, n, 2)) @ np.array([1.0, 1.0j])
+field = np.real(np.fft.ifft2(noise * spectrum))
+flat = field.ravel()
+return (flat - flat.mean()) / flat.std(ddof=1)
+</code></pre>
+<p>Line-by-line correspondence:</p>
+<table>
+<thead>
+<tr>
+<th>Mathematica</th>
+<th>Python</th>
+<th>note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>RotateRight[Range[-n/2, n/2-1], n/2]*n</code></td>
+<td><code>np.roll(np.arange(-n//2, n//2), n//2) * n</code></td>
+<td><code>np.roll(·, +k)</code> also moves the last $k$ elements to the front — identical output <code>[0..15, -16..-1]*32</code></td>
+</tr>
+<tr>
+<td><code>Outer[Plus, freqs^2, freqs^2]</code></td>
+<td><code>f[:,None]**2 + f[None,:]**2</code></td>
+<td>broadcasting = <code>Outer[Plus, ...]</code></td>
+</tr>
+<tr>
+<td><code>RandomVariate[...,{n,n,2}] . {1,I}</code></td>
+<td><code>rng.standard_normal((n,n,2)) @ [1, 1j]</code></td>
+<td>same construction, <strong>different RNG stream</strong></td>
+</tr>
+<tr>
+<td><code>Re@InverseFourier[·, FourierParameters-&gt;{-1,-1}]</code></td>
+<td><code>np.real(np.fft.ifft2(·))</code></td>
+<td>same $e^{+2\pi i k\cdot x}$ kernel; differ by the constant $n^2$ (Mathematica unnormalized, NumPy divides by $n^2$)</td>
+</tr>
+<tr>
+<td><code>Standardize@Flatten@grfRaw</code></td>
+<td><code>(flat - flat.mean()) / flat.std(ddof=1)</code></td>
+<td><code>ravel()</code> is row-major = <code>Flatten</code>; <code>ddof=1</code> = sample std = <code>Standardize</code></td>
+</tr>
+</tbody>
+</table>
+<p>Why the $n^2$ and $\mathrm{Re}$ factors don't matter: both are overall positive constants on the field, and the final standardization maps the field affinely to mean 0 / sample-std 1, so <em>any</em> overall scaling cancels exactly. The only non-cancelling difference is the RNG stream itself — see §3.</p>
+<h3 id="22-pythonpcgpy--pcg-and-flexible_pcg">2.2 <a href="../python/pcg.py">python/pcg.py</a> — <code>pcg</code> and <code>flexible_pcg</code></h3>
+<p><strong><code>pcg(A, b, M=None, tol=1e-10, maxiter=2000)</code></strong> (lines 15–81) is the imperative transliteration of <code>PCGSolve</code>, one Mathematica state-slot per Python local:</p>
+<table>
+<thead>
+<tr>
+<th><code>PCGSolve</code></th>
+<th><code>pcg</code> (line)</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>{0.*vecB, vecB, precondFunc[vecB], vecB.precondFunc[vecB], 1.0}</code></td>
+<td><code>x = zeros; r = b.copy(); z = M(r); p = z.copy(); rz = r @ z</code> (61–65)</td>
+<td>init; the port computes <code>M(b)</code> <strong>once</strong> (the .wls evaluates it twice)</td>
+</tr>
+<tr>
+<td><code>Ap = matA . p</code></td>
+<td><code>Ap = A @ p</code> (68)</td>
+<td>one matvec</td>
+</tr>
+<tr>
+<td><code>aStep = rz/(p . Ap)</code></td>
+<td><code>alpha = rz / (p @ Ap)</code> (69)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>xNew = x + aStep*p; rNew = r - aStep*Ap</code></td>
+<td>lines 70–71</td>
+<td></td>
+</tr>
+<tr>
+<td><code>relRes = Norm[rNew]/bNorm; Sow[relRes]</code></td>
+<td><code>res_hist.append(norm(r)/bnorm)</code> (72–73)</td>
+<td><code>res_hist = [1.0]</code> (line 59) plays <code>Sow[1.0]</code>; iterations = <code>len(res_hist) - 1</code></td>
+</tr>
+<tr>
+<td><code>zNew = precondFunc[rNew]; rzNew = rNew.zNew</code></td>
+<td><code>z = M(r); rz_new = r @ z</code> (74–75)</td>
+<td>same "wasted" final apply as the .wls (§1.3)</td>
+</tr>
+<tr>
+<td><code>zNew + (rzNew/rz)*p</code></td>
+<td><code>p = z + (rz_new/rz) * p</code> (76)</td>
+<td>Fletcher–Reeves-form $\beta$</td>
+</tr>
+<tr>
+<td><code>NestWhile[..., #[[5]] &gt; tol &amp;, 1, maxIter]</code></td>
+<td><code>for _ in range(maxiter): ...; if relres &lt;= tol: break</code> (67, 78–79)</td>
+<td>continue-while <code>&gt; tol</code> ≡ break-when <code>&lt;= tol</code>; both cap at <code>maxiter</code> and return silently on non-convergence</td>
+</tr>
+</tbody>
+</table>
+<p><code>M=None</code> maps to an identity lambda (line 55); <code>b</code> is coerced to float64 (line 57). The only semantic difference from <code>NestWhile</code> is that the Python loop never tests the <em>initial</em> state — harmless since <code>res_hist[0] = 1.0 &gt; tol</code> for any meaningful tolerance. Neither implementation guards <code>bnorm == 0</code>.</p>
+<p><strong><code>flexible_pcg(A, b, M, ...)</code></strong> (lines 84–141) is identical except for one line — the search-direction update (line 134):</p>
+<pre><code class="language-python">beta = (z_new @ (r_new - r)) / rz  # Polak-Ribiere (Notay 2000)
+</code></pre>
+<p>i.e. $\beta_k = z_{k+1}^\top (r_{k+1} - r_k) / (z_k^\top r_k)$, the Polak–Ribière form of Notay, <em>Flexible Conjugate Gradients</em>, SIAM J. Sci. Comput. 22(4), 2000. It subtracts the stale component $z_{k+1}^\top r_k$ that the Fletcher–Reeves ratio silently assumes is zero — an assumption that holds only for a fixed SPD $M$ and is <em>false</em> for the ReLU-bearing NPO. The cost is one extra stored vector (<code>r</code> is kept alongside <code>r_new</code>, lines 130–136). Consequence in the results: FCG+NPO converges in <strong>30</strong> iterations while plain PCG+NPO stalls at relres <code>9.653e-06</code> after 2000 iterations (<a href="../results/results.json">results/results.json</a>, <code>fcg_npo</code> / <code>cg_npo</code>); the mechanism is dissected in <a href="04-krylov-and-pcg.html">04-krylov-and-pcg.md</a> and <a href="06-neural-preconditioner.html">06-neural-preconditioner.md</a>.</p>
+<h3 id="23-pythonpreconditionerspy">2.3 <a href="../python/preconditioners.py">python/preconditioners.py</a></h3>
+<p>Three factories, each returning a callable $z = M(r) \approx A^{-1} r$ — the exact interface of <code>precondFunc</code> in the .wls:</p>
+<ul>
+<li><strong><code>identity()</code></strong> (line 11): <code>lambda r: r</code>. Provided for symmetry; <code>pcg(M=None)</code> is the same thing.</li>
+<li><strong><code>jacobi(A)</code></strong> (lines 22–41): <code>inv_diag = 1.0 / A.diagonal()</code> then <code>lambda r: r * inv_diag</code> — the port of <code>invDiag*# &amp;</code>. SciPy's <code>.diagonal()</code> returns a dense ndarray, so the <code>Normal[...]</code> densification gotcha of §1.4 does not arise. The docstring (lines 25–29) restates the scalar-multiple-of-identity fact for <code>poisson_2d</code>.</li>
+<li><strong><code>ilu(A, **kw)</code></strong> (lines 44–60): <code>scipy.sparse.linalg.spilu(A.tocsc(), **kw)</code> (SuperLU incomplete LU; CSC required) wrapped as <code>lambda r: fac.solve(np.asarray(r, dtype=np.float64))</code>. With <code>spilu</code> defaults this is by far the strongest classical option in the suite: <strong>5 iterations</strong> to <code>6.212e-13</code>, solve wall <code>0.00024 s</code> plus <code>0.00100 s</code> setup (<a href="../results/results.json">results/results.json</a>, <code>cg_ilu</code>; discussion in <a href="05-classical-preconditioners.html">05-classical-preconditioners.md</a>). No Mathematica counterpart.</li>
+</ul>
+<h3 id="24-pythonexperimentsrun_baselinepy--the-driver-port">2.4 <a href="../python/experiments/run_baseline.py">python/experiments/run_baseline.py</a> — the driver port</h3>
+<p>Port of the .wls driver (§1.4) plus verification the Mathematica script lacks. Flow of <code>main()</code> (lines 34–108):</p>
+<ol>
+<li><code>A = poisson_2d(32)</code>, <code>b = grf_rhs(32, alpha=2.0, tau=3.0, seed=42)</code> (lines 36–37).</li>
+<li><code>pcg(A, b, M=None)</code> and <code>pcg(A, b, M=jacobi(A))</code> (lines 39–40); iteration counts via <code>len(res) - 1</code> (lines 42–43) — the <code>Length[resHist] - 1</code> convention.</li>
+<li><strong>Direct-solve verification</strong> (lines 50–53): <code>spla.spsolve(A.tocsc(), b)</code> and relative errors. From <a href="../results/baseline.json">results/baseline.json</a>: <code>relerr_vs_spsolve_none = 5.3995e-12</code>, <code>relerr_vs_spsolve_jacobi = 5.3995e-12</code>.</li>
+<li><strong>Jacobi≡CG check</strong> (lines 57–59): max elementwise deviation between the two residual histories over their common length — <code>4.441e-16</code>, i.e. two ULPs at scale 1; recorded into the JSON <code>note</code>.</li>
+<li>Figures (lines 66–89): <img alt="baseline_convergence" src="../figures/baseline_convergence.png" /> (semilogy of both histories), <img alt="grf_field" src="../figures/grf_field.png" />, <img alt="solution_field" src="../figures/solution_field.png" /> (both via <code>field.reshape(n, n)</code> — valid because of the shared row-major convention).</li>
+<li>JSON summary → <a href="../results/baseline.json">results/baseline.json</a> (lines 91–107): 116/116 iterations, final relres <code>6.666547523655469e-11</code> / <code>6.666547523655465e-11</code>. These records are bit-identical to the <code>canonical.cg_none</code> / <code>cg_jacobi</code> entries later produced by <code>run_all.py</code> in <a href="../results/results.json">results/results.json</a> — the whole pipeline is deterministic (fixed seeds, single-threaded sparse matvecs).</li>
+</ol>
+<p>Boilerplate worth noting: <code>matplotlib.use("Agg")</code> before pyplot (headless safety, lines 20–22) and <code>sys.path.insert(0, ...parents[1])</code> (line 27) so <code>python/</code> modules import without packaging.</p>
+<hr />
+<h2 id="3-divergence-ledger-every-place-the-port-differs-and-why-results-match-statistically-but-not-bit-for-bit">3. Divergence ledger: every place the port differs, and why results match statistically but not bit-for-bit</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Divergence</th>
+<th>Mathematica</th>
+<th>Python</th>
+<th>Consequence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>RNG</strong></td>
+<td><code>SeedRandom[42]</code> → Wolfram's default generator (ExtendedCA-family); draw order fixed by the single <code>{n,n,2}</code> <code>RandomVariate</code></td>
+<td><code>np.random.default_rng(42)</code> → PCG64</td>
+<td><strong>The one real divergence.</strong> The two <code>b</code> vectors are different samples from the <em>same</em> distribution (the pipeline after the raw draws is exactly equivalent, items 2–4). Hence Mathematica iteration counts need not equal Python's 116; they agree statistically (same $\kappa(A)$, same GRF law). No cross-language bit-match is possible or claimed — <a href="../results/results.json">results/*.json</a> numbers all come from the Python runs.</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>FFT normalization</strong></td>
+<td><code>InverseFourier[·, {-1,-1}]</code>: prefactor 1</td>
+<td><code>np.fft.ifft2</code>: prefactor $1/n^2$</td>
+<td>Same $e^{+2\pi i k\cdot x}$ kernel; pure constant factor $n^2$, annihilated by standardization. Zero statistical effect.</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Std-dev estimator</strong></td>
+<td><code>Standardize</code> uses sample std ($m{-}1$)</td>
+<td><code>flat.std(ddof=1)</code></td>
+<td>Matched deliberately; NumPy's default <code>ddof=0</code> divisor is <em>smaller</em> by $\sqrt{1023/1024}$, so using it would rescale <code>b</code> up by $\sqrt{1024/1023}$ — still harmless for CG iterates (scale invariance) but would break bit-level determinism <em>within</em> Python between the two choices.</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Flattening order</strong></td>
+<td><code>Flatten</code> row-major</td>
+<td><code>ravel()</code> row-major (C order)</td>
+<td>Matched exactly; no permutation anywhere.</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong><code>maxiter</code> default</strong></td>
+<td>1000</td>
+<td>2000</td>
+<td>Immaterial for converging runs (max observed: 771). The larger cap exists so the deliberately-failing <code>cg_npo</code> run can demonstrate its stall at 2000 iterations (<a href="08-results.html">08-results.md</a>).</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>tol type / halting test</strong></td>
+<td>exact rational <code>10^-10</code>; <code>NestWhile</code> continues while <code>relres &gt; tol</code>, tests initial state</td>
+<td>float <code>1e-10</code>; <code>break</code> when <code>relres &lt;= tol</code>, never tests initial state</td>
+<td>Logically identical for <code>res_hist[0] = 1.0</code>; same histories index-by-index.</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Setup $M$-applies</strong></td>
+<td><code>precondFunc[vecB]</code> evaluated twice at init</td>
+<td><code>z = M(r)</code> once, reused</td>
+<td>Cost-only; identical numbers.</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Extras with no .wls counterpart</strong></td>
+<td>—</td>
+<td><code>variable_poisson_2d</code>, <code>ilu</code>, <code>flexible_pcg</code>, <code>spsolve</code> verification, <code>NystromPreconditioner</code> (Python class), NPO</td>
+<td>Additive; the shared subset (CG/Jacobi on the canonical problem) is the correspondence surface.</td>
+</tr>
+</tbody>
+</table>
+<p>Bottom line: <strong>within Python</strong> everything is bit-deterministic (fixed seeds; reruns reproduce <a href="../results/baseline.json">results/baseline.json</a>, <a href="../results/nystrom.json">results/nystrom.json</a>, <a href="../results/npo_eval.json">results/npo_eval.json</a> exactly). <strong>Across languages</strong> items 2–4 and 6–7 are exact equivalences; item 1 (RNG) is the sole source of discrepancy and is irreducible without implementing one RNG inside the other.</p>
+<hr />
+<h2 id="4-mathematicaeigen_checkwls--brief">4. <a href="../mathematica/eigen_check.wls">mathematica/eigen_check.wls</a> — brief</h2>
+<p>Rebuilds <code>d1</code> and <code>A</code> exactly as in §1.1, then verifies against closed forms (derivations in <a href="02-eigenvalues.html">02-eigenvalues.md</a>):</p>
+<ul>
+<li><strong>1-D</strong> (lines 29–32): <code>Eigenvalues[Normal[d1]]</code> vs $\lambda_k = 2 - 2\cos\!\big(k\pi/(n{+}1)\big)$, compared after <code>Sort</code> on both sides.</li>
+<li><strong>2-D</strong> (lines 35–38): dense <code>Eigenvalues[Normal[A]]</code> ($1024\times1024$ — fine at this size) vs the tensor sums <code>Flatten@Outer[Plus, lam1d, lam1d]/h^2</code>.</li>
+<li><strong>Condition number</strong> (lines 41–45): <code>Max/Min</code> of the computed spectrum vs the analytic $\kappa(A) = \cot^2\!\big(\pi/(2(n{+}1))\big)$ — algebraically the same as the $\sin^2$-ratio form used in the Python analogue <a href="../python/experiments/spectra.py">python/experiments/spectra.py</a>.</li>
+</ul>
+<p>The Python counterpart's verified numbers (<a href="../results/spectra.json">results/spectra.json</a>): 1-D max deviation <code>2.220e-15</code>, 2-D max deviation <code>2.728e-11</code> (consistent with $\sim 10^4$-magnitude eigenvalues at float64), $\kappa$ computed <code>440.6885603835139</code> vs analytic <code>440.6885603836582</code>, asymptote $4(n{+}1)^2/\pi^2 = 441.36$.</p>
+<h2 id="5-mathematicanystrom_pcgwls--brief">5. <a href="../mathematica/nystrom_pcg.wls">mathematica/nystrom_pcg.wls</a> — brief</h2>
+<p>Same problem setup and the <em>verbatim</em> <code>PCGSolve</code> (lines 22–60), plus a Wolfram implementation of the randomized Nyström preconditioner of Frangella–Tropp–Udell (https://arxiv.org/abs/2110.02820); full math in <a href="07-nystrom-preconditioning.html">07-nystrom-preconditioning.md</a>. <code>NystromPreconditioner[matA, ell, seed]</code> (lines 72–94):</p>
+<ul>
+<li>Gaussian sketch <code>Omega</code> ($N\times\ell$), <code>Y = A.Omega</code>; stabilization shift <code>nu = Sqrt[N] $MachineEpsilon ||Y||_F</code>; <code>Ynu = Y + nu*Omega</code>.</li>
+<li>Core factorization: <code>CholeskyDecomposition</code> of the explicitly <strong>symmetrized</strong> <code>(Omega^T.Ynu + (Omega^T.Ynu)^T)/2</code> (line 81–82) — symmetric only in exact arithmetic, so symmetrization protects the Cholesky.</li>
+<li><code>B = Ynu.C^{-1}</code> via a triangular <code>LinearSolve</code> on the transpose (line 84), then thin <code>SingularValueDecomposition</code>; eigenvalues <code>lams = Max[0, sigma^2 - nu]</code> with exact-zero directions dropped (lines 86–89).</li>
+<li>The apply (line 93) is Eq. (5.3) at $\mu = 0$: $P^{-1}r = \lambda_\ell\, U(\Lambda^{-1}(U^\top r)) + (r - U U^\top r)$. (Equation numbering is the SIAM version's, matching <a href="../python/nystrom.py">python/nystrom.py</a>: the $P$/$P^{-1}$ pair is the third numbered equation of their §5 — eq. (17) of the continuously-numbered arXiv v3 — and $P$ alone is Eq. (1.3). The .wls header's citation has been corrected accordingly; "(5.2)" is the <em>optimal</em> low-rank preconditioner's condition number, not this formula.)</li>
+<li><strong>Slot-syntax gotcha</strong> (comment, lines 91–92): the apply closure is written with <code>#</code>/<code>&amp;</code> rather than <code>Function[r, ...]</code>, because a named parameter <code>r</code> would collide with the pattern variable <code>r_</code> used inside <code>PCGSolve</code>'s <code>pcgStep</code> — a Wolfram scoping hazard the code sidesteps by using slots.</li>
+</ul>
+<p>Differences from the Python <a href="../python/nystrom.py">python/nystrom.py</a> class worth flagging (details in <a href="07-nystrom-preconditioning.html">07-nystrom-preconditioning.md</a>): the Python version follows Algorithm 2.1 more strictly — it <strong>orthonormalizes the sketch</strong> (<code>np.linalg.qr(omega)</code>, <a href="../python/nystrom.py">python/nystrom.py</a> line 105) where the .wls uses the raw Gaussian <code>Omega</code>; its shift is <code>np.spacing(||Y||_F)</code> (one ULP) vs the .wls's $\sqrt{N}\,\varepsilon\,\Vert Y\Vert _F$; and it has the paper's Cholesky-failure fallback loop (<code>nu *= 100</code>, retry ×4, lines 113–124) plus a <code>mu &gt; 0</code> generalization and a degenerate-rank guard. The .wls script runs only $\ell = 128$; the Python experiment sweeps ranks 16/64/128/256 and additionally computes the exact preconditioned condition numbers by dense eigensolves (439.62 / 434.52 / 426.58 / 407.46 vs unpreconditioned 440.69, <a href="../results/nystrom.json">results/nystrom.json</a>) — the "Nyström is marginally <em>worse</em> than plain CG here" story (123/123/122/119 iterations vs 116) is told in <a href="07-nystrom-preconditioning.html">07-nystrom-preconditioning.md</a> and <a href="08-results.html">08-results.md</a>.</p>
+<h2 id="6-the-rest-of-python--one-paragraph-each-with-pointers">6. The rest of <code>python/</code> — one paragraph each, with pointers</h2>
+<ul>
+<li><strong><a href="../python/nystrom.py">python/nystrom.py</a></strong> — <code>NystromPreconditioner</code> class: Algorithm 2.1 steps 1–9 annotated line-by-line in the constructor (lines 103–129), the $\mu=0$ eigenvalue-drop policy (lines 135–148, rationale in the class docstring lines 53–62), and the $O(N\cdot\text{rank})$ apply <code>P^{-1}r = U(d \odot U^\top r) + r</code> with $d_i = (\lambda_\ell+\mu)/(\lambda_i+\mu) - 1$ (lines 150–172). The module docstring's "honest expectation" paragraph (lines 13–21) predicts the flat-top-spectrum failure mode before the experiment confirms it. → <a href="07-nystrom-preconditioning.html">07-nystrom-preconditioning.md</a>.</li>
+<li><strong><a href="../python/neural/npo.py">python/neural/npo.py</a></strong> — the NAMG-lite <code>NPO</code> network (lift + coordinate channels, pre/post 3×3-conv ReLU relaxations, learned-coarse-query cross-attention restriction, coarse self-attention + FFN, cross-attention prolongation with residual coarse-grid correction; forward pass lines 122–168) and the <code>NPOPreconditioner</code> wrapper (unit-norm normalization → float32 network → rescale, making the map positively 1-homogeneous; lines 205–229). The $\hat A = h^2 A$ training-scale trick (comment lines 47–53) exploits PCG's scale invariance in $M$. Toy-scale reimplementation of NPO, Li et al., https://arxiv.org/abs/2502.01337. → <a href="06-neural-preconditioner.html">06-neural-preconditioner.md</a>.</li>
+<li><strong><a href="../python/neural/train_npo.py">python/neural/train_npo.py</a></strong> — dataset of GRF RHSs (seeds 100–139) plus CG-residual snapshots at iterations (1,2,4,8,16,32,64) captured by a <code>_RecordingIdentity</code> preconditioner shim (lines 64–77); three scale-free losses (condition Eq. 9, residual Eq. 10, data loss with exact sparse-LU targets); 400 epochs, warmup + cosine LR. Writes <code>results/npo_checkpoint.pt</code> and <a href="../results/npo_training_history.json">results/npo_training_history.json</a>. → <a href="06-neural-preconditioner.html">06-neural-preconditioner.md</a>.</li>
+<li><strong><a href="../python/neural/eval_npo.py">python/neural/eval_npo.py</a></strong> — held-out seed-42 problem; CG vs FCG(NPO) vs plain-PCG(NPO) (the last recorded deliberately as a negative control); writes <a href="../results/npo_eval.json">results/npo_eval.json</a> and <img alt="npo_convergence" src="../figures/npo_convergence.png" />. → <a href="06-neural-preconditioner.html">06-neural-preconditioner.md</a>.</li>
+<li><strong><a href="../python/experiments/spectra.py">python/experiments/spectra.py</a></strong> — Python analogue of <code>eigen_check.wls</code> plus the $\kappa(n)\sim 4(n{+}1)^2/\pi^2$ scaling study over $n\in\{8,16,32,64,128\}$ (analytic formula only, lines 83–87); writes <a href="../results/spectra.json">results/spectra.json</a> and figures <img alt="d1_eigenvalues" src="../figures/d1_eigenvalues.png" />, <img alt="A_spectrum" src="../figures/A_spectrum.png" />, <img alt="kappa_scaling" src="../figures/kappa_scaling.png" />. → <a href="02-eigenvalues.html">02-eigenvalues.md</a>.</li>
+<li><strong><a href="../python/experiments/run_nystrom.py">python/experiments/run_nystrom.py</a></strong> — rank sweep with exact preconditioned spectra via the closed-form $P^{-1/2} = I + U(\sqrt{s}-1)U^\top$ symmetrization (<code>preconditioned_spectrum</code>, lines 39–66 — chosen over nonsymmetric <code>eig</code> to guarantee real eigenvalues) and the optimal-rank-$\ell$ deflation reference $\kappa_{\text{opt}} = \lambda_{\ell+1}/\lambda_{\min}$ (line 104). → <a href="07-nystrom-preconditioning.html">07-nystrom-preconditioning.md</a>.</li>
+<li><strong><a href="../python/experiments/npo_spectrum.py">python/experiments/npo_spectrum.py</a></strong> — column linearization $\tilde M[:,j] = M_\theta(e_j)$ over all 1024 basis vectors, nonsymmetric <code>eig</code> of $\tilde M A$, plus nonsymmetry ($\Vert \tilde M - \tilde M^\top\Vert _F/\Vert \tilde M\Vert _F$) and nonlinearity ($\Vert \tilde M b - M_\theta(b)\Vert /\Vert M_\theta(b)\Vert $) diagnostics; writes <a href="../results/npo_spectrum.json">results/npo_spectrum.json</a> and <img alt="npo_spectrum" src="../figures/npo_spectrum.png" />. → <a href="06-neural-preconditioner.html">06-neural-preconditioner.md</a>.</li>
+<li><strong><a href="../python/experiments/run_all.py">python/experiments/run_all.py</a></strong> — the consolidated benchmark behind <a href="../results/results.json">results/results.json</a>: the full method matrix on the canonical problem, the variable-coefficient Jacobi contrast, per-method <code>run_method</code> records (<code>iterations / final_relres / wall_time_s / setup_time_s / relerr_vs_spsolve / converged</code>, lines 58–94), five sanity checks with the Nyström strict-monotonicity check deliberately <em>report-only</em> (lines 176–196 — ranks 16 and 64 tie at 123 iterations, so <code>nystrom_strictly_decreasing_with_rank</code> is <code>false</code> while the asserted non-increasing-with-overall-decrease check passes), hard <code>assert</code> on the other four (lines 254–261), and <img alt="all_convergence" src="../figures/all_convergence.png" />. → <a href="08-results.html">08-results.md</a>.</li>
+</ul>
+</div>
+</body>
+</html>

@@ -83,6 +83,9 @@ wolframscript -file mathematica/nystrom_pcg.wls    # Wolfram Nystrom run (ell = 
 wolframscript -file mathematica/fdt_fluctuations.wls  # report 10 Wolfram cross-check (10 PASS)
 wolframscript -file mathematica/grid8_regressions.wls  # report 11 Wolfram cross-check (6 PASS)
 wolframscript -file mathematica/decoupling_adi.wls  # report 13 Wolfram cross-check (7 PASS)
+
+# Offline HTML mirror of the whole suite (open local-site/index.html via file://)
+uv run python tools/build_local_site.py            # rebuild local-site/
 ```
 
 Everything Python-side is bit-deterministic (GRF seed 42, training seeds 100–139, Nyström seed 0, torch seed 0); reruns reproduce the committed JSONs exactly. The Mathematica runs use a different RNG stream, so they are the *same distribution but a different draw*: 115 CG iterations vs Python's 116 — statistically equivalent, deliberately not bit-matched (divergence ledger in [01-code-walkthrough.md](01-code-walkthrough.md) §3).

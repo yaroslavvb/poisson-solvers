@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>08 — Consolidated Results</title>
+<style>
+body { margin: 0; color: #1b1f23; background: #fff;
+       font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI",
+             Helvetica, Arial, sans-serif; }
+.page { max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+nav.site { font-size: .85rem; color: #57606a; margin-bottom: 1.5rem;
+           border-bottom: 1px solid #d8dee4; padding-bottom: .5rem; }
+nav.site a { color: #0969da; text-decoration: none; }
+nav.site a:hover { text-decoration: underline; }
+nav.site .sep { margin: 0 .45em; color: #8c959f; }
+h1, h2, h3, h4 { line-height: 1.25; margin: 1.6em 0 .6em; }
+h1 { font-size: 1.9rem; border-bottom: 1px solid #d8dee4;
+     padding-bottom: .3em; margin-top: .2em; }
+h2 { font-size: 1.45rem; border-bottom: 1px solid #eaecef;
+     padding-bottom: .25em; }
+a { color: #0969da; }
+img { max-width: 100%; height: auto; }
+pre { background: #f6f8fa; padding: .9em 1.1em; overflow-x: auto;
+      border-radius: 6px; font-size: .85em; line-height: 1.45; }
+code { font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo,
+       Consolas, monospace; background: #f6f8fa; padding: .1em .3em;
+       border-radius: 4px; font-size: .9em; }
+pre code { background: none; padding: 0; font-size: 1em; }
+table { border-collapse: collapse; margin: 1em 0; display: block;
+        overflow-x: auto; max-width: 100%; }
+th, td { border: 1px solid #d0d7de; padding: .35em .7em; }
+th { background: #f6f8fa; }
+blockquote { margin: 0 0 1em; padding: 0 1em; color: #57606a;
+             border-left: .25em solid #d0d7de; }
+hr { border: none; border-top: 1px solid #d8dee4; margin: 2em 0; }
+.citation { color: #57606a; word-break: break-all; }
+mjx-container[jax="SVG"][display="true"] { overflow-x: auto;
+                                           overflow-y: hidden; }
+</style>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  options: {
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  svg: { fontCache: 'local' }
+};
+</script>
+<script defer src="../vendor/mathjax-tex-svg.js"></script>
+</head>
+<body>
+<div class="page">
+<nav class="site"><a href="../index.html">index</a><span class="sep">&middot;</span><a href="07-nystrom-preconditioning.html">&larr; 07-nystrom-preconditioning</a><span class="sep">&middot;</span><a href="09-stiffness-as-precision.html">09-stiffness-as-precision &rarr;</a></nav>
+<h1 id="08--consolidated-results">08 — Consolidated Results</h1>
+<p>This report consolidates every experiment in the repo into one place: the full method matrix on the canonical problem, the variable-coefficient Jacobi study, wall-time accounting, the cross-method spectral comparison, and an honest reckoning of what won, what lost, and why. Every number below is read directly from <a href="../results/results.json">results/results.json</a>, <a href="../results/nystrom.json">results/nystrom.json</a>, <a href="../results/npo_eval.json">results/npo_eval.json</a>, <a href="../results/npo_spectrum.json">results/npo_spectrum.json</a>, <a href="../results/spectra.json">results/spectra.json</a>, and <a href="../results/baseline.json">results/baseline.json</a>, all produced by the scripts described in <a href="01-code-walkthrough.html">01-code-walkthrough.md</a>. The single consolidated driver is <a href="../python/experiments/run_all.py">python/experiments/run_all.py</a>; its outputs were verified to be bit-consistent with the earlier per-experiment JSONs — every field they share (iteration counts, final residuals, relative errors vs <code>spsolve</code>, Nyström κ values) agrees exactly, as forced by the deterministic seeds; no reruns needed.</p>
+<h2 id="1-experimental-setup">1. Experimental setup</h2>
+<p>All canonical-problem runs share one configuration (recorded in <code>results.json → config</code>):</p>
+<table>
+<thead>
+<tr>
+<th>item</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>operator $A$</td>
+<td><code>poisson_2d(32)</code>: 5-point Dirichlet Laplacian, $A = (\mathrm{kron}(d_1,I)+\mathrm{kron}(I,d_1))/h^2$, $h = 1/33$, $N = 1024$ (<a href="../python/poisson.py">python/poisson.py</a> lines 43–68; see <a href="02-eigenvalues.html">02-eigenvalues.md</a>)</td>
+</tr>
+<tr>
+<td>right-hand side $b$</td>
+<td><code>grf_rhs(32, alpha=2.0, tau=3.0, seed=42)</code> — standardized Gaussian random field, Matérn-like spectrum $(\vert k\vert ^2+\tau^2)^{-\alpha/2}$ (<a href="../python/poisson.py">python/poisson.py</a> lines 131–184; see <a href="03-gaussian-random-fields.html">03-gaussian-random-fields.md</a>). Seed 42 is <strong>held out</strong> from the NPO training seeds 100–139.</td>
+</tr>
+<tr>
+<td>tolerance</td>
+<td>stop when $\Vert r_k\Vert /\Vert b\Vert  \le 10^{-10}$</td>
+</tr>
+<tr>
+<td>max iterations</td>
+<td>2000</td>
+</tr>
+<tr>
+<td>Nyström sketch seed</td>
+<td>0</td>
+</tr>
+<tr>
+<td>solvers</td>
+<td><code>pcg</code> (Hestenes–Stiefel, Fletcher–Reeves $\beta$) and <code>flexible_pcg</code> (Notay 2000, Polak–Ribière $\beta$), <a href="../python/pcg.py">python/pcg.py</a> lines 15–81 and 84–141; see <a href="04-krylov-and-pcg.html">04-krylov-and-pcg.md</a></td>
+</tr>
+<tr>
+<td>iteration counting</td>
+<td><code>iterations = len(res_hist) - 1</code>; <code>res_hist[0] = 1.0</code> by convention (<a href="../python/pcg.py">python/pcg.py</a> lines 48–52)</td>
+</tr>
+<tr>
+<td>reference solution</td>
+<td><code>scipy.sparse.linalg.spsolve(A.tocsc(), b)</code>; every converged run is checked against it</td>
+</tr>
+<tr>
+<td>timing protocol</td>
+<td><code>wall_time_s</code> is the solve loop only; <code>setup_time_s</code> is preconditioner construction, timed separately (<a href="../python/experiments/run_all.py">python/experiments/run_all.py</a> lines 82–94, 120–144)</td>
+</tr>
+</tbody>
+</table>
+<p>The variable-coefficient runs use <code>variable_poisson_2d(32, contrast=100.0)</code> — a harmonic-mean finite-volume discretization of $-\nabla\!\cdot(a\nabla u)$ with $a = 1$ for $x &lt; 0.5$ and $a = 100$ for $x \ge 0.5$ (<a href="../python/poisson.py">python/poisson.py</a> lines 71–128) — with the <strong>same</strong> GRF right-hand side.</p>
+<h2 id="2-the-full-method-matrix">2. The full method matrix</h2>
+<h3 id="21-canonical-problem-poisson_2d32-grf-rhs-tol-xmathphx15xendx">2.1 Canonical problem: <code>poisson_2d(32)</code>, GRF RHS, tol $10^{-10}$</h3>
+<p>From <code>results.json → canonical</code>:</p>
+<table>
+<thead>
+<tr>
+<th>method</th>
+<th style="text-align: right;">iterations</th>
+<th style="text-align: right;">final relres</th>
+<th style="text-align: right;">solve wall [s]</th>
+<th style="text-align: right;">setup [s]</th>
+<th style="text-align: right;">relerr vs <code>spsolve</code></th>
+<th>converged</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CG (none)</td>
+<td style="text-align: right;"><strong>116</strong></td>
+<td style="text-align: right;">6.667e-11</td>
+<td style="text-align: right;">0.00117</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">5.40e-12</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>CG (Jacobi)</td>
+<td style="text-align: right;">116</td>
+<td style="text-align: right;">6.667e-11</td>
+<td style="text-align: right;">0.00119</td>
+<td style="text-align: right;">~0</td>
+<td style="text-align: right;">5.40e-12</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>CG (ILU, <code>spilu</code> defaults)</td>
+<td style="text-align: right;"><strong>5</strong></td>
+<td style="text-align: right;">6.212e-13</td>
+<td style="text-align: right;">0.000236</td>
+<td style="text-align: right;">0.000996</td>
+<td style="text-align: right;">8.17e-14</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>CG (Nyström, rank 16)</td>
+<td style="text-align: right;">123</td>
+<td style="text-align: right;">9.518e-11</td>
+<td style="text-align: right;">0.00184</td>
+<td style="text-align: right;">0.000737</td>
+<td style="text-align: right;">1.53e-11</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>CG (Nyström, rank 64)</td>
+<td style="text-align: right;">123</td>
+<td style="text-align: right;">8.005e-11</td>
+<td style="text-align: right;">0.00188</td>
+<td style="text-align: right;">0.00418</td>
+<td style="text-align: right;">9.76e-12</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>CG (Nyström, rank 128)</td>
+<td style="text-align: right;">122</td>
+<td style="text-align: right;">7.727e-11</td>
+<td style="text-align: right;">0.00200</td>
+<td style="text-align: right;">0.0116</td>
+<td style="text-align: right;">6.97e-12</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>CG (Nyström, rank 256)</td>
+<td style="text-align: right;">119</td>
+<td style="text-align: right;">9.183e-11</td>
+<td style="text-align: right;">0.00233</td>
+<td style="text-align: right;">0.0238</td>
+<td style="text-align: right;">2.54e-11</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>FCG (NPO, Notay flexible)</td>
+<td style="text-align: right;"><strong>30</strong></td>
+<td style="text-align: right;">7.162e-11</td>
+<td style="text-align: right;">0.0277</td>
+<td style="text-align: right;">0.00272</td>
+<td style="text-align: right;">3.10e-11</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>CG (NPO, plain PCG)</td>
+<td style="text-align: right;">2000</td>
+<td style="text-align: right;">9.653e-06</td>
+<td style="text-align: right;">1.68</td>
+<td style="text-align: right;">0.00272</td>
+<td style="text-align: right;">6.65e-06</td>
+<td><strong>no</strong></td>
+</tr>
+</tbody>
+</table>
+<p><img alt="All methods, canonical problem" src="../figures/all_convergence.png" /></p>
+<p>The figure (x-axis clipped at 200 iterations for readability; the plain-PCG NPO curve continues stalling to 2000) shows the four qualitative regimes at a glance:</p>
+<ol>
+<li><strong>ILU</strong> drops nearly vertically — 5 iterations. <code>spilu</code> with default parameters on this small, well-structured matrix produces a nearly exact factorization, so each preconditioned residual is close to the true error and CG converges almost immediately.</li>
+<li><strong>CG(none), CG(Jacobi), and all four Nyström ranks</strong> form a tight bundle around 116–123 iterations — the Nyström curves sit marginally <em>right</em> of plain CG (Section 5.2 explains why).</li>
+<li><strong>FCG(NPO)</strong> cuts through the bundle at a visibly steeper slope: 30 iterations, a <strong>3.87×</strong> iteration reduction over plain CG (<code>npo_eval.json → speedup_fcg_vs_cg = 3.8666…</code>).</li>
+<li><strong>CG(NPO, plain)</strong> decays for a while, then flattens near $10^{-5}$ and never recovers — the deliberate negative control (Section 6, anomaly 3).</li>
+</ol>
+<p>Two smaller per-experiment figures show the same runs in isolation:</p>
+<p><img alt="Baseline: CG none vs Jacobi" src="../figures/baseline_convergence.png" /></p>
+<p><img alt="NPO: FCG vs plain PCG vs CG" src="../figures/npo_convergence.png" /></p>
+<p>Note the baseline figure: the CG(none) and CG(Jacobi) curves are <strong>exactly</strong> superimposed. This is a theorem, not a coincidence — <code>diag(A)</code> is the constant $4/h^2 = 4356$ for the constant-coefficient Dirichlet Laplacian, so Jacobi preconditioning is $M = (h^2/4)I$, a positive scalar multiple of the identity, and PCG iterates are invariant to positive scaling of $M$ (the scalar cancels between $\alpha = r^\top z / p^\top A p$ and $\beta = r_{k+1}^\top z_{k+1} / r_k^\top z_k$). <code>baseline.json</code> records the max deviation between the two residual histories as <strong>4.441e-16</strong> — one ulp of 1.0. This is sanity check #1 below.</p>
+<h3 id="22-variable-coefficient-problem-variable_poisson_2d32-contrast100">2.2 Variable-coefficient problem: <code>variable_poisson_2d(32, contrast=100)</code></h3>
+<p>From <code>results.json → variable</code>:</p>
+<table>
+<thead>
+<tr>
+<th>method</th>
+<th style="text-align: right;">iterations</th>
+<th style="text-align: right;">final relres</th>
+<th style="text-align: right;">solve wall [s]</th>
+<th style="text-align: right;">relerr vs <code>spsolve</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CG (none)</td>
+<td style="text-align: right;">771</td>
+<td style="text-align: right;">8.979e-11</td>
+<td style="text-align: right;">0.00742</td>
+<td style="text-align: right;">4.52e-12</td>
+</tr>
+<tr>
+<td>CG (Jacobi)</td>
+<td style="text-align: right;"><strong>137</strong></td>
+<td style="text-align: right;">9.219e-11</td>
+<td style="text-align: right;">0.00144</td>
+<td style="text-align: right;">1.12e-12</td>
+</tr>
+</tbody>
+</table>
+<p>Here Jacobi is worth <strong>5.6×</strong> in iterations (771 → 137) and <strong>5.1×</strong> in wall time. The mechanism: with $a$ jumping from 1 to 100 across $x=0.5$, <code>diag(A)</code> ranges from $(w_{i-1/2}+w_{i+1/2}+2a_i)/h^2 = 4/h^2 = 4356$ in the $a{=}1$ half to $400/h^2 = 435{,}600$ in the $a{=}100$ half — a factor-100 diagonal spread (compute directly from <a href="../python/poisson.py">python/poisson.py</a> lines 110–127 with $1/h^2 = 1089$). Plain CG must resolve this two-scale spectrum by brute Krylov force; Jacobi rescales both material regions to a common diagonal and recovers near-constant-coefficient behavior (137 iterations, close to the canonical problem's 116). This is the textbook statement "Jacobi ≈ free and worthless on constant-coefficient problems, cheap and genuinely useful when the diagonal varies" — measured rather than asserted. See <a href="05-classical-preconditioners.html">05-classical-preconditioners.md</a> for the operator-level discussion.</p>
+<p>No dedicated convergence figure is produced for the variable problem (<code>run_all.py</code> plots only the canonical panel); the iteration counts and JSON records are the artifact.</p>
+<h2 id="3-wall-time-discussion">3. Wall-time discussion</h2>
+<h3 id="31-per-iteration-cost-decomposition">3.1 Per-iteration cost decomposition</h3>
+<p>Dividing solve wall time by iterations (both from <code>results.json</code>):</p>
+<table>
+<thead>
+<tr>
+<th>method</th>
+<th style="text-align: right;">µs / iteration</th>
+<th>dominant per-iteration work</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CG (none)</td>
+<td style="text-align: right;">10.1</td>
+<td>one 5-point sparse matvec (~5 flops/row) + 3 axpys + 2 dots</td>
+</tr>
+<tr>
+<td>CG (Jacobi)</td>
+<td style="text-align: right;">10.3</td>
+<td>+ one elementwise multiply</td>
+</tr>
+<tr>
+<td>CG (ILU)</td>
+<td style="text-align: right;">47.2</td>
+<td>+ two sparse triangular solves (sequential, cache-unfriendly)</td>
+</tr>
+<tr>
+<td>CG (Nyström 16)</td>
+<td style="text-align: right;">14.9</td>
+<td>+ $U(d\odot U^\top r)$: two $1024\times16$ GEMVs</td>
+</tr>
+<tr>
+<td>CG (Nyström 64)</td>
+<td style="text-align: right;">15.3</td>
+<td>two $1024\times64$ GEMVs</td>
+</tr>
+<tr>
+<td>CG (Nyström 128)</td>
+<td style="text-align: right;">16.4</td>
+<td>two $1024\times128$ GEMVs</td>
+</tr>
+<tr>
+<td>CG (Nyström 256)</td>
+<td style="text-align: right;">19.6</td>
+<td>two $1024\times256$ GEMVs</td>
+</tr>
+<tr>
+<td>FCG (NPO)</td>
+<td style="text-align: right;">922</td>
+<td>one full NAMG transformer forward (50,465 params, attention over 1024 tokens) on CPU</td>
+</tr>
+<tr>
+<td>CG (NPO, plain)</td>
+<td style="text-align: right;">838</td>
+<td>same forward; slightly cheaper loop (no $r_{k+1}-r_k$ vector)</td>
+</tr>
+</tbody>
+</table>
+<p>Three observations:</p>
+<ul>
+<li><strong>The NPO forward is ~90× a sparse matvec</strong> at this scale. Its 3.87× iteration reduction is therefore a ~24× wall-time <em>loss</em> against plain CG (0.0277 s vs 0.00117 s). This is the expected regime for $N=1024$ on CPU: a neural preconditioner amortizes only when the per-iteration baseline cost is large (big $N$, GPU-resident matvec) or when iteration counts are the binding constraint (memory-bound distributed solves, many-RHS pipelines where the forward batches). The NPO paper (Li et al., arXiv:2502.01337<span class="citation"> (https://arxiv.org/abs/2502.01337)</span>) does report a wall-time win at exactly this $32\times32$ scale — Table 1: NPO 0.0751 s vs Jacobi 2.7337 s at tol $10^{-10}$ — but with the forward pass on GPU and inside GMRES, i.e. precisely the amortized regime above; its benchmarks otherwise span resolutions 128–4096.</li>
+<li><strong>Nyström's apply cost is visibly linear in rank</strong>, exactly the $O(N\cdot\mathrm{rank})$ predicted for <code>NystromPreconditioner.apply</code> (<a href="../python/nystrom.py">python/nystrom.py</a> lines 166–170): the per-iteration overhead over plain CG grows 4.8 → 5.2 → 6.3 → 9.5 µs for ranks 16 → 256.</li>
+<li><strong>ILU's per-iteration cost is 4.7× plain CG</strong> (triangular solves don't vectorize like a stencil matvec), but with only 5 iterations it doesn't matter.</li>
+</ul>
+<h3 id="32-total-time-to-solution-setup--solve">3.2 Total time to solution (setup + solve)</h3>
+<table>
+<thead>
+<tr>
+<th>method</th>
+<th style="text-align: right;">total [s]</th>
+<th>note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CG (none)</td>
+<td style="text-align: right;">0.00117</td>
+<td></td>
+</tr>
+<tr>
+<td>CG (Jacobi)</td>
+<td style="text-align: right;">0.00119</td>
+<td></td>
+</tr>
+<tr>
+<td>CG (ILU)</td>
+<td style="text-align: right;">0.00123</td>
+<td>0.000996 setup + 0.000236 solve — <strong>ties plain CG</strong> despite 5 vs 116 iterations</td>
+</tr>
+<tr>
+<td>CG (Nyström 16)</td>
+<td style="text-align: right;">0.00257</td>
+<td></td>
+</tr>
+<tr>
+<td>CG (Nyström 64)</td>
+<td style="text-align: right;">0.00606</td>
+<td>setup grows superlinearly in rank (QR + Cholesky + SVD of $1024\times\mathrm{rank}$)</td>
+</tr>
+<tr>
+<td>CG (Nyström 128)</td>
+<td style="text-align: right;">0.01356</td>
+<td></td>
+</tr>
+<tr>
+<td>CG (Nyström 256)</td>
+<td style="text-align: right;">0.02617</td>
+<td>91% of total is setup</td>
+</tr>
+<tr>
+<td>FCG (NPO)</td>
+<td style="text-align: right;">0.03038</td>
+<td>setup = checkpoint load only; <strong>training cost (216.6 s, <code>npo_training_history.json → wall_time_seconds</code>) is amortized off-line</strong></td>
+</tr>
+<tr>
+<td>CG (NPO, plain)</td>
+<td style="text-align: right;">1.679</td>
+<td>did not converge</td>
+</tr>
+</tbody>
+</table>
+<h3 id="33-caveats--read-before-extrapolating">3.3 Caveats — read before extrapolating</h3>
+<ol>
+<li><strong>$N = 1024$ is far below the crossover scale for everything here.</strong> At this size the entire problem fits in L2 cache, <code>spsolve</code> is effectively instantaneous, and the asymptotic arguments that motivate each preconditioner (ILU's $O(N^{1.5})$-ish fill on 2-D problems, Nyström's matvec-only access, NPO's resolution-agnostic amortization) are invisible. Wall-time <em>rankings</em> here should not be extrapolated; iteration counts and spectra are the transferable signal.</li>
+<li><strong>Single measurement, no repetition.</strong> Times are one <code>perf_counter</code> interval each (<a href="../python/experiments/run_all.py">run_all.py</a> lines 82–84); sub-millisecond entries carry maybe tens-of-percent jitter. They are reported to characterize regimes (10 µs vs 1 ms per iteration), not for micro-comparisons like Jacobi's 0.00119 vs plain's 0.00117.</li>
+<li><strong>CPU-only, float64 pipeline, PyTorch forward in float32</strong> internally with float64 in/out (<a href="../python/neural/npo.py">python/neural/npo.py</a> lines 218–227). On a GPU the NPO forward cost collapses and the matvec/forward ratio changes completely.</li>
+<li><strong>Dense diagnostics are excluded from the timing story.</strong> The exact preconditioned condition numbers (Section 5) come from $O(N^3)$ dense eigensolves in <a href="../python/experiments/run_nystrom.py">run_nystrom.py</a> and <a href="../python/experiments/npo_spectrum.py">npo_spectrum.py</a> — analysis instruments, feasible only at toy scale, and never part of a solve.</li>
+</ol>
+<h2 id="4-convergence-figure-gallery-per-experiment">4. Convergence-figure gallery (per-experiment)</h2>
+<p>Nyström convergence and the before/after spectrum for the rank-128 sketch:</p>
+<p><img alt="Nyström PCG convergence by rank" src="../figures/nystrom_convergence.png" /></p>
+<p><img alt="Spectrum before/after Nyström rank-128 preconditioning" src="../figures/nystrom_spectrum.png" /></p>
+<p>The spectrum figure is the whole Nyström story in one panel: the preconditioned curve matches $\lambda_j(A)$ except for a flattened top-128 plateau at $\approx \hat\lambda_{128}$ — deflation from above only, leaving $\kappa$ nearly unchanged because the Laplacian's upper spectrum is dense (eigenvalue counts grow like the area of a quarter-disk in frequency space; see <a href="02-eigenvalues.html">02-eigenvalues.md</a>).</p>
+<p>NPO linearized-spectrum figure (complex-plane scatter + median-scaled clustering histogram):</p>
+<p><img alt="NPO linearized spectrum" src="../figures/npo_spectrum.png" /></p>
+<p>Mathematica cross-checks (reference implementation in <a href="../mathematica/poisson_pcg.wls">mathematica/poisson_pcg.wls</a> and <a href="../mathematica/nystrom_pcg.wls">mathematica/nystrom_pcg.wls</a>, same problem and protocol; the Python <code>pcg</code> is a line-by-line port of the Mathematica <code>PCGSolve</code>):</p>
+<p><img alt="Mathematica PCG convergence" src="../figures/mma_convergence.png" /></p>
+<p><img alt="Mathematica Nyström convergence" src="../figures/mma_nystrom_convergence.png" /></p>
+<h2 id="5-cross-method-spectral-comparison">5. Cross-method spectral comparison</h2>
+<h3 id="51-the-κ-table">5.1 The κ table</h3>
+<p>Unpreconditioned, from <code>spectra.json</code>: the computed $\kappa(A) = 440.688560$ agrees with the closed form</p>
+<p>$$\kappa(A) = \frac{\lambda_{n,n}}{\lambda_{1,1}} = \frac{\sin^2\!\big(\tfrac{n\pi h}{2}\big)}{\sin^2\!\big(\tfrac{\pi h}{2}\big)} = 440.688560\ldots, \qquad h = \tfrac{1}{n+1},\ n = 32,$$</p>
+<p>to all printed digits (asymptote $4(n+1)^2/\pi^2 = 441.355$), and the full 2-D spectrum matches $(\lambda_k + \lambda_l)/h^2$ with $\lambda_k = 2 - 2\cos\frac{k\pi}{n+1}$ to max deviation <strong>2.73e-11</strong> (1-D stencil: <strong>2.22e-15</strong>). Scaling: $\kappa$ vs $n$ is exactly $O(n^2)$ — analytic values 32.16, 116.46, 440.69, 1711.66, 6743.68 for $n \in \{8,16,32,64,128\}$, with $\kappa/n^2 \to 0.412$ at $n=128$, approaching $4/\pi^2 \approx 0.405$:</p>
+<p><img alt="kappa scaling with n" src="../figures/kappa_scaling.png" /></p>
+<p>Preconditioned condition numbers (Nyström values are <strong>exact</strong>, from dense <code>eigvalsh</code> of $P^{-1/2} A P^{-1/2}$ using the closed-form square root $P^{-1/2} = I + U(\sqrt{s}-1)U^\top$, $s_i = \hat\lambda_\ell/\hat\lambda_i$ — <a href="../python/experiments/run_nystrom.py">run_nystrom.py</a> lines 39–66; recorded in <code>nystrom.json</code>):</p>
+<table>
+<thead>
+<tr>
+<th>preconditioner</th>
+<th style="text-align: right;">$\kappa$ (exact)</th>
+<th style="text-align: right;">optimal rank-$\ell$ bound $\lambda_{\ell+1}/\lambda_{\min}$</th>
+<th style="text-align: right;">iterations</th>
+<th style="text-align: right;">$\sqrt{\kappa}$-predicted iterations$^\dagger$</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>none</td>
+<td style="text-align: right;">440.69</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">116</td>
+<td style="text-align: right;">(116, by construction)</td>
+</tr>
+<tr>
+<td>Nyström rank 16</td>
+<td style="text-align: right;">439.62</td>
+<td style="text-align: right;">428.91</td>
+<td style="text-align: right;">123</td>
+<td style="text-align: right;">115.9</td>
+</tr>
+<tr>
+<td>Nyström rank 64</td>
+<td style="text-align: right;">434.52</td>
+<td style="text-align: right;">395.67</td>
+<td style="text-align: right;">123</td>
+<td style="text-align: right;">115.2</td>
+</tr>
+<tr>
+<td>Nyström rank 128</td>
+<td style="text-align: right;">426.58</td>
+<td style="text-align: right;">359.61</td>
+<td style="text-align: right;">122</td>
+<td style="text-align: right;">114.1</td>
+</tr>
+<tr>
+<td>Nyström rank 256</td>
+<td style="text-align: right;">407.46</td>
+<td style="text-align: right;">298.41</td>
+<td style="text-align: right;">119</td>
+<td style="text-align: right;">111.5</td>
+</tr>
+<tr>
+<td>NPO (FCG)</td>
+<td style="text-align: right;">n/a (non-normal); $\vert \lambda\vert $-spread <strong>12.56</strong></td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">30</td>
+<td style="text-align: right;">~19.6 if the spread acted like a κ</td>
+</tr>
+<tr>
+<td>ILU</td>
+<td style="text-align: right;">not computed (would require forming $M^{-1/2}$)</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">—</td>
+</tr>
+<tr>
+<td>Jacobi (canonical)</td>
+<td style="text-align: right;">440.69 (scalar scaling, provably unchanged)</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">116</td>
+<td style="text-align: right;">116</td>
+</tr>
+</tbody>
+</table>
+<p>$^\dagger$ scaled as $116\sqrt{\kappa_P/\kappa_A}$, using the classical CG bound $\Vert e_k\Vert _A \le 2\big(\frac{\sqrt\kappa - 1}{\sqrt\kappa + 1}\big)^k \Vert e_0\Vert _A$, i.e. iterations $\propto \sqrt{\kappa}$ at fixed tolerance. (For calibration, the bound itself is loose here: it predicts $\tfrac12\sqrt{440.69}\,\ln(2\cdot10^{10}) \approx 249$ iterations for plain CG vs 116 observed — CG exploits the discrete spectrum's structure beyond the two-point bound.)</p>
+<h3 id="52-reading-the-table-three-different-stories">5.2 Reading the table: three different stories</h3>
+<p><strong>Nyström: correct implementation, adversarial problem.</strong> All four sketches <em>reduce</em> the exact κ (440.69 → 439.62…407.46), monotonically in rank, and all sit above their optimal-rank-$\ell$ lower bounds — exactly what arXiv:2110.02820<span class="citation"> (https://arxiv.org/abs/2110.02820)</span> (Frangella–Tropp–Udell) predicts. But the reductions are marginal <em>by construction of the problem</em>: the Nyström preconditioner deflates the <strong>top</strong> of the spectrum, so the best any rank-$\ell$ method can achieve is $\kappa = \lambda_{\ell+1}/\lambda_{\min}$, and the 2-D Laplacian's spectrum decays so slowly from the top that even a <strong>perfect</strong> rank-256 deflation (a quarter of all modes!) would leave $\kappa = 298$. The paper targets regularized/ridge-type systems with fast spectral decay and small effective dimension $d_{\mathrm{eff}}(\mu)$; the flat-topped Laplacian at $\mu = 0$ is the worst case. On top of that, the randomized sketch slightly perturbs the retained eigenvectors, which at these tiny κ-gains is enough to make the observed iteration counts (119–123) land <em>above</em> plain CG's 116 rather than at the $\sqrt\kappa$-predicted 111–116. Full derivation in <a href="07-nystrom-preconditioning.html">07-nystrom-preconditioning.md</a>.</p>
+<p><strong>NPO: clustering, not symmetry, drives the win.</strong> The NPO is not a matrix — it's a ReLU network — so <code>npo_spectrum.py</code> linearizes it column-by-column ($\tilde M_{:,j} = M_\theta(e_j)$, exact per column because the wrapper normalizes inputs and $\Vert e_j\Vert  = 1$) and takes the dense nonsymmetric spectrum of $\tilde M A$. From <code>npo_spectrum.json</code>:</p>
+<ul>
+<li>all 1024 eigenvalues have <strong>positive real part</strong>: $\mathrm{Re}\,\lambda \in [248.8,\ 3125.2]$, $\max\vert \mathrm{Im}\,\lambda\vert  = 257.1$, zero nonpositive-real eigenvalues;</li>
+<li>modulus spread $\max\vert \lambda\vert /\min\vert \lambda\vert  = \textbf{12.56}$ vs $\kappa(A) = 440.69$ — <strong>35× tighter</strong>;</li>
+<li><strong>98.1%</strong> of $\vert \lambda(\tilde M A)\vert $ lie within $[0.5, 2]\times$ median, vs <strong>82.0%</strong> for $\lambda(A)$;</li>
+<li>yet the linearization is severely non-symmetric ($\Vert \tilde M - \tilde M^\top\Vert _F/\Vert \tilde M\Vert _F = 0.568$) and the operator severely non-linear ($\Vert \tilde M b - M_\theta(b)\Vert /\Vert M_\theta(b)\Vert  = 0.432$ on the canonical GRF $b$).</li>
+</ul>
+<p>So the NPO's 116 → 30 comes from squeezing the spectrum of the preconditioned operator into one decade with a strong cluster near the median — despite being nothing like an SPD matrix. The naive $\sqrt{440.69/12.56} \approx 5.9\times$ prediction overestimates the realized $3.87\times$; the gap is exactly the price of complex eigenvalues, non-normality, and the 43% nonlinearity, which FCG's local orthogonality tolerates but cannot fully exploit. Details in <a href="06-neural-preconditioner.html">06-neural-preconditioner.md</a>. (Training context: 400 epochs, 50,465 parameters, 216.6 s wall; total loss 7.504 → 0.301, with the condition/residual/data terms ending at 0.0738/0.1545/0.0730 — <code>npo_training_history.json</code>.)</p>
+<p><strong>ILU: the boring winner.</strong> No spectral diagnostic was computed for ILU, and none is needed: at $N=1024$ with <code>spilu</code> defaults the incomplete factorization is nearly complete, $M^{-1}A \approx I$, and CG finishes in 5 iterations with the best final residual (6.2e-13) and the best accuracy vs <code>spsolve</code> (8.2e-14) of any method. This is the standing reminder that classical preconditioners are extremely hard to beat at small scale.</p>
+<h2 id="6-sanity-checks-and-anomalies">6. Sanity checks and anomalies</h2>
+<p>From <code>results.json → sanity_checks</code> (logic at <a href="../python/experiments/run_all.py">run_all.py</a> lines 173–204; hard assertions at lines 252–261):</p>
+<table>
+<thead>
+<tr>
+<th>check</th>
+<th>result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Jacobi iterations == plain-CG iterations, constant-coefficient (116 == 116)</td>
+<td><strong>PASS</strong> (asserted)</td>
+</tr>
+<tr>
+<td>Jacobi iterations &lt; plain-CG iterations, variable-coefficient (137 &lt; 771)</td>
+<td><strong>PASS</strong> (asserted)</td>
+</tr>
+<tr>
+<td>Nyström iterations strictly decreasing with rank</td>
+<td><strong>FAIL</strong> (report-only)</td>
+</tr>
+<tr>
+<td>Nyström iterations non-increasing AND rank-256 &lt; rank-16</td>
+<td><strong>PASS</strong> (asserted)</td>
+</tr>
+<tr>
+<td>every converged solve matches <code>spsolve</code> to 1e-8 rel. error</td>
+<td><strong>PASS</strong> (asserted)</td>
+</tr>
+</tbody>
+</table>
+<p>Anomalies, in decreasing order of interest:</p>
+<ol>
+<li><strong>Nyström strict monotonicity fails on a tie.</strong> Iterations by rank $[16, 64, 128, 256]$ are $[123, 123, 122, 119]$ — ranks 16 and 64 tie at 123 even though rank 64's exact κ is smaller (434.52 vs 439.62). Iteration counts are integers and the κ difference is 1.2%; a tie is unremarkable. <code>run_all.py</code> deliberately computes and reports the strict check as FAIL while asserting only the non-increasing-with-overall-decrease version (docstring lines 16–24, assertion list line 254–259).</li>
+<li><strong>All Nyström variants are <em>worse</em> than plain CG in iterations</strong> (119–123 vs 116) despite provably smaller exact κ. Explained in Section 5.2: the achievable κ gain on a flat-top spectrum is tiny, and the sketch's slight distortion of the retained eigenspace costs more than the deflation buys at this scale. This is a <em>property of the problem–method pairing</em>, not a bug — and it is exactly the "honest expectation" written into the module docstring of <a href="../python/nystrom.py">python/nystrom.py</a> (lines 13–21) before the experiment was run.</li>
+<li><strong>Plain PCG + NPO stalls at $\sim 10^{-5}$</strong> and burns all 2000 iterations (final relres 9.653e-06, relerr 6.65e-06). Deliberate negative control: $M_\theta$ contains ReLUs, so it is not a fixed SPD matrix, Fletcher–Reeves $\beta = r_{k+1}^\top z_{k+1}/r_k^\top z_k$ loses conjugacy, and the search directions degrade once the easily-representable error components are gone. The Notay flexible variant — one changed line, $\beta = z_{k+1}^\top(r_{k+1} - r_k)/z_k^\top r_k$ (<a href="../python/pcg.py">python/pcg.py</a> line 134) — converges in 30. This pair is the strongest single argument in the repo for <em>why flexible PCG exists</em>.</li>
+<li><strong>The NPO linearization is 57% non-symmetric and 43% non-linear yet works brilliantly under FCG</strong> — the spectrum of $\tilde M A$ stays entirely in the right half-plane with a 12.6 modulus spread. Clustering, not SPD structure, is the operative property.</li>
+<li><strong>Nothing is broken:</strong> all pre-existing result JSONs reproduce exactly under <code>run_all.py</code> (deterministic seeds throughout — GRF seed 42, Nyström seed 0, torch seed 0), and the computed spectra match the analytic formulas at machine-precision levels (2.2e-15 in 1-D; 2.7e-11 in 2-D, consistent with eigenvalues of magnitude ~$10^4$ in float64).</li>
+</ol>
+<h2 id="7-what-wins-where-and-why">7. What wins where, and why</h2>
+<table>
+<thead>
+<tr>
+<th>regime</th>
+<th>winner</th>
+<th>why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>this exact benchmark, wall time</td>
+<td>ILU (0.00123 s total) tied with plain CG (0.00117 s)</td>
+<td>near-exact factorization at toy scale; 5 iterations</td>
+</tr>
+<tr>
+<td>this exact benchmark, iterations</td>
+<td>ILU (5), then FCG-NPO (30)</td>
+<td>factorization quality; spectral clustering</td>
+</tr>
+<tr>
+<td>variable coefficients, near-zero setup budget</td>
+<td>Jacobi (5.6× iterations, 5.1× wall)</td>
+<td>rescales the jumping diagonal; costs one vector divide</td>
+</tr>
+<tr>
+<td>constant coefficients, near-zero setup budget</td>
+<td>nothing — plain CG; Jacobi provably identical</td>
+<td>$\mathrm{diag}(A) = 4/h^2$ constant ⇒ Jacobi ≡ scaled identity</td>
+</tr>
+<tr>
+<td>matvec-only access to $A$, fast-decaying/regularized spectrum</td>
+<td>Nyström (by the theory of arXiv:2110.02820<span class="citation"> (https://arxiv.org/abs/2110.02820)</span>)</td>
+<td>this benchmark is its worst case; on ridge-type spectra with small $d_{\mathrm{eff}}(\mu)$ it achieves $O(1)$ κ</td>
+</tr>
+<tr>
+<td>iteration count is the binding constraint; forward pass amortizable (GPU, many RHS, huge $N$)</td>
+<td>NPO + FCG</td>
+<td>3.87× fewer iterations from a 35× tighter spectrum; per-apply cost is the only obstacle, and it's an artifact of CPU + $N{=}1024$</td>
+</tr>
+<tr>
+<td>a nonlinear/varying preconditioner of any kind</td>
+<td>flexible PCG, non-negotiable</td>
+<td>plain PCG demonstrably stalls (2000 iters, $10^{-5}$); FCG costs one extra stored vector</td>
+</tr>
+</tbody>
+</table>
+<h2 id="8-limitations">8. Limitations</h2>
+<ol>
+<li><strong>Toy scale.</strong> $N = 1024$ ($32\times32$). Every wall-time conclusion is scale-bound (Section 3.3); ILU's dominance in particular will erode as fill-in and factorization cost grow on larger 2-D/3-D grids.</li>
+<li><strong>Single RHS family, single held-out instance.</strong> All solves use one GRF draw (seed 42) from one spectral family ($\alpha=2, \tau=3$). The NPO was trained on the same family (seeds 100–139) — its 30 iterations are an in-distribution generalization result, not a robustness result. No out-of-family RHS (point sources, discontinuous $f$, high-frequency noise) was evaluated.</li>
+<li><strong>Single-threaded CPU timings, one repetition,</strong> float32 network forward inside a float64 solve. No GPU numbers anywhere.</li>
+<li><strong>No multigrid baseline.</strong> Geometric multigrid is the asymptotically optimal ($O(N)$, κ-independent) solver for exactly this operator; its absence flatters every method in the table. The NPO paper doesn't fill this gap either: it blends AMG principles <em>into</em> the NAMG architecture (its Sec. 3.4) and uses AMG-preconditioned solves only to generate training data (its Sec. 5.1.2), but its benchmarked baselines are Jacobi/Gauss–Seidel/SOR and neural models — a head-to-head NAMG-vs-multigrid comparison is missing both there and here.</li>
+<li><strong>Nyström evaluated only at $\mu = 0$</strong> on an unregularized Laplacian — the regime its theory explicitly does not target. A fair showcase would add $\mu &gt; 0$ (or a kernel/ridge system) where $d_{\mathrm{eff}}(\mu) \ll N$.</li>
+<li><strong>NPO trained and evaluated at a single resolution</strong> ($n = 32$), although the architecture (learned coarse queries + coordinate channels, <a href="../python/neural/npo.py">python/neural/npo.py</a> lines 81–120) is resolution-agnostic by design.</li>
+<li><strong>ILU at <code>spilu</code> defaults only</strong> — no <code>drop_tol</code>/<code>fill_factor</code> sweep, so the ILU column shows "essentially exact LU" behavior rather than the fill/quality tradeoff a practitioner would tune.</li>
+</ol>
+<h2 id="9-next-steps">9. Next steps</h2>
+<ol>
+<li><strong>Scale $n$: 64 → 128 → 256.</strong> κ grows as $\sim 0.41\,n^2$ (measured, <code>spectra.json</code>), so plain CG should scale as $\sim\sqrt\kappa \propto n$ while ILU setup cost and fill grow — find the crossover. Rerun the NPO <strong>unretrained</strong> at higher $n$ to test the resolution-agnosticism claim of arXiv:2502.01337<span class="citation"> (https://arxiv.org/abs/2502.01337)</span>.</li>
+<li><strong>Add a geometric multigrid baseline</strong> (V-cycle, weighted-Jacobi smoother) — the reference point both the classical and neural columns need. Also usable as a preconditioner inside <code>pcg</code> for a direct MG-PCG vs NPO-FCG match.</li>
+<li><strong>Train the NPO across resolutions and coefficient fields</strong> (mixed $n \in \{16,32,64\}$ batches; variable-coefficient operators with random contrast) and evaluate on the variable-coefficient problem, where the classical cheap option (Jacobi) still leaves 137 iterations on the table.</li>
+<li><strong>Give Nyström a fair fight:</strong> the same pipeline at $\mu &gt; 0$ (e.g. $A + \mu I$ with $\mu$ sweeping decades) or on a ridge-regression normal-equations matrix, where $d_{\mathrm{eff}}(\mu)$ is small and Theorem 5.1 of arXiv:2110.02820<span class="citation"> (https://arxiv.org/abs/2110.02820)</span> predicts $\mathbb{E}[\kappa] &lt; 28$ at $\ell = 2\lceil 1.5\,d_{\mathrm{eff}}\rceil + 1$.</li>
+<li><strong>Timing hygiene at scale:</strong> repeat solves for confidence intervals, add GPU timings for the NPO forward, and batch multiple RHS through one forward to measure amortized per-solve cost.</li>
+<li><strong>RHS robustness sweep:</strong> out-of-family right-hand sides against the trained NPO to bound the in-distribution advantage measured here.</li>
+</ol>
+<hr />
+<p>Every solve in this report ends within 3.1e-11 of the direct solution or is explicitly flagged as non-converged — the ledger is clean, and the most informative entries are the ones that lost on purpose: knowing precisely <em>why</em> Nyström loses on a flat-top spectrum and <em>why</em> plain PCG chokes on a ReLU preconditioner is the transferable result; the toy-scale wall-clock rankings are not.</p>
+</div>
+</body>
+</html>

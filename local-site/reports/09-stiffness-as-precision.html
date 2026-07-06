@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Stiffness Matrix Is a Precision Matrix</title>
+<style>
+body { margin: 0; color: #1b1f23; background: #fff;
+       font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI",
+             Helvetica, Arial, sans-serif; }
+.page { max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+nav.site { font-size: .85rem; color: #57606a; margin-bottom: 1.5rem;
+           border-bottom: 1px solid #d8dee4; padding-bottom: .5rem; }
+nav.site a { color: #0969da; text-decoration: none; }
+nav.site a:hover { text-decoration: underline; }
+nav.site .sep { margin: 0 .45em; color: #8c959f; }
+h1, h2, h3, h4 { line-height: 1.25; margin: 1.6em 0 .6em; }
+h1 { font-size: 1.9rem; border-bottom: 1px solid #d8dee4;
+     padding-bottom: .3em; margin-top: .2em; }
+h2 { font-size: 1.45rem; border-bottom: 1px solid #eaecef;
+     padding-bottom: .25em; }
+a { color: #0969da; }
+img { max-width: 100%; height: auto; }
+pre { background: #f6f8fa; padding: .9em 1.1em; overflow-x: auto;
+      border-radius: 6px; font-size: .85em; line-height: 1.45; }
+code { font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo,
+       Consolas, monospace; background: #f6f8fa; padding: .1em .3em;
+       border-radius: 4px; font-size: .9em; }
+pre code { background: none; padding: 0; font-size: 1em; }
+table { border-collapse: collapse; margin: 1em 0; display: block;
+        overflow-x: auto; max-width: 100%; }
+th, td { border: 1px solid #d0d7de; padding: .35em .7em; }
+th { background: #f6f8fa; }
+blockquote { margin: 0 0 1em; padding: 0 1em; color: #57606a;
+             border-left: .25em solid #d0d7de; }
+hr { border: none; border-top: 1px solid #d8dee4; margin: 2em 0; }
+.citation { color: #57606a; word-break: break-all; }
+mjx-container[jax="SVG"][display="true"] { overflow-x: auto;
+                                           overflow-y: hidden; }
+</style>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  options: {
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  svg: { fontCache: 'local' }
+};
+</script>
+<script defer src="../vendor/mathjax-tex-svg.js"></script>
+</head>
+<body>
+<div class="page">
+<nav class="site"><a href="../index.html">index</a><span class="sep">&middot;</span><a href="08-results.html">&larr; 08-results</a><span class="sep">&middot;</span><a href="10-fluctuation-dissipation.html">10-fluctuation-dissipation &rarr;</a></nav>
+<h1 id="the-stiffness-matrix-is-a-precision-matrix">The Stiffness Matrix Is a Precision Matrix</h1>
+<h3 id="a-statistical-dictionary-for-solving-xmathphx15xendx-from-greens-functions-to-preconditioners">A statistical dictionary for solving $-u'' = f$, from Green's functions to preconditioners</h3>
+<p><em>A statistical companion to the suite: it rereads <a href="01-code-walkthrough.html">01</a>, <a href="03-gaussian-random-fields.html">03</a>, <a href="04-krylov-and-pcg.html">04</a>, <a href="05-classical-preconditioners.html">05</a>, and <a href="07-nystrom-preconditioning.html">07</a> in the vocabulary of Gaussian inference. The setting is the 1-D factor $d_1/h^2$ of the suite's Kronecker-sum operator — the chain, where every object has a closed form; §6–7 say exactly what changes on the 2-D grid. Regression-identity notation follows a companion Mathematica notebook (<code>whitening_inverse_transposed.nb</code>, Pourahmadi's parameterization) and the Gram–Schmidt / QR / Cholesky duality of Shawe-Taylor &amp; Cristianini §5.2. Every identity asserted below is verified numerically by <a href="../python/experiments/verify_statistical_identities.py">python/experiments/verify_statistical_identities.py</a> (19 checks, $n = 8$).</em></p>
+<hr />
+<h2 id="1-one-problem-two-vocabularies">1. One problem, two vocabularies</h2>
+<p>Take the steady 1D heat (Poisson) equation on $(0,1)$ with Dirichlet walls held at zero temperature,</p>
+<p>$$-u''(x) = f(x), \qquad u(0) = u(1) = 0,$$</p>
+<p>discretized on $n$ interior nodes $x_i = ih$, $h = 1/(n+1)$, giving the familiar system $Au = b$ with</p>
+<p>$$A = \frac{1}{h^2}\,\mathrm{tridiag}(-1,\, 2,\, -1).$$</p>
+<p>The numerical analyst calls $A$ the <strong>stiffness matrix</strong> (its FEM pedigree) or the discrete Laplacian, and calls solving $Au=b$ "the linear solve." The statistician looks at the same symbols and reads off a Gaussian distribution. The solution $u$ is the unique minimizer of the discrete Dirichlet energy</p>
+<p>$$J(u) = \tfrac{1}{2}u^\top A u - b^\top u,$$</p>
+<p>and exponentiating the negative energy gives a probability density:</p>
+<p>$$p(u) \propto \exp\!\big(-\tfrac{1}{2}u^\top A u + b^\top u\big) = \mathcal{N}\!\big(u \mid A^{-1}b,\; A^{-1}\big).$$</p>
+<p>This is the <strong>information form</strong> (canonical / natural-parameter form) of a Gaussian: the pair $(A, b)$ consists of the <strong>precision matrix</strong> and the <strong>information vector</strong> (also called the potential vector or shift). The moment form is $(\Sigma, \mu) = (A^{-1}, A^{-1}b)$. So the single most compressive statement of the whole dictionary is:</p>
+<blockquote>
+<p><strong>Solving $Au = b$ is converting a Gaussian from natural parameters to moments.</strong> The solution $u^\star = A^{-1}b$ is the posterior mean; the energy landscape around it has curvature $A$; and every linear solver is, whether it knows it or not, an inference algorithm on this Gaussian.</p>
+</blockquote>
+<p>Two aliases worth keeping in mind: physicists call $\tfrac12 u^\top A u$ the (discrete Dirichlet) energy and $p(u)$ its Gibbs measure; in graphical-model language $(A,b)$ parameterize a <strong>Gaussian Markov random field (GMRF)</strong>, with $A$'s sparsity pattern as the graph.</p>
+<hr />
+<h2 id="2-xmathphx35xendx-is-a-covariance-matrix--specifically-a-brownian-bridge">2. $A^{-1}$ is a covariance matrix — specifically, a Brownian bridge</h2>
+<p>The map $b \mapsto A^{-1}b$ is the discrete <strong>Green's function</strong>, and the Green's function of $-d^2/dx^2$ with Dirichlet boundary conditions on $(0,1)$ is</p>
+<p>$$G(s,t) = \min(s,t) - st.$$</p>
+<p>That kernel is <em>exactly</em> the covariance function of the <strong>Brownian bridge</strong> $B_t = W_t - tW_1$ (Brownian motion pinned to zero at both ends — the continuum limit of "zero temperature at both walls"). The discrete identity is clean and exact:</p>
+<p>$$(A^{-1})_{ij} = h\,\big(\min(x_i, x_j) - x_i x_j\big) = h\,G(x_i, x_j).$$</p>
+<p>So the covariance of the Gaussian whose precision is the stiffness matrix is the Green's function times a quadrature weight. The prior $u \sim \mathcal N(0, A^{-1})$ <em>is</em> a Brownian bridge sampled on the grid, and $u^\star = A^{-1}b$ is the bridge's conditional mean given the source — a kriging/smoothing operation with the bridge kernel.</p>
+<p>This one identity explains the central structural asymmetry of the subject:</p>
+<p><strong>Sparse precision, dense covariance.</strong> $A$ is tridiagonal but $A^{-1}$ is completely dense. Statistically this is the difference between conditional and marginal structure. Zeros of the precision encode <strong>conditional independence</strong>: $A_{ij} = 0 \iff u_i \perp u_j \mid u_{\text{rest}}$. The three-point stencil says the temperature field is a Markov chain in space — given your two neighbors, the rest of the rod tells you nothing. But <em>marginal</em> correlations are long-range: $\mathrm{Corr}(u_i, u_j) &gt; 0$ for every pair, because a point heat source warms the entire rod. The PDE stencil is the conditional-independence graph; the Green's function is the marginal dependence. This is why the statistician (Rue &amp; Held's GMRF program) and the numerical analyst make the same move for the same reason: <strong>never form the inverse; work with the sparse precision and apply its inverse implicitly.</strong></p>
+<hr />
+<h2 id="3-every-row-of-xmathphx46xendx-is-a-regression-and-jacobis-iteration-matrix-is-the-notebooks-xmathphx47xendx">3. Every row of $A$ is a regression (and Jacobi's iteration matrix is the notebook's $B$)</h2>
+<p>The companion notebook's central identity — asserted there as <code>precisionMat == (I - B).D2</code> — is the finite-sample version of the textbook Gaussian fact that the precision matrix stores the <strong>full-conditional regressions</strong>. For $u \sim \mathcal N(\mu, A^{-1})$,</p>
+<p>$$\mathbb E[u_i \mid u_{-i}] = \mu_i - \frac{1}{A_{ii}}\sum_{j \ne i} A_{ij}(u_j - \mu_j), \qquad \mathrm{Var}(u_i \mid u_{-i}) = \frac{1}{A_{ii}}.$$</p>
+<p>In notebook notation: collect into column $j$ of a hollow matrix $B$ the coefficients that predict coordinate $j$ from all the others ($B_{ij} = -A_{ij}/A_{jj}$ for $i \ne j$), and let the diagonal <code>D2</code> store the inverse residual variances $1/\sigma_j^2 = A_{jj}$; then $A = (I - B)\,\cdot$<code>D2</code> exactly — the notebook's <code>precisionMat</code> — and $\mathrm{diag}(A) = $ inverse residual variances — the notebook's <code>Diagonal[precisionMat] == 1/Diagonal[R'.R]</code> assertion, verified here too. The precision matrix is <em>literally a stack of regressions</em>: divide row $i$ by its diagonal and negate the off-diagonals, and you are reading regression coefficients.</p>
+<p>Apply this to the Laplacian row $\tfrac{1}{h^2}(-u_{i-1} + 2u_i - u_{i+1}) = b_i$ and the regression is charming:</p>
+<p>$$\mathbb E[u_i \mid u_{-i}] = \frac{u_{i-1} + u_{i+1}}{2} + \frac{h^2}{2}b_i, \qquad \mathrm{Var}(u_i \mid u_{-i}) = \frac{h^2}{2}.$$</p>
+<p>Each node's best prediction is the average of its neighbors (plus a source lift). This is the discrete <strong>mean-value property</strong> of harmonic functions wearing a statistics costume: "harmonic" and "martingale" are the same condition.</p>
+<p>Now the classical iterative solvers fall out as inference procedures. The <strong>Jacobi iteration</strong> $u \leftarrow u - \mathrm{diag}(A)^{-1}(Au - b)$ has iteration matrix $I - \mathrm{diag}(A)^{-1}A$, which is <em>exactly the regression matrix $B$</em> — Jacobi simultaneously replaces every coordinate by its conditional expectation. <strong>Gauss–Seidel</strong> does the same sweep sequentially, using fresh values as it goes: it is a <strong>Gibbs sampler with the noise deleted</strong>, a systematic-scan sweep of conditional means. Add the correct noise $\mathcal N(0, h^2/2)$ to each Gauss–Seidel update and you have, exactly, the Gibbs sampler for $\mathcal N(A^{-1}b, A^{-1})$. This is not just an analogy: the splitting-solver and the Gibbs sampler converge under the same condition and at the same asymptotic rate, $\rho(B)$ (Goodman &amp; Sokal 1989; Fox &amp; Parker 2017 make the equivalence a theorem for general matrix splittings).</p>
+<p>The rate is where statistics gives the cleanest <em>explanation of failure</em>. For our chain, $\rho(B) = \cos(\pi h) \approx 1 - \pi^2 h^2/2$: each variable is <em>almost perfectly predicted by its neighbors</em> — smoothness of the field means the conditional-mean map is nearly the identity, each sweep extracts a sliver of new information, and Jacobi/Gibbs mix in $O(n^2)$ sweeps. And it explains the suite's headline no-op — CG(Jacobi) identical to plain CG, residual histories agreeing to 4.4e-16 (<a href="05-classical-preconditioners.html">05 — Classical Preconditioners</a>): the Jacobi <em>preconditioner</em> $M = \mathrm{diag}(A)$ is an <strong>independence model with homogeneous conditional variances</strong>. It carries zero information about the correlation structure — when the diagonal is constant ($2/h^2$ on the chain, $4/h^2$ on the 2-D grid) it is a scalar, and PCG is invariant to scalar rescalings of $M$ (the invariance proof is in <a href="04-krylov-and-pcg.html">04</a>). The variable-coefficient contrast problem, where Jacobi earns 5.6×, is the converse: heterogeneous conditional variances are real statistical information, and an independence model that gets them right is no longer vacuous. A statistical model that says "everything is i.i.d." cannot help you whiten a Brownian bridge.</p>
+<hr />
+<h2 id="4-square-roots-design-matrices-cholesky-as-sequential-regression-and-why-the-whitener-is-an-inverse-transpose">4. Square roots: design matrices, Cholesky as sequential regression, and why the whitener is an inverse transpose</h2>
+<h3 id="41-the-stiffness-matrix-is-a-gram-matrix">4.1 The stiffness matrix is a Gram matrix</h3>
+<p>Let $D \in \mathbb R^{(n+1)\times n}$ be the scaled forward-difference (incidence) matrix, $(Du)_k = (u_k - u_{k-1})/h$ with the boundary values grounded. Then</p>
+<p>$$A = D^\top D, \qquad J(u) = \tfrac12\Vert Du\Vert ^2 - b^\top u.$$</p>
+<p>So $A$ is the Gram matrix ("uncentered covariance," the notebook's $\mathrm{cov}[X] = X^\top X$) of a design matrix, and $Au = b$ is a set of <strong>normal equations</strong>: the solve is ridgeless least squares in which the "design matrix" is a differential operator and the penalty is roughness. Under the prior, $Du$ is white noise conditioned to sum to zero ($\mathrm{Cov}(Du) = D(D^\top D)^{-1}D^\top$ is the orthogonal projector onto $\{\text{increments summing to }0\}$) — the increments of a bridge.</p>
+<h3 id="42-cholesky--sequential-regression-mchol-phil2r-phir2l">4.2 Cholesky = sequential regression (mchol, phiL2R, phiR2L)</h3>
+<p>The notebook's <code>mchol</code> computes the <strong>modified Cholesky decomposition</strong> $\Sigma = C D^2 C^\top$ with $C$ unit lower triangular — Pourahmadi's regression parameterization of a covariance matrix. Its content: fix an ordering of the variables and write each as a regression on its <em>predecessors</em>,</p>
+<p>$$u_i = \sum_{j&lt;i}\varphi_{ij}\,u_j + \sigma_i\,\varepsilon_i, \qquad \varepsilon_i \sim \mathcal N(0,1)\ \text{i.i.d.},$$</p>
+<p>i.e. $(I - \Phi)\,u = D_\sigma\,\varepsilon$ with $\Phi$ strictly lower triangular. Then $\Sigma = (I-\Phi)^{-1}D_\sigma^2(I-\Phi)^{-\top}$ (so $C = (I-\Phi)^{-1}$) and the precision factors as $A = (I-\Phi)^\top D_\sigma^{-2}(I-\Phi)$. The $\varepsilon_i$ are the <strong>innovations</strong>; the $\sigma_i^2$ are the residual variances of the sequential regressions — verified above: computing $\Phi$ by literally running the regressions makes $(I-\Phi)\Sigma(I-\Phi)^\top$ diagonal. Your <code>phiL2R</code> (predict coordinate $i$ from earlier coordinates, "3.26 of Pourahmadi") builds exactly this $\Phi$; <code>phiR2L</code> builds its time-reversed twin.</p>
+<p>The two directions are not decoration — they are the ordinary and reversed Cholesky factorizations. With $A = LL^\top$ ($L$ lower), the whitening map $z = L^\top u$ reads, row by row, $z_i = L_{ii}u_i + L_{i+1,i}u_{i+1}$: the regression of $u_i$ on its <em>successors</em> (phiR2L), coefficient $-L_{i+1,i}/L_{ii}$, innovation s.d. $1/L_{ii}$. For the bridge the coefficients have a closed form with a transparent meaning: $-L_{i+1,i}/L_{ii} = i/(i+1)$, which is just linear interpolation between the known left wall (zero, at distance $i$) and the conditioning neighbor $u_{i+1}$ — pinned diffusion, verified numerically ($\tfrac12, \tfrac23, \tfrac34, \tfrac45, \dots$). Meanwhile the Cholesky factor of the <em>covariance</em> runs the regressions forward on predecessors (phiL2R). The exact relationship, verified above with the reversal permutation $P$:</p>
+<p>$$\mathrm{chol}(A^{-1}) = P\,L^{-\top}P.$$</p>
+<p><strong>Cholesky of the inverse is the inverse transpose of the Cholesky, read in the opposite variable order.</strong> The two factorizations tell one regression story in the two possible directions of the Markov chain. This is the notebook's title made precise, and it is why Rue's classic GMRF sampler never forms $\mathrm{chol}(\Sigma)$: to draw $u \sim \mathcal N(0, A^{-1})$ you factor the sparse precision $A = LL^\top$ and back-substitute,</p>
+<p>$$u = L^{-\top}z, \qquad z\sim\mathcal N(0,I).$$</p>
+<p>Sampling is <strong>coloring</strong> by $L^{-\top}$; solving/whitening is applying $L^\top$ (or $A$). One triangular matrix, used in the two directions.</p>
+<p>Because the graph is a chain, $L$ is lower <strong>bidiagonal — Cholesky creates no fill-in on a tree</strong>. Hold that thought; it is the entire story of why 1D is easy and 2D/3D is where preconditioning becomes real (§6).</p>
+<h3 id="43-qr-and-the-shawe-taylor-duality-in-whitening-language">4.3 QR and the Shawe-Taylor duality, in whitening language</h3>
+<p>Shawe-Taylor &amp; Cristianini's §5.2 duality says: Gram–Schmidt on the feature vectors gives $X' = QR$, and the <em>same</em> $R$ appears as the Cholesky factor of the kernel matrix, $K = XX' = R'R$ — "Cholesky is the dual implementation of Gram–Schmidt." For our problem the "data matrix" is the difference operator: QR-factor $D = QR$ and (verified, after fixing signs) $R = L^\top = \mathrm{chol}(A)^\top$, with</p>
+<p>$$Q = D R^{-1} = D L^{-\top}.$$</p>
+<p>Read that as a statistician: <strong>the orthonormal $Q$ of the QR decomposition is the design matrix whitened by the inverse transpose of the Cholesky factor of its Gram matrix.</strong> Gram–Schmidt <em>is</em> whitening; $R$ stores the regression coefficients and innovation scales it took to do it; and computing $R$ via QR on $D$ rather than Cholesky on $A = D^\top D$ is the numerically stable "square-root method" that avoids squaring the condition number (the same reason the notebook's singular-matrix experiments found $\mathrm{pinv}(X'X)$ brittle and preferred $\mathrm{pinv}(X)\mathrm{pinv}(X)^\top$, with Tikhonov as the robust fallback — forming the Gram matrix is where ill-conditioning bites). The notebook's remaining assertion, $X(X^\top X)^{-1} = \mathrm{pinv}(X^\top)$ — verified — is the same object from a third angle: "dividing by the covariance" is the transpose of the pseudoinverse, the map that turns the design into its own dual (bi-orthogonal) basis.</p>
+<p>One more member of the family: whiteners of $\Sigma$ form an orthogonal orbit $\{U\Sigma^{-1/2} : U^\top U = I\}$. Cholesky whitening picks the <em>triangular</em> (causal, ordered) representative; PCA whitening picks the eigenbasis representative — which for our $A$ is the <strong>discrete sine transform</strong>, since $A$'s eigenvectors are $\sin(k\pi x)$ with eigenvalues $4\sin^2(k\pi h/2)/h^2$ (verified), i.e. the <strong>Karhunen–Loève basis of the Brownian bridge</strong> (the DST-I diagonalization of <a href="02-eigenvalues.html">02 — The Eigenvalue Story</a>); and ZCA whitening $\Sigma^{-1/2}$ is the unique <em>symmetric</em> representative — the polar factor of any whitener, the one closest to the identity (Kessy, Lewandowski &amp; Strimmer 2018).</p>
+<hr />
+<h2 id="5-solvers-as-inference-algorithms">5. Solvers as inference algorithms</h2>
+<p><strong>Direct solve (Thomas algorithm) = Kalman smoothing = belief propagation.</strong> Elimination on a tridiagonal $A$ is Gaussian belief propagation on a chain: each Schur-complement step $A_{22} - A_{21}A_{11}^{-1}A_{12}$ is a <strong>marginalization</strong> of the eliminated variable, the forward sweep is Kalman filtering (accumulate information left to right), and back-substitution is the Rauch–Tung–Striebel smoothing pass. Message passing is exact on trees for the same reason Cholesky has no fill-in on trees: marginalizing a leaf creates no new dependencies. The $O(n)$ tridiagonal solve and the Kalman smoother are one algorithm.</p>
+<p><strong>Conjugate gradients = sequential regression on uncorrelated directions.</strong> CG's defining property, $p_i^\top A p_j = 0$, says the search directions are orthogonal in the $A$-inner product — which is precisely the statement that the linear functionals $p_i^\top A u$ are <strong>uncorrelated random variables</strong> under $u \sim \mathcal N(0, A^{-1})$: $\mathrm{Cov}(p_i^\top Au,\, p_j^\top Au) = p_i^\top A A^{-1} A\, p_j = p_i^\top A p_j$. CG is Gram–Schmidt run in the Mahalanobis geometry of the precision, extracting one new <em>independent measurement</em> $p_k^\top b$ per iteration and regressing the solution on the measurements so far; the $A$-norm optimality of $x_k$ over the Krylov space is least-squares optimality of that regression. This reading is a theorem in probabilistic numerics: with prior $u \sim \mathcal N(x_0, A^{-1})$, the posterior means after conditioning on the CG search directions <em>are</em> the CG iterates (Cockayne, Oates, Ipsen &amp; Girolami 2019; Hennig 2015).</p>
+<p><strong>Spectral solve = KL rotation.</strong> Diagonalizing with the DST solves the system by rotating to the Karhunen–Loève coordinates where the bridge's components are independent, dividing by the per-mode variances, and rotating back — PCA whitening as a solver.</p>
+<hr />
+<h2 id="6-preconditioning--fitting-a-tractable-surrogate-gaussian-the-regression-recipe">6. Preconditioning = fitting a tractable surrogate Gaussian (the regression recipe)</h2>
+<p>Here is where the dictionary pays rent. A preconditioner is an SPD $M$ with two properties: $M^{-1}r$ is cheap, and $M \approx A$. Statistically: <strong>$M$ is the precision of a surrogate Gaussian model, and PCG is CG run in the surrogate's whitened coordinates.</strong> Factor $M = L_M L_M^\top$; split-preconditioned CG solves</p>
+<p>$$\big(L_M^{-1} A\, L_M^{-\top}\big)\,\tilde u = L_M^{-1}b,$$</p>
+<p>and $L_M^{-1}AL_M^{-\top}$ is the true precision expressed in coordinates the <em>surrogate</em> believes are white. If the surrogate were exact, this matrix is $I$ and CG converges in one step. In general, $\kappa(M^{-1}A)$ — the CG convergence constant — is a <strong>model-mismatch statistic</strong>: the spread of variances the true model assigns to directions the surrogate has normalized to unit variance. Building a preconditioner is a statistical modeling problem: <em>choose a family of Gaussians you can factor and solve cheaply; fit the best member to $A$; whiten with it.</em></p>
+<p>The regression view makes the construction mechanical, because §3–4 showed that a precision matrix <em>is</em> a collection of regressions. The recipe: fix an elimination ordering; for each variable $i$ choose a small conditioning set $s(i)$ among the not-yet-eliminated variables; compute the coefficients $c_{i}$ and residual variance $\sigma_i^2$ of the regression of $u_i$ on $u_{s(i)}$ (exactly <code>phiR2L</code>, restricted to $s(i)$); place $1/\sigma_i$ on the diagonal and $-c_i/\sigma_i$ in the sparse off-diagonal slots of a triangular factor $U$; and take $M = U^\top U$, applied via two sparse triangular solves. If $s(i)$ is everything, the regressions are exact, $U = L^\top$, and $M = A$. Every classical preconditioner is a truncation policy for these regressions:</p>
+<p><strong>Jacobi</strong> keeps no regressors at all: the independence surrogate, retaining only conditional variances. On constant-diagonal $A$ it is a scalar — provably inert, per §3.</p>
+<p><strong>Gauss–Seidel / SSOR</strong> as a preconditioner applies one (or one symmetrized) sweep of conditional-mean updates: an embedded pass of the noise-free Gibbs sampler, with the Fox–Parker equivalence quantifying exactly how much whitening one sweep buys.</p>
+<p><strong>Incomplete Cholesky, IC(0)</strong> keeps only regressors allowed by $A$'s own sparsity pattern: each variable regressed only on its stencil neighbors among the survivors. In spatial statistics this surrogate has a name — the <strong>Vecchia approximation</strong> (Vecchia 1988), the workhorse of large-scale Gaussian-process inference: replace the joint density by $\prod_i p(u_i \mid u_{s(i)})$ with small conditioning sets. The identification is sharp: the sparse triangular factor minimizing the KL divergence from the true Gaussian, subject to the sparsity pattern, is given in closed form by exactly these local regressions (Schäfer, Katzfuss &amp; Owhadi 2021). So "compute the preconditioner from the regression view" is not a metaphor — the KL-optimal sparse factor <em>is</em> the truncated-regression factor, and incomplete Cholesky is maximum-likelihood fitting of a sparse autoregression to the field. (On the 2-D grid, where fill makes the two criteria diverge, <a href="11-regressions-and-multiscale.html">11 §4</a> measures the IC(0)-vs-Vecchia gap explicitly: same pattern and innovation scales, coefficients apart by ~22% at the worst nodes.)</p>
+<p><strong>Pivoted / partial decompositions</strong> truncate in the other direction: keep all regressors but only $T \ll n$ regressions. This is Algorithm 5.12 of Shawe-Taylor &amp; Cristianini verbatim — partial Gram–Schmidt / incomplete pivoted Cholesky, where the residual array $d_i$ tracks each variable's <strong>unexplained variance</strong> and the pivot <code>[a, I(j+1)] = max(d)</code> is greedy <strong>forward-selection regression</strong>: always adjoin the variable the current model predicts worst. (Their $\nu_j = \sqrt{d_j}$ is the innovation standard deviation; their Proposition 5.11 — rank of the data equals rank of $K$ — is the statement that the Gaussian is supported on a $T$-dimensional subspace.) The resulting surrogate, low-rank factor plus diagonal residual, is a <strong>factor-analysis model</strong>: "the field is a few common factors plus independent noise" — the Nyström / inducing-point approximation of GP regression, recycled as a preconditioner — exactly what <a href="07-nystrom-preconditioning.html">07 — Randomized Nyström Preconditioning</a> implements. Its instructive negative result is the factor-analysis reading made empirical: the Laplacian's flat-topped spectrum is a field with <em>no dominant common factors</em>, so a low-rank-plus-diagonal surrogate has nothing to capture, and even optimal rank-256 deflation barely dents $\kappa$. Their <em>deflation</em> (eq. 5.8) is the complementary move: project out directions already known — statistically, condition on the coarse modes and precondition only the residual field.</p>
+<p>Why does none of this matter in 1D? Because the chain has no fill-in: IC(0) <em>is</em> complete Cholesky, the exact solve is $O(n)$ Kalman smoothing, and preconditioning is theater. The subject becomes real on the suite's 2-D grid — where the ILU result (5 iterations, near-direct at toy scale, <a href="05-classical-preconditioners.html">05</a>) shows how much of the fill a good incomplete factorization can afford to keep at $N = 1024$ — because eliminating a variable marries its neighbors: <strong>fill-in is marginalization-induced dependence</strong> — integrate out an interior node of a grid and its former neighbors become directly coupled. Approximating the fill (which is all IC, Vecchia orderings, and nested dissection are doing) means choosing which of those induced regressions to keep; multigrid answers hierarchically, with coarse grids as a multiscale statistical model whose coarse-level solves are inference on aggregated variables (<a href="11-regressions-and-multiscale.html">11 §5</a> measures this division of labor on the grid and assembles it into a working two-level preconditioner: 76 → 32 iterations). The statistical framing tells you <em>what any good preconditioner must capture</em>: the long-range marginal correlations that the bridge's Green's function makes unavoidable, using only short-range conditional machinery.</p>
+<hr />
+<h2 id="7-the-heat-equation-and-matérn-coda-and-the-operator-learning-punchline">7. The heat-equation and Matérn coda (and the operator-learning punchline)</h2>
+<p>Everything above concerned the equilibrium problem; the time-dependent heat equation $u_t = u_{xx}$ adds one more page to the dictionary. The heat semigroup $e^{t\Delta}$ is convolution with a Gaussian kernel of variance $2t$ — running the PDE forward is Gaussian blurring, i.e. adding independent Gaussian increments in KL space, mode $k$ decaying at rate $\lambda_k$. Implicit time stepping makes the statistics explicit: one backward-Euler step solves</p>
+<p>$$(I + \Delta t\, A)\,u^{+} = u,$$</p>
+<p>and $I + \Delta t\,A = \Delta t\,(\tau^2 - \Delta_h)$ with $\tau^2 = 1/\Delta t$ is precisely a <strong>Whittle–Matérn precision operator</strong>. The suite's GRF right-hand side (<a href="03-gaussian-random-fields.html">03 — The GRF Right-Hand Side</a>, effective Matérn smoothness $\nu = 1$) — spectrum $(\vert \omega\vert ^2 + \tau^2)^{-\alpha/2}$ applied to white noise — is the spectral implementation of the SPDE construction $(\tau^2 - \Delta)^{\alpha/2}\,g = \mathcal W$ (Whittle 1954; Lindgren, Rue &amp; Lindström 2011): Matérn fields are exactly the fields whose precision is a power of a shifted Laplacian, which is <em>why</em> Matérn GPs admit sparse GMRF representations and fast solvers at all. Note the symmetry with §4.2: the generator <strong>colors</strong> white noise by a covariance square root in the KL basis; the solver <strong>whitens</strong> by the precision. Same factor, opposite directions, and "inverse transposed" is the hinge between them.</p>
+<p>For the neural preconditioner of <a href="06-neural-preconditioner.html">06 — Neural Preconditioning Operator</a> this closes a loop. §6 said a preconditioner is a surrogate covariance; a network trained to approximate the inverse is therefore doing <em>covariance estimation</em> — learning the kriging map of the field — and its measured success mode, spectral clustering rather than raw $\kappa$ reduction, is what a good-but-inexact covariance model looks like to CG. More broadly, for operator learning trained on pairs $(f, u = A^{-1}f)$ with GRF forcing $f \sim \mathcal N(0, \Sigma_f)$, the pairs are <em>jointly Gaussian</em> with $\mathrm{Cov}(u) = A^{-1}\Sigma_f A^{-\top}$ and cross-covariance $\Sigma_f A^{-\top}$; the Bayes-optimal map from $f$ to $u$ is the linear kriging operator, which here is $A^{-1}$ itself, and the smoothing it applies — two extra powers of spectral decay per solve — is why solved fields are so much tamer than their sources.</p>
+<hr />
+<h2 id="8-the-dictionary">8. The dictionary</h2>
+<table>
+<thead>
+<tr>
+<th>Numerical linear algebra / PDE</th>
+<th>Statistics / probability</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Stiffness matrix $A$ (discrete $-\Delta$, Dirichlet)</td>
+<td>Precision (inverse covariance) matrix of a GMRF; natural parameter</td>
+</tr>
+<tr>
+<td>Right-hand side $b$; solving $Au=b$</td>
+<td>Information (potential) vector; converting natural parameters to moments — posterior mean</td>
+</tr>
+<tr>
+<td>Dirichlet energy $\tfrac12 u^\top Au - b^\top u$</td>
+<td>Negative log-density of $\mathcal N(A^{-1}b, A^{-1})$</td>
+</tr>
+<tr>
+<td>Stencil / sparsity pattern of $A$</td>
+<td>Conditional-independence (Markov) graph</td>
+</tr>
+<tr>
+<td>$A^{-1}$; Green's function $\min(s,t)-st$</td>
+<td>Covariance matrix; Brownian-bridge kernel</td>
+</tr>
+<tr>
+<td>Row equation $u_i = \tfrac12(u_{i-1}+u_{i+1}) + \tfrac{h^2}{2}b_i$</td>
+<td>Full-conditional regression: $\mathbb E[u_i \mid u_{-i}]$, variance $1/A_{ii}$</td>
+</tr>
+<tr>
+<td>Notebook: $A = $ <code>(I − B).D2</code></td>
+<td>Precision assembled from regress-on-the-rest coefficients and inverse residual variances</td>
+</tr>
+<tr>
+<td>Jacobi iteration matrix $I - \mathrm{diag}(A)^{-1}A$</td>
+<td>The regression matrix $B$; simultaneous conditional-mean update</td>
+</tr>
+<tr>
+<td>Gauss–Seidel / SOR sweep</td>
+<td>Systematic-scan Gibbs sampler with the noise removed (same rate: Goodman–Sokal, Fox–Parker)</td>
+</tr>
+<tr>
+<td>$\rho(\text{iteration matrix}) \to 1$ as $h \to 0$</td>
+<td>Neighbors nearly determine each node; vanishing innovation per sweep</td>
+</tr>
+<tr>
+<td>$A = D^\top D$, $D$ = difference operator</td>
+<td>Normal equations of a regression whose design matrix is the operator; roughness penalty</td>
+</tr>
+<tr>
+<td>Cholesky $A = LL^\top$</td>
+<td>Sequential (autoregressive) factorization; regressions on successors (<code>phiR2L</code>); innovations rep.</td>
+</tr>
+<tr>
+<td><code>mchol</code>: $\Sigma = CD^2C^\top$ (Pourahmadi)</td>
+<td>Regressions on predecessors (<code>phiL2R</code>); modified Cholesky = ordered AR model</td>
+</tr>
+<tr>
+<td>$\mathrm{chol}(A^{-1}) = P L^{-\top} P$</td>
+<td>Same regressions read in the reversed variable order</td>
+</tr>
+<tr>
+<td>Back-substitution $u = L^{-\top}z$</td>
+<td>Sampling from the GMRF (coloring); Rue's algorithm</td>
+</tr>
+<tr>
+<td>$z = L^\top u$; and QR: $Q = DL^{-\top}$</td>
+<td>Whitening; Gram–Schmidt = whitening by the inverse-transposed Cholesky factor</td>
+</tr>
+<tr>
+<td>QR of $D$ vs Cholesky of $D^\top D$</td>
+<td>Square-root method vs normal equations (stability; the notebook's pinv experiments)</td>
+</tr>
+<tr>
+<td>$X(X^\top X)^{-1} = \mathrm{pinv}(X^\top)$</td>
+<td>"Dividing by covariance" = dual basis = transposed pseudoinverse</td>
+</tr>
+<tr>
+<td>DST diagonalization; eigenpairs $\sin(k\pi x)$, $4\sin^2(k\pi h/2)/h^2$</td>
+<td>Karhunen–Loève expansion of the bridge; PCA whitening</td>
+</tr>
+<tr>
+<td>$\Sigma^{-1/2}$ (symmetric square root)</td>
+<td>ZCA whitening; polar factor of any whitener</td>
+</tr>
+<tr>
+<td>Thomas algorithm; elimination + back-substitution</td>
+<td>Kalman filter + RTS smoother; Gaussian belief propagation on the chain</td>
+</tr>
+<tr>
+<td>Schur complement; fill-in</td>
+<td>Marginalization; dependence induced by integrating variables out</td>
+</tr>
+<tr>
+<td>CG; $A$-conjugate directions</td>
+<td>Sequential regression on measurements uncorrelated under $\mathcal N(0,A^{-1})$; BayesCG posterior means</td>
+</tr>
+<tr>
+<td>Preconditioner $M \approx A$; $\kappa(M^{-1}A)$</td>
+<td>Tractable surrogate Gaussian; whitening under the surrogate; model-mismatch statistic</td>
+</tr>
+<tr>
+<td>Jacobi preconditioner</td>
+<td>Independence surrogate (conditional variances only) — inert when the diagonal is constant</td>
+</tr>
+<tr>
+<td>Incomplete Cholesky IC(0)</td>
+<td>Vecchia approximation; KL-optimal sparse autoregression (Schäfer–Katzfuss–Owhadi)</td>
+</tr>
+<tr>
+<td>Pivoted partial Cholesky (Alg. 5.12; pivot on $d_i$)</td>
+<td>Forward-selection regression on unexplained variance; Nyström / inducing points; factor analysis (low-rank + diagonal)</td>
+</tr>
+<tr>
+<td>Deflation of known eigenvectors (eq. 5.8)</td>
+<td>Conditioning on known factors / coarse modes</td>
+</tr>
+<tr>
+<td>Multigrid coarse-grid correction</td>
+<td>Hierarchical model; inference on aggregated (marginalized) variables</td>
+</tr>
+<tr>
+<td>Backward Euler operator $I + \Delta t\,A$</td>
+<td>Whittle–Matérn precision, $\tau^2 = 1/\Delta t$</td>
+</tr>
+<tr>
+<td>Spectral GRF generator $(\vert \omega\vert ^2+\tau^2)^{-\alpha/2}\cdot$noise</td>
+<td>SPDE sampling $(\tau^2-\Delta)^{\alpha/2}g = \mathcal W$ (Lindgren–Rue–Lindström)</td>
+</tr>
+<tr>
+<td>Solution operator $A^{-1}$ acting on random $f$</td>
+<td>Kriging map; Bayes-optimal linear operator for the joint $(f,u)$ Gaussian</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="9-pointers">9. Pointers</h2>
+<p>The GMRF half of the dictionary — precision sparsity as Markov structure, sampling by $L^{-\top}$, Cholesky orderings — is Rue &amp; Held, <em>Gaussian Markov Random Fields</em> (2005); the Matérn/SPDE bridge is Whittle (1954) and Lindgren, Rue &amp; Lindström (JRSS-B 2011). The regression parameterization of covariance ($\Phi$, $D^2$, modified Cholesky) that the companion notebook implements is Pourahmadi (Biometrika 1999; Statistical Science 2011 review). The sampler–solver equivalence is Goodman &amp; Sokal (1989) and Fox &amp; Parker (Bernoulli 2017); the CG-as-Bayesian-inference results are Hennig (SIOPT 2015) and Cockayne, Oates, Ipsen &amp; Girolami (Bayesian Analysis 2019). Vecchia (JRSS-B 1988) introduced the truncated-conditioning surrogate; Schäfer, Katzfuss &amp; Owhadi (SISC 2021) prove the KL-optimality of sparse-Cholesky-by-local-regression that makes "preconditioner = fitted autoregression" exact. The whitening taxonomy (Cholesky / PCA / ZCA and the orthogonal orbit) is Kessy, Lewandowski &amp; Strimmer (American Statistician 2018). And the QR–Cholesky–Gram–Schmidt duality with the pivoted partial algorithm is Shawe-Taylor &amp; Cristianini, <em>Kernel Methods for Pattern Analysis</em>, §5.2.</p>
+</div>
+</body>
+</html>

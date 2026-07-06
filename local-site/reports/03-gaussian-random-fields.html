@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>03 — The Gaussian-Random-Field Right-Hand Side</title>
+<style>
+body { margin: 0; color: #1b1f23; background: #fff;
+       font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI",
+             Helvetica, Arial, sans-serif; }
+.page { max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+nav.site { font-size: .85rem; color: #57606a; margin-bottom: 1.5rem;
+           border-bottom: 1px solid #d8dee4; padding-bottom: .5rem; }
+nav.site a { color: #0969da; text-decoration: none; }
+nav.site a:hover { text-decoration: underline; }
+nav.site .sep { margin: 0 .45em; color: #8c959f; }
+h1, h2, h3, h4 { line-height: 1.25; margin: 1.6em 0 .6em; }
+h1 { font-size: 1.9rem; border-bottom: 1px solid #d8dee4;
+     padding-bottom: .3em; margin-top: .2em; }
+h2 { font-size: 1.45rem; border-bottom: 1px solid #eaecef;
+     padding-bottom: .25em; }
+a { color: #0969da; }
+img { max-width: 100%; height: auto; }
+pre { background: #f6f8fa; padding: .9em 1.1em; overflow-x: auto;
+      border-radius: 6px; font-size: .85em; line-height: 1.45; }
+code { font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo,
+       Consolas, monospace; background: #f6f8fa; padding: .1em .3em;
+       border-radius: 4px; font-size: .9em; }
+pre code { background: none; padding: 0; font-size: 1em; }
+table { border-collapse: collapse; margin: 1em 0; display: block;
+        overflow-x: auto; max-width: 100%; }
+th, td { border: 1px solid #d0d7de; padding: .35em .7em; }
+th { background: #f6f8fa; }
+blockquote { margin: 0 0 1em; padding: 0 1em; color: #57606a;
+             border-left: .25em solid #d0d7de; }
+hr { border: none; border-top: 1px solid #d8dee4; margin: 2em 0; }
+.citation { color: #57606a; word-break: break-all; }
+mjx-container[jax="SVG"][display="true"] { overflow-x: auto;
+                                           overflow-y: hidden; }
+</style>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  options: {
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  svg: { fontCache: 'local' }
+};
+</script>
+<script defer src="../vendor/mathjax-tex-svg.js"></script>
+</head>
+<body>
+<div class="page">
+<nav class="site"><a href="../index.html">index</a><span class="sep">&middot;</span><a href="02-eigenvalues.html">&larr; 02-eigenvalues</a><span class="sep">&middot;</span><a href="04-krylov-and-pcg.html">04-krylov-and-pcg &rarr;</a></nav>
+<h1 id="03--the-gaussian-random-field-right-hand-side">03 — The Gaussian-Random-Field Right-Hand Side</h1>
+<p>Every experiment in this repo solves $Ax=b$ with the same right-hand side family: a mean-zero Gaussian random field (GRF) with Matérn-type power spectrum, synthesized spectrally via the FFT. This report derives the construction line by line, explains the two non-obvious design choices (the <code>* n</code> frequency scaling and the <code>Re(IFFT)</code> of <em>non</em>-Hermitian complex noise), gives the Matérn-covariance interpretation of $(\alpha, \tau)$, and quantifies the torus-vs-Dirichlet-box mismatch.</p>
+<p>Code under discussion:</p>
+<ul>
+<li>Python: <code>grf_rhs</code> in <a href="../python/poisson.py">python/poisson.py</a> (def at line 131; the whole computation is lines 176–184 — seven statements).</li>
+<li>Mathematica reference: <a href="../mathematica/poisson_pcg.wls">mathematica/poisson_pcg.wls</a> lines 40–47.</li>
+</ul>
+<p>Context: this GRF family is the de-facto standard data distribution for neural-operator PDE benchmarks. The FNO paper (Li et al., <em>Fourier Neural Operator for Parametric PDEs</em>, ICLR 2021, arXiv:2010.08895<span class="citation"> (https://arxiv.org/abs/2010.08895)</span>) builds its Darcy coefficients on the base GRF $\mathcal N\!\big(0,(-\Delta+9I)^{-2}\big)$ — exactly $\alpha=2,\tau=3$ in the notation below — though the coefficients themselves are the <em>pushforward</em> $\psi_\#\,\mathcal N\big(0,(-\Delta+9I)^{-2}\big)$ of that field through a binary threshold map (so they are piecewise-constant, not Gaussian). The NPO paper (arXiv:2502.01337<span class="citation"> (https://arxiv.org/abs/2502.01337)</span>, Sec. 5.1.2) says only that its right-hand sides are sampled "from a Gaussian Random Field (GRF)" mapped onto the same mesh as $A$ — it does not specify the spectrum or the sampling method. The defaults <code>alpha=2.0, tau=3.0</code> in <code>grf_rhs</code> follow the FNO convention as the concrete instantiation of that underspecified choice. See <a href="06-neural-preconditioner.html">06-neural-preconditioner.md</a> for how 40 draws of this field (seeds 100–139) form the NPO training set, and <a href="08-results.html">08-results.md</a> for everything solved against the canonical seed-42 draw.</p>
+<hr />
+<h2 id="1-the-pipeline-at-a-glance">1. The pipeline at a glance</h2>
+<p>Mathematica (<a href="../mathematica/poisson_pcg.wls">poisson_pcg.wls</a> L40–47):</p>
+<pre><code class="language-wolfram">alpha = 2.0; tau = 3.0;
+freqs    = N@RotateRight[Range[-n/2, n/2 - 1], n/2]*n;
+spectrum = 1.0/(Outer[Plus, freqs^2, freqs^2] + tau^2)^(alpha/2.0);
+SeedRandom[42];
+noise    = RandomVariate[NormalDistribution[], {n, n, 2}] . {1, I};
+grfRaw   = Re@InverseFourier[noise*spectrum, FourierParameters -&gt; {-1, -1}];
+b        = Standardize@Flatten@grfRaw;
+</code></pre>
+<p>Python port (<a href="../python/poisson.py">python/poisson.py</a> L176–184):</p>
+<pre><code class="language-python">f = np.roll(np.arange(-n // 2, n // 2), n // 2) * n
+spectrum = 1.0 / (f[:, None] ** 2 + f[None, :] ** 2 + tau**2) ** (alpha / 2.0)
+
+rng = np.random.default_rng(seed)
+noise = rng.standard_normal((n, n, 2)) @ np.array([1.0, 1.0j])
+field = np.real(np.fft.ifft2(noise * spectrum))
+
+flat = field.ravel()  # row-major, matching Mathematica Flatten
+return (flat - flat.mean()) / flat.std(ddof=1)
+</code></pre>
+<p>In math: with $k=(k_1,k_2)\in\{-n/2,\dots,n/2-1\}^2$ integer wavenumbers,</p>
+<p>$$
+b(x) \;\propto\; \operatorname{Re}\!\Big[\sum_{k} \underbrace{\big(n^2\vert k\vert ^2+\tau^2\big)^{-\alpha/2}}_{S_k}\, Z_k\, e^{2\pi i\, k\cdot x/n}\Big],
+\qquad Z_k = G^{(1)}_k + i\,G^{(2)}_k,\;\; G^{(j)}_k \overset{iid}{\sim}\mathcal N(0,1),
+$$</p>
+<p>followed by exact removal of the spatial mean and rescaling to unit sample variance. Sections 2–6 unpack each factor.</p>
+<p>The port is distribution-exact but not draw-exact: NumPy's PCG64 stream under <code>default_rng(42)</code> cannot bit-match Mathematica's <code>SeedRandom[42]</code> stream, so <a href="../figures/grf_field.png">figures/grf_field.png</a> and <a href="../figures/mma_source_grf.png">figures/mma_source_grf.png</a> show two <em>different samples of the same distribution</em>. That is fine for the experiments — each language's suite is internally self-consistent — but it is why the two figures don't look identical.</p>
+<hr />
+<h2 id="2-the-frequency-grid-fftshifted-ordering-and-the--n-scaling">2. The frequency grid: fftshifted ordering and the <code>* n</code> scaling</h2>
+<h3 id="21-ordering">2.1 Ordering</h3>
+<p><code>Range[-n/2, n/2-1]</code> is $[-16,\dots,15]$ for $n=32$; <code>RotateRight[..., n/2]</code> cyclically shifts by 16, giving</p>
+<p>$$
+[\,0,\,1,\,\dots,\,15,\,-16,\,-15,\,\dots,\,-1\,]
+$$</p>
+<p>— exactly the standard DFT ordering (DC in slot 0, positive frequencies first, then negatives), i.e. the <em>inverse</em> of <code>fftshift</code>. NumPy reproduces it with <code>np.roll(np.arange(-n//2, n//2), n//2)</code> (<a href="../python/poisson.py">poisson.py</a> L176); it equals <code>np.fft.fftfreq(n) * n</code>. This ordering is mandatory because <code>ifft2</code> (and <code>InverseFourier</code>) index Fourier coefficients in DFT order — building <code>spectrum</code> on a shifted grid without unshifting would scramble which noise mode gets which amplitude. Verified numerically: the array starts <code>[0, 32, 64, ...]</code> and ends <code>[..., -64, -32]</code> after the <code>* n</code> scaling, with the unpaired Nyquist frequency $-n/2$ sitting at index 16 (<code>f[16] = -512</code>).</p>
+<h3 id="22-what-the--n-actually-does">2.2 What the <code>* n</code> actually does</h3>
+<p>After scaling, the spectral amplitude at integer mode $k$ is</p>
+<p>$$
+S_k = \big(n^2 k_1^2 + n^2 k_2^2 + \tau^2\big)^{-\alpha/2}
+    = n^{-\alpha}\Big(\vert k\vert ^2 + \big(\tfrac{\tau}{n}\big)^2\Big)^{-\alpha/2}.
+$$</p>
+<p>Two consequences, one trivial and one substantive:</p>
+<ol>
+<li><strong>The prefactor $n^{-\alpha}$ is irrelevant.</strong> It is a global constant, annihilated by the final standardization (Sec. 6).</li>
+<li><strong>The effective mass parameter is $\tau_{\mathrm{eff}}=\tau/n = 3/32 = 0.09375$, not $\tau=3$.</strong> The Matérn "knee" — the wavenumber below which the spectrum flattens — sits at $\vert k\vert \approx\tau_{\mathrm{eff}}\approx 0.094$, <em>below the first resolvable nonzero mode</em> $\vert k\vert =1$. So on every mode the field actually contains, the spectrum is a nearly pure power law $\vert k\vert ^{-\alpha}$: the relative flattening at $k=(1,0)$ is $\tau^2/n^2 = 9/1024 \approx 0.88\%$. Concretely (verified): $S_{(0,1)}/S_{(0,2)} = 3.974$ versus exactly $4$ for a pure $\vert k\vert ^{-2}$ law.</li>
+</ol>
+<p>Compare the FNO-paper normalization, which uses angular wavenumbers: amplitude $\propto(4\pi^2\vert k\vert ^2+\tau^2)^{-\alpha/2}$, i.e. $\tau_{\mathrm{eff}} = \tau/2\pi \approx 0.477$ and a $\tau^2/4\pi^2 \approx 23\%$ flattening at mode 1. The <code>* n</code> convention here (with $n=32 \approx 5.1\times 2\pi$) therefore produces a <em>smoother, longer-range</em> field than FNO's at the same $(\alpha,\tau)$ — effectively scale-free across the resolved band. Same family, slightly different point in it; nothing downstream depends on this distinction since every experiment uses the one convention consistently.</p>
+<p>The DC entry $S_{(0,0)} = \tau^{-\alpha} = 1/9 \approx 0.1111$ is enormous relative to its neighbors — $S_{(0,0)}/S_{(0,1)} = (n^2+\tau^2)/\tau^2 \cdot \ldots = 1033/9 = 114.8$ in amplitude, and the DC mode carries $99.95\%$ of the raw spectral energy $\sum_k S_k^2$ (verified: $\sum S_k^2 = 1.2351\times10^{-2}$, of which $S_{(0,0)}^2 = 1/81 = 1.2346\times10^{-2}$). This would be alarming except that a DC Fourier mode is a <em>spatial constant</em>, and <code>Standardize</code> subtracts the sample mean — which for a band-limited periodic field equals the DC component exactly (Sec. 6). So the huge DC amplitude is created and then exactly destroyed; only the $\vert k\vert \ge 1$ modes survive into $b$.</p>
+<hr />
+<h2 id="3-the-power-spectrum-as-a-matérn-covariance">3. The power spectrum as a Matérn covariance</h2>
+<h3 id="31-covariance-operator">3.1 Covariance operator</h3>
+<p>A mean-zero Gaussian field with Fourier <em>amplitudes</em> $S_k \propto (\vert k\vert ^2+\tau^2)^{-\alpha/2}$ has <em>power spectral density</em> $S_k^2 \propto (\vert k\vert ^2+\tau^2)^{-\alpha}$, i.e. covariance operator</p>
+<p>$$
+C = \sigma^2\big({-\Delta} + \tau^2 I\big)^{-\alpha}
+$$</p>
+<p>on the torus (where $-\Delta$ has Fourier symbol $\vert k\vert ^2$ in the wavenumber units used — with the code's <code>* n</code> scaling the symbol is $n^2\vert k\vert ^2$, which just rescales $\tau$ per Sec. 2.2). This is exactly the base measure $\mu = \mathcal N\big(0, (-\Delta + 9I)^{-2}\big)$ that the FNO paper pushes through a threshold map to make its Darcy coefficients; the NPO paper (Sec. 5.1.2) specifies only an unqualified "Gaussian Random Field" for its right-hand sides.</p>
+<h3 id="32-whittlematérn-dictionary">3.2 Whittle–Matérn dictionary</h3>
+<p>The Whittle–Matérn covariance in $d$ dimensions with smoothness $\nu$ and inverse length-scale $\tau$ has spectral density</p>
+<p>$$
+\hat C(\xi) \;\propto\; \big(\vert \xi\vert ^2 + \tau^2\big)^{-(\nu + d/2)},
+$$</p>
+<p>so matching exponents gives</p>
+<p>$$
+\boxed{\;\nu = \alpha - \tfrac{d}{2}\;}\qquad\Rightarrow\qquad \nu = 2 - 1 = 1 \;\text{ for }\; \alpha=2,\ d=2 .
+$$</p>
+<p>Interpretation of the two knobs:</p>
+<ul>
+<li><strong>$\alpha$ controls smoothness.</strong> Sobolev regularity of samples: $\mathbb E\,\Vert b\Vert _{H^s}^2 \propto \sum_k (1+\vert k\vert ^2)^s (\vert k\vert ^2+\tau^2)^{-\alpha} &lt; \infty \iff 2(\alpha - s) &gt; d$, i.e. samples lie a.s. in $H^s$ for every $s &lt; \alpha - d/2 = 1$ and <em>not</em> in $H^1$. Equivalently Matérn $\nu=1$: continuous, but not mean-square differentiable (that requires $\nu&gt;1$). By elliptic regularity the exact solution $u = A^{-1}b$ then sits (formally, modulo box-corner caveats) two derivatives higher, in $H^{3-\varepsilon}$ — a smooth-looking blob, cf. <a href="../figures/solution_field.png">figures/solution_field.png</a>.</li>
+<li><strong>$\tau$ controls correlation length</strong>, roughly $\ell \sim 1/\tau_{\mathrm{eff}}$ in domain units. With the code's $\tau_{\mathrm{eff}} = \tau/n \approx 0.094 \ll 1$ the correlation length exceeds the domain: the field is dominated by its few lowest modes.</li>
+</ul>
+<h3 id="33-measured-correlation-structure-seed-42-draw-xmathphx67xendx">3.3 Measured correlation structure (seed-42 draw, $n=32$)</h3>
+<p>From the exact covariance formula of Sec. 4, the theoretical lag-1 (one grid cell) correlation after DC removal is $0.9698$; matching sample statistics from the actual <code>grf_rhs(32)</code> draw:</p>
+<table>
+<thead>
+<tr>
+<th>quantity</th>
+<th>value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>corr(row 0, row 16) — half-domain separation</td>
+<td>$0.330$</td>
+</tr>
+<tr>
+<td>corr(row 0, row 31) — wrap-around neighbors on the torus</td>
+<td>$0.972$</td>
+</tr>
+<tr>
+<td>$\min b$, $\max b$ (after standardization)</td>
+<td>$-3.200$, $+2.283$</td>
+</tr>
+<tr>
+<td>sample mean, sample std (ddof=1)</td>
+<td>$2.8\times10^{-17}$, $1.000000$</td>
+</tr>
+</tbody>
+</table>
+<p>The $0.972$ wrap-around correlation is the periodicity artifact discussed in Sec. 7.</p>
+<p>Why this matters for the solver benchmarks: a $\vert k\vert ^{-\alpha}$-weighted $b$ concentrates energy in the <em>low</em> end of $A$'s spectrum — precisely the eigenmodes CG resolves last (see <a href="02-eigenvalues.html">02-eigenvalues.md</a> for the eigenstructure and <a href="04-krylov-and-pcg.html">04-krylov-and-pcg.md</a> for the convergence consequences). A white-noise $b$ would flatter the solvers; the GRF is the harder and more physical choice, and it is what the neural preconditioner is trained on, so train/test distributions match by construction.</p>
+<hr />
+<h2 id="4-complex-white-noise-and-why-reifft-of-non-hermitian-noise-is-legitimate">4. Complex white noise and why <code>Re(IFFT)</code> of <em>non</em>-Hermitian noise is legitimate</h2>
+<h3 id="41-the-construction">4.1 The construction</h3>
+<p><code>rng.standard_normal((n, n, 2)) @ [1, 1j]</code> (<a href="../python/poisson.py">poisson.py</a> L180) builds</p>
+<p>$$
+Z_k = G^{(1)}_k + i\,G^{(2)}_k,\qquad G^{(1)},G^{(2)} \overset{iid}{\sim} \mathcal N(0,1),
+$$</p>
+<p>a <strong>circularly-symmetric</strong> complex Gaussian array: $\mathbb E[Z_k \bar Z_l] = 2\,\delta_{kl}$ and, crucially, vanishing pseudo-covariance $\mathbb E[Z_k Z_l] = 0$. Note what it is <em>not</em>: it is not Hermitian-symmetric ($Z_{-k} \ne \bar Z_k$), so <code>ifft2(noise * spectrum)</code> is a genuinely complex field, and the code simply takes its real part (L181).</p>
+<p>A textbook spectral sampler instead enforces $Z_{-k}=\bar Z_k$ (with real DC and Nyquist modes) so the IFFT is real by construction. The <code>Re</code> shortcut skips all of that bookkeeping — including the fiddly special-casing of the self-conjugate modes $k\in\{0,n/2\}^2$ (recall the unpaired Nyquist frequency at index $n/2$, Sec. 2.1). The question is whether the result is still a stationary GRF with the right spectrum.</p>
+<h3 id="42-derivation-it-is-with-exactly-half-the-variance">4.2 Derivation: it is, with exactly half the variance</h3>
+<p>Write the complex field ($\mathcal F^{-1}$ = <code>ifft2</code>, kernel $e^{+2\pi i k\cdot x/n}$, prefactor $1/n^2$):</p>
+<p>$$
+F(x) = \frac{1}{n^2}\sum_k S_k Z_k\, e^{2\pi i k\cdot x/n}, \qquad b_{\text{raw}}(x) = \operatorname{Re} F(x).
+$$</p>
+<p>Using $\operatorname{Re}a = \tfrac12(a+\bar a)$ and the two moment identities ($\mathbb E[Z_k\bar Z_l]=2\delta_{kl}$, $\mathbb E[Z_kZ_l]=0$):</p>
+<p>$$
+\mathbb E\big[F(x)\overline{F(y)}\big] = \frac{2}{n^4}\sum_k S_k^2\, e^{2\pi i k\cdot(x-y)/n},
+\qquad
+\mathbb E\big[F(x)F(y)\big] = \frac{1}{n^4}\sum_k S_k^2\,\mathbb E[Z_k^2]\,e^{\cdots} = 0 .
+$$</p>
+<p>Because $S_k$ depends on $k$ only through $\vert k\vert ^2$ (with the wrapped DFT frequencies, $f_j^2 = f_{n-j}^2$), the first sum is invariant under $k\to -k$ and hence real. Expanding $\operatorname{Re}F(x)\operatorname{Re}F(y) = \tfrac14(F(x)+\bar F(x))(F(y)+\bar F(y))$ and using both identities:</p>
+<p>$$
+\operatorname{Cov}\big(b_{\text{raw}}(x),\, b_{\text{raw}}(y)\big)
+= \tfrac12 \operatorname{Re}\,\mathbb E\big[F(x)\overline{F(y)}\big]
+= \frac{1}{n^4}\sum_k S_k^2 \cos\!\big(2\pi k\cdot(x-y)/n\big).
+$$</p>
+<p>This depends on $x-y$ only — <strong>stationary on the torus</strong> — and equals <strong>exactly half</strong> the covariance of the full complex field, which is the covariance a Hermitian-symmetrized sampler would deliver. The same computation for the cross-moment gives $\mathbb E[\operatorname{Re}F(x)\operatorname{Im}F(y)] = -\tfrac12\operatorname{Im}\mathbb E[F(x)\overline{F(y)}] = 0$ (the expectation is real), so $\operatorname{Re}F$ and $\operatorname{Im}F$ are jointly Gaussian and uncorrelated, hence <strong>independent iid copies of the same GRF</strong>. Taking the real part doesn't distort anything; it merely discards an independent duplicate sample, at the cost of a factor $\tfrac12$ in variance — and that factor is a global constant erased by <code>Standardize</code> one line later, so it is exactly harmless.</p>
+<p>Monte-Carlo verification (400 fresh draws, $n=32$, seeds 1000–1399 via <code>np.random.default_rng(1000+k)</code>, averaging the spatial variance of each draw):</p>
+<table>
+<thead>
+<tr>
+<th>quantity</th>
+<th>theory</th>
+<th>measured</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>per-point variance of $\operatorname{Re}F$ after mean removal, $\big(\sum_k S_k^2 - S_0^2\big)/n^4$</td>
+<td>$5.399\times10^{-12}$</td>
+<td>$5.59\times10^{-12}$</td>
+</tr>
+<tr>
+<td>spatial variance of $\operatorname{Im}F$</td>
+<td>same</td>
+<td>$5.21\times10^{-12}$</td>
+</tr>
+<tr>
+<td>$\mathbb E\,\overline{\vert F\vert ^2}$ vs $2\times$ Re-variance incl. DC ($2\sum S_k^2/n^4 = 2.356\times10^{-8}$)</td>
+<td>$2.356\times10^{-8}$</td>
+<td>$2.418\times10^{-8}$</td>
+</tr>
+<tr>
+<td>lag-$(0,1)$ correlation</td>
+<td>$0.9698$</td>
+<td>$0.972$ (seed-42 sample)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="5-fft-normalization-equivalence-mathematica-vs-numpy">5. FFT-normalization equivalence: Mathematica vs NumPy</h2>
+<p>Mathematica's <code>InverseFourier[..., FourierParameters -&gt; {-1, -1}]</code> uses the kernel $e^{+2\pi i k\cdot x/n}$ with <strong>no prefactor</strong>; NumPy's <code>ifft2</code> uses the same kernel with prefactor $1/n^2$. The two transforms of the same input therefore differ by the constant factor $n^2 = 1024$ — nothing else (both docstring-documented in <a href="../python/poisson.py">poisson.py</a> L152–157 and verified by the conventions above). Since the very next operation standardizes the field (Sec. 6), this constant is unobservable, exactly like the $n^{-\alpha}$ from Sec. 2.2 and the $\tfrac12$ from Sec. 4.2. <strong>Any overall multiplicative normalization anywhere in the pipeline is a no-op.</strong> The only things that matter are the <em>shape</em> of $S_k$ over $k\ne 0$ and the noise distribution.</p>
+<p>This is also why the FNO reference implementation's amplitude prefactor $\sigma = \tau^{\frac12(2\alpha-d)}$ (their normalization to unit-ish marginal variance) has no counterpart here: <code>Standardize</code> performs the same role empirically, per sample.</p>
+<hr />
+<h2 id="6-what-standardize-does">6. What <code>Standardize</code> does</h2>
+<p>Mathematica <code>Standardize[list]</code> computes $(x - \bar x)/s$ with $s$ the <strong>sample</strong> standard deviation (Bessel-corrected); the Python port matches with <code>ddof=1</code> (<a href="../python/poisson.py">poisson.py</a> L184). Three precise effects:</p>
+<ol>
+<li><strong>Exact DC surgery.</strong> For a band-limited periodic field, the spatial mean over one full period equals the DC Fourier component: every $k\ne0$ mode integrates to zero exactly over the $n\times n$ grid, so $\overline{b_{\text{raw}}} = \operatorname{Re}(Z_0)\,S_0/n^2$. (Verified: <code>field.mean() == noise[0,0].real * S[0,0] / n**2</code> to float precision.) Mean subtraction therefore zeroes the $k=0$ mode <em>exactly</em> and touches nothing else — the clean answer to the scary-looking $99.95\%$-of-energy DC mode from Sec. 2.2.</li>
+<li><strong>Scale fixing.</strong> Division by the sample std maps every draw to sample variance 1 (measured on seed 42: mean $2.8\times10^{-17}$, std $1.000000$), making all the dropped constants ($n^{-\alpha}$, $n^2$, $\tfrac12$) moot and giving every solver run a right-hand side with $\Vert b\Vert _2 = \sqrt{n^2-1}\approx 32.0$ regardless of $(\alpha,\tau)$ bookkeeping.</li>
+<li><strong>A pedantic caveat.</strong> Normalizing by the <em>per-sample</em> std makes the resulting $b$ very slightly non-Gaussian (its marginal law is a Gaussian conditioned on its own empirical variance). With $n^2 = 1024$ weakly-correlated-ish degrees of freedom this is negligible, and it is standard practice in the benchmark literature; it just means "GRF" is accurate to first order, not a theorem, after this line.</li>
+</ol>
+<p>Finally <code>Flatten</code> / <code>.ravel()</code> produce the row-major vector with flat index $k = i\,n + j$ — the same convention used to assemble $A$ from Kronecker products (see <a href="01-code-walkthrough.html">01-code-walkthrough.md</a>), so no transposition bug is possible between $b$ and $A$.</p>
+<hr />
+<h2 id="7-torus-sample-dirichlet-box-the-deliberate-mismatch">7. Torus sample, Dirichlet box: the deliberate mismatch</h2>
+<p>The sampler lives on the <strong>periodic torus</strong>: an $n\times n$ FFT grid, stationary covariance in $x-y$ mod $n$. The Poisson problem lives on the <strong>open unit square with homogeneous Dirichlet BCs</strong>, interior nodes $x_i = ih$, $h = 1/(n+1)$ (see <a href="02-eigenvalues.html">02-eigenvalues.md</a>). Two consequences:</p>
+<ol>
+<li><strong>Wrap-around correlation.</strong> Opposite edges of the sampled field are near-duplicates: corr(row 0, row 31) $= 0.972$ on the canonical draw — they are lag-1 neighbors on the torus. Visually, <a href="../figures/grf_field.png">figures/grf_field.png</a> tiles seamlessly; the color field "wants" to continue periodically. A field drawn from the honest Matérn measure <em>on the box</em> (e.g. via a KL expansion in the Dirichlet or Neumann eigenbasis of the Laplacian, as in the FNO paper's Darcy setup) would have no such edge-to-edge coupling.</li>
+<li><strong>Grid mismatch, cosmetic.</strong> The torus grid has $n$ points at spacing $1/n$; the Dirichlet interior grid has $n$ points at spacing $1/(n+1)$ shifted off the boundary. The code ignores this entirely and simply reinterprets the $n^2$ torus samples as nodal values of $b$ on the interior grid.</li>
+</ol>
+<p>Neither point is a bug for this repo's purpose. The right-hand side of a linear-solver benchmark is just <em>data</em> — any fixed $b$ defines a valid SPD system, and restricting a stationary Gaussian field to a sub-grid yields a perfectly valid (still Gaussian, still stationary as a process) vector. What is lost is only the <em>interpretation</em> of $b$ as a sample from the Matérn field naturally associated with the Dirichlet box, plus literal independence between values near opposite edges. What is gained is a seven-statement sampler, exact spectral control, and — most importantly — exact train/test consistency <em>within this repo</em>: the NPO paper (arXiv:2502.01337<span class="citation"> (https://arxiv.org/abs/2502.01337)</span>, Sec. 5.1.2) says only that right-hand sides are GRF samples mapped onto the mesh, so this repo fixes the FNO-style spectral sampler as its concrete instantiation and uses it everywhere. The NPO training pipeline draws from it (<a href="../python/neural/train_npo.py">python/neural/train_npo.py</a> L51–52 and L89: <code>NUM_RHS = 40</code> fields, <code>grf_rhs(32, alpha=2.0, tau=3.0, seed=100+k)</code>), and the canonical evaluation $b$ is <code>grf_rhs(32, ..., seed=42)</code> everywhere (<a href="../python/experiments/run_all.py">run_all.py</a> L110, <a href="../python/experiments/run_baseline.py">run_baseline.py</a> L37, <a href="../python/experiments/run_nystrom.py">run_nystrom.py</a> L72, <a href="../python/neural/eval_npo.py">eval_npo.py</a> L43, <a href="../python/experiments/npo_spectrum.py">npo_spectrum.py</a> L51).</p>
+<hr />
+<h2 id="8-figures">8. Figures</h2>
+<p><img alt="GRF right-hand side, Python draw (alpha=2, tau=3, 32x32)" src="../figures/grf_field.png" /></p>
+<p><em>Python draw (<code>np.random.default_rng(42)</code>), rendered by <a href="../python/experiments/run_baseline.py">run_baseline.py</a> L79–89. A few large low-frequency blobs of both signs (dark top-center, bright lower-right), each spanning an $O(1)$ fraction of the domain — the visual signature of $\tau_{\mathrm{eff}}\ll 1$ (Sec. 2.2). Range after standardization: $[-3.20,\,2.28]$.</em></p>
+<p><img alt="GRF source term b, Mathematica draw" src="../figures/mma_source_grf.png" /></p>
+<p><em>Mathematica draw (<code>SeedRandom[42]</code>), rendered by <a href="../mathematica/poisson_pcg.wls">poisson_pcg.wls</a> L99–102. Same distribution, different RNG stream, hence a different sample — the smoothness, large-blob character, and periodic-tiling tendency match the Python draw, which is the meaningful check.</em></p>
+<hr />
+<h2 id="9-summary-of-verified-facts">9. Summary of verified facts</h2>
+<table>
+<thead>
+<tr>
+<th>claim</th>
+<th>value / status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DFT frequency ordering after <code>RotateRight</code>/<code>np.roll</code></td>
+<td>$[0,1,\dots,15,-16,\dots,-1]$, Nyquist $-16$ at index 16</td>
+</tr>
+<tr>
+<td>effective mass after <code>* n</code> scaling</td>
+<td>$\tau_{\mathrm{eff}} = \tau/n = 0.09375$; power-law deviation at mode 1 is $\tau^2/n^2 = 0.88\%$ ($S_{(0,1)}/S_{(0,2)}=3.974$ vs 4)</td>
+</tr>
+<tr>
+<td>DC amplitude / energy</td>
+<td>$S_{(0,0)} = 1/9$; ratio to first mode $114.8$; $99.95\%$ of $\sum S_k^2$; removed <em>exactly</em> by mean subtraction (spatial mean $\equiv$ DC coefficient, verified)</td>
+</tr>
+<tr>
+<td>Matérn parameters at defaults</td>
+<td>covariance $\propto(-\Delta+\tau^2)^{-\alpha}$, $\nu = \alpha - d/2 = 1$; $b\in H^{1-\varepsilon}$ a.s., $u\in H^{3-\varepsilon}$</td>
+</tr>
+<tr>
+<td><code>Re(IFFT)</code> of circular non-Hermitian noise</td>
+<td>stationary GRF with exactly $\tfrac12$ the Hermitian-sampler covariance; Im part is an independent iid copy; MC-verified (theory $5.40\times10^{-12}$ vs measured $5.59\times10^{-12}$ per-point variance, 400 draws)</td>
+</tr>
+<tr>
+<td>FFT normalization</td>
+<td>Mathematica <code>{-1,-1}</code> vs <code>np.fft.ifft2</code> differ by the constant $n^2$; erased by <code>Standardize</code>, as are $n^{-\alpha}$ and $\tfrac12$</td>
+</tr>
+<tr>
+<td><code>Standardize</code></td>
+<td>mean 0, sample std 1 (<code>ddof=1</code>); seed-42 draw: mean $2.8\times10^{-17}$, std $1.000000$, range $[-3.200, 2.283]$</td>
+</tr>
+<tr>
+<td>torus artifact</td>
+<td>corr(row 0, row 31) $= 0.972$; harmless for solver benchmarking, standard in the neural-operator benchmark literature (e.g. FNO)</td>
+</tr>
+<tr>
+<td>Python vs Mathematica draws</td>
+<td>distribution-identical, not bit-identical (different RNG streams)</td>
+</tr>
+</tbody>
+</table>
+</div>
+</body>
+</html>

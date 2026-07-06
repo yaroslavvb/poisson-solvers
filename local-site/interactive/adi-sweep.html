@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ADI half-sweeps on the hot-rod/cold-rod plate</title>
+<style>
+  :root {
+    --ink: #1a1a1a; --muted: #666; --rule: #ddd;
+    --accent: #0072B2; --hot: #b2182b; --cold: #2166ac;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0 auto; padding: 20px 16px 48px; max-width: 820px;
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--ink); background: #fdfdfc;
+  }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  p { margin: 8px 0; }
+  a { color: var(--accent); }
+  .muted { color: var(--muted); font-size: 13px; }
+  .formula {
+    background: #f4f4f0; border: 1px solid var(--rule); border-radius: 6px;
+    padding: 10px 14px; margin: 12px 0; font-family: Georgia, "Times New Roman", serif;
+    font-size: 15.5px; text-align: center;
+  }
+  .formula .op { font-style: italic; }
+  .formula sub, .formula sup { font-size: 11px; }
+  #badge {
+    display: inline-block; padding: 3px 10px; border-radius: 12px;
+    font-size: 12.5px; font-weight: 600; margin: 2px 0 10px;
+  }
+  #badge.pass { background: #e3f2e3; color: #1a6b1a; border: 1px solid #a8d5a8; }
+  #badge.fail { background: #fce4e4; color: #a01010; border: 1px solid #eaa; }
+  details { font-size: 12.5px; color: var(--muted); margin: -4px 0 10px; }
+  details table { border-collapse: collapse; margin: 6px 0; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+  details td, details th { border: 1px solid var(--rule); padding: 2px 8px; text-align: right; }
+  .sliderRow { display: flex; align-items: center; gap: 8px; margin: 14px 0 2px; }
+  .sliderRow input[type=range] { flex: 1; accent-color: var(--accent); }
+  button {
+    font: 14px/1 inherit; padding: 6px 10px; border: 1px solid #bbb; border-radius: 5px;
+    background: #fff; cursor: pointer; min-width: 34px;
+  }
+  button:hover { background: #f0f0f0; }
+  #playBtn { min-width: 64px; }
+  #stepLabel { font-weight: 600; }
+  #errLabel { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13.5px; }
+  .panes { display: flex; gap: 20px; flex-wrap: wrap; margin: 14px 0 4px; justify-content: center; }
+  .pane { text-align: center; }
+  .pane canvas { border: 1px solid #ccc; display: block; }
+  .pane .cap { font-size: 12.5px; color: var(--muted); margin-top: 4px; max-width: 256px; }
+  #curveWrap { margin-top: 18px; }
+  #curve { border: 1px solid #ccc; display: block; width: 100%; max-width: 788px; }
+  .note { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+  .legend { font-size: 12.5px; color: var(--muted); }
+  .legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; }
+</style>
+</head>
+<body>
+
+<h1>ADI half-sweeps, live</h1>
+<p>The Peaceman&ndash;Rachford ADI iteration attacks the 32&times;32 hot-rod/cold-rod Poisson
+problem (plate held at 0 on the boundary, +1 rod near the NW corner, &minus;1 rod near the SE corner)
+by alternating two cheap <em>exact</em> solves: a rows pass that removes all row coupling
+(32 independent tridiagonal systems), then a columns pass that removes all column coupling.
+Drag the slider through 60 half-sweeps and watch each half-sweep wipe the error structure
+along its own direction &mdash; with the geometric-mean shift
+&sigma; = &radic;(&lambda;<sub>1</sub>&lambda;<sub>n</sub>) the full double sweep contracts the
+error at asymptotic rate 0.826 (see
+<a href="../reports/13-preconditioning-as-decoupling.html">report 13, &sect;2.2</a>).</p>
+
+<div class="formula">
+  (<span class="op">H</span> + &sigma;<span class="op">I</span>)&thinsp;<span class="op">x</span><sub>k+&frac12;</sub>
+  = (&sigma;<span class="op">I</span> &minus; <span class="op">V</span>)&thinsp;<span class="op">x</span><sub>k</sub> + <span class="op">b</span>
+  &nbsp;&nbsp;<span class="muted">(rows)</span>,&emsp;
+  (<span class="op">V</span> + &sigma;<span class="op">I</span>)&thinsp;<span class="op">x</span><sub>k+1</sub>
+  = (&sigma;<span class="op">I</span> &minus; <span class="op">H</span>)&thinsp;<span class="op">x</span><sub>k+&frac12;</sub> + <span class="op">b</span>
+  &nbsp;&nbsp;<span class="muted">(columns)</span>,&emsp;
+  &sigma; = &radic;(&lambda;<sub>1</sub>&lambda;<sub>n</sub>) = <span id="sigmaVal"></span>
+</div>
+
+<span id="badge">self-test running&hellip;</span>
+<details id="selftestDetails">
+  <summary>self-test details (JS vs Python reference, 10 significant digits)</summary>
+  <div id="selftestTable"></div>
+  <p>Python reference: same Peaceman&ndash;Rachford recurrences from x&#8320; = 0
+  (scipy <code>solveh_banded</code> + sparse matvecs), rel l&#8322; error vs x* after
+  half-sweeps 1, 2, 10, 40; x* from plain CG at rel resid 10&#8315;&sup1;&sup3;.</p>
+</details>
+
+<div class="sliderRow">
+  <button id="minusBtn" aria-label="one half-sweep back">&minus;</button>
+  <input type="range" id="slider" min="0" max="60" step="1" value="0" aria-label="half-sweep index">
+  <button id="plusBtn" aria-label="one half-sweep forward">+</button>
+  <button id="playBtn" aria-label="play half-sweeps">Play</button>
+</div>
+<div><span id="stepLabel"></span> &mdash; <span id="errLabel"></span></div>
+<div class="muted">arrow keys step by one half-sweep; odd steps are ROWS passes, even steps COLUMNS passes</div>
+
+<div class="panes">
+  <div class="pane">
+    <canvas id="estCanvas" width="256" height="256"></canvas>
+    <div class="cap">temperature estimate x<sub>k</sub>, fixed scale &plusmn;max|x*|
+      <br><span class="legend"><span class="sw" style="background:#b2182b"></span> hot rod (rows 3&ndash;8, col 4)
+      &nbsp;<span class="sw" style="background:#2166ac"></span> cold rod (rows 23&ndash;28, col 27)</span></div>
+  </div>
+  <div class="pane">
+    <canvas id="errCanvas" width="256" height="256"></canvas>
+    <div class="cap">error field x<sub>k</sub> &minus; x*, fixed symmetric scale from half-sweep 0</div>
+  </div>
+</div>
+
+<div id="curveWrap">
+  <canvas id="curve" width="788" height="200"></canvas>
+  <div class="note" id="transientNote"></div>
+</div>
+
+<p class="muted" style="margin-top:22px">All numbers are computed in this page at load, in double
+precision: b built on the 32&times;32 grid (h = 1/33, row-major), x* by plain CG with the 5-point
+stencil matvec to rel resid 10&#8315;&sup1;&sup3;, then 60 stored ADI half-sweeps from x&#8320; = 0 &mdash;
+the same recurrences as <code>python/experiments/make_report13_anims.py</code>.
+Back to <a href="../reports/13-preconditioning-as-decoupling.html">report 13: preconditioning as decoupling</a>.</p>
+
+<script>
+"use strict";
+
+// ======================= computation (double precision) =======================
+var n = 32, N = n * n, h = 1.0 / (n + 1), h2 = h * h;
+
+// 1-D eigenvalues lam_k = (2 - 2 cos(k pi h))/h^2, k = 1..n; geometric-mean shift
+var lam1 = new Float64Array(n);
+for (var k = 0; k < n; k++) lam1[k] = (2.0 - 2.0 * Math.cos((k + 1) * Math.PI * h)) / h2;
+var sigma = Math.sqrt(lam1[0] * lam1[n - 1]);
+
+// hot/cold-rod rhs: +1 at grid (rows 3..8, col 4), -1 at (rows 23..28, col 27)
+var b = new Float64Array(N);
+for (var ih = 3; ih <= 8; ih++) b[ih * n + 4] = 1.0;
+for (var ic = 23; ic <= 28; ic++) b[ic * n + 27] = -1.0;
+
+// 5-point stencil matvec: (Ax)[i,j] = (4x - x_up - x_down - x_left - x_right)/h^2
+function applyA(x, out) {
+  for (var i = 0; i < n; i++) {
+    for (var j = 0; j < n; j++) {
+      var p = i * n + j, s = 4.0 * x[p];
+      if (i > 0) s -= x[p - n];
+      if (i < n - 1) s -= x[p + n];
+      if (j > 0) s -= x[p - 1];
+      if (j < n - 1) s -= x[p + 1];
+      out[p] = s / h2;
+    }
+  }
+}
+
+function dot(u, v) { var s = 0.0; for (var q = 0; q < N; q++) s += u[q] * v[q]; return s; }
+function nrm(u) { return Math.sqrt(dot(u, u)); }
+
+// reference x*: plain CG (Hestenes-Stiefel, x0 = 0) to rel resid 1e-13 (max 2000 iters)
+function cgSolve() {
+  var x = new Float64Array(N), r = Float64Array.from(b), p = Float64Array.from(b);
+  var Ap = new Float64Array(N), rz = dot(r, r), bnorm = Math.sqrt(rz);
+  for (var it = 0; it < 2000; it++) {
+    applyA(p, Ap);
+    var alpha = rz / dot(p, Ap);
+    for (var q = 0; q < N; q++) { x[q] += alpha * p[q]; r[q] -= alpha * Ap[q]; }
+    if (nrm(r) / bnorm <= 1e-13) break;
+    var rzNew = dot(r, r);
+    for (var q2 = 0; q2 < N; q2++) p[q2] = r[q2] + (rzNew / rz) * p[q2];
+    rz = rzNew;
+  }
+  return x;
+}
+
+// Thomas algorithm for the constant tridiagonal (diag 2/h^2 + sigma, off-diag -1/h^2)
+var tdA = 2.0 / h2 + sigma, tdC = -1.0 / h2;
+var tdCp = new Float64Array(n), tdInv = new Float64Array(n);
+tdInv[0] = 1.0 / tdA;
+tdCp[0] = tdC * tdInv[0];
+for (var jj = 1; jj < n; jj++) {
+  tdInv[jj] = 1.0 / (tdA - tdC * tdCp[jj - 1]);
+  tdCp[jj] = tdC * tdInv[jj];
+}
+var tdWork = new Float64Array(n);
+function thomas(y, off, s) {          // solve in place along slice y[off + s*t]
+  tdWork[0] = y[off] * tdInv[0];
+  for (var t = 1; t < n; t++) tdWork[t] = (y[off + s * t] - tdC * tdWork[t - 1]) * tdInv[t];
+  y[off + s * (n - 1)] = tdWork[n - 1];
+  for (var t2 = n - 2; t2 >= 0; t2--) y[off + s * t2] = tdWork[t2] - tdCp[t2] * y[off + s * (t2 + 1)];
+}
+
+// rows half-sweep: (H + sigma I) x' = (sigma I - V) x + b  (V couples along i)
+function rowsHalfSweep(x) {
+  var y = new Float64Array(N);
+  for (var i = 0; i < n; i++) {
+    for (var j = 0; j < n; j++) {
+      var p = i * n + j, v = 2.0 * x[p];
+      if (i > 0) v -= x[p - n];
+      if (i < n - 1) v -= x[p + n];
+      y[p] = sigma * x[p] - v / h2 + b[p];
+    }
+  }
+  for (var r = 0; r < n; r++) thomas(y, r * n, 1);   // tridiagonal along j, one per grid row
+  return y;
+}
+
+// columns half-sweep: (V + sigma I) x' = (sigma I - H) x + b  (H couples along j)
+function colsHalfSweep(x) {
+  var y = new Float64Array(N);
+  for (var i = 0; i < n; i++) {
+    for (var j = 0; j < n; j++) {
+      var p = i * n + j, w = 2.0 * x[p];
+      if (j > 0) w -= x[p - 1];
+      if (j < n - 1) w -= x[p + 1];
+      y[p] = sigma * x[p] - w / h2 + b[p];
+    }
+  }
+  for (var c = 0; c < n; c++) thomas(y, c, n);       // tridiagonal along i, one per grid column
+  return y;
+}
+
+// precompute x_k for k = 0..60 half-sweeps from x_0 = 0, plus rel l2 errors
+var KMAX = 60;
+var xstar = cgSolve(), xstarNorm = nrm(xstar);
+var vmax = 0.0;
+for (var q3 = 0; q3 < N; q3++) vmax = Math.max(vmax, Math.abs(xstar[q3]));
+var states = [new Float64Array(N)], relErr = [1.0];
+(function () {
+  var x = states[0];
+  for (var kk = 1; kk <= KMAX; kk++) {
+    x = (kk % 2 === 1) ? rowsHalfSweep(x) : colsHalfSweep(x);
+    states.push(x);
+    var s = 0.0;
+    for (var q = 0; q < N; q++) { var d = x[q] - xstar[q]; s += d * d; }
+    relErr.push(Math.sqrt(s) / xstarNorm);
+  }
+})();
+// fixed symmetric error scale from half-sweep 0 (x_0 = 0, so this is max|x*|)
+var errVmax = 0.0;
+for (var q4 = 0; q4 < N; q4++) errVmax = Math.max(errVmax, Math.abs(states[0][q4] - xstar[q4]));
+
+// worst transient rows-half-sweep amplification (for the honest note below the curve)
+var maxRowsAmp = 0.0;
+for (var m1 = 1; m1 <= KMAX / 2; m1++) maxRowsAmp = Math.max(maxRowsAmp, relErr[2 * m1 - 1] / relErr[2 * m1 - 2]);
+
+// ============================== self-test ====================================
+// Python-computed references (scipy solveh_banded + sparse matvecs, x* via the
+// same plain-CG spec): rel l2 error after half-sweeps 1, 2, 10, 40 from x_0 = 0,
+// 10 significant digits.
+var SELFTEST_REF = { 1: 0.6886088629, 2: 0.4943447599, 10: 0.0691007963, 40: 0.0002984549772 };
+var selfTest = (function () {
+  var maxDev = 0.0, rows = [];
+  for (var key in SELFTEST_REF) {
+    var kk = Number(key), dev = Math.abs(relErr[kk] - SELFTEST_REF[key]) / SELFTEST_REF[key];
+    if (dev > maxDev) maxDev = dev;
+    rows.push({ k: kk, js: relErr[kk], py: SELFTEST_REF[key], dev: dev });
+  }
+  return { pass: maxDev < 1e-8, maxDev: maxDev, rows: rows };
+})();
+
+// ================================== UI =======================================
+var $ = function (id) { return document.getElementById(id); };
+
+$("sigmaVal").textContent = sigma.toFixed(3);
+
+var badge = $("badge");
+if (selfTest.pass) {
+  badge.className = "pass";
+  badge.textContent = "self-test PASS (max rel dev " + selfTest.maxDev.toExponential(0) + ")";
+} else {
+  badge.className = "fail";
+  badge.textContent = "self-test FAIL (max rel dev " + selfTest.maxDev.toExponential(2) + ") — see details";
+}
+(function () {
+  var htm = "<table><tr><th>half-sweep k</th><th>JS rel error</th><th>Python ref</th><th>rel dev</th></tr>";
+  selfTest.rows.forEach(function (r) {
+    htm += "<tr><td>" + r.k + "</td><td>" + r.js.toPrecision(12) + "</td><td>" + r.py +
+           "</td><td>" + r.dev.toExponential(2) + "</td></tr>";
+  });
+  $("selftestTable").innerHTML = htm + "</table>";
+})();
+
+$("transientNote").textContent =
+  "Honest footnote on the sawtooth: PR half-steps are not contractions, only the full double sweep is — " +
+  "from the smooth start x₀ = 0 the first ROWS half-sweep still contracts (×" +
+  relErr[1].toFixed(2) + "), but later ROWS half-sweeps transiently RAISE the error, up to ×" +
+  maxRowsAmp.toFixed(2) + " here (report 13's GIF starts from a rough seeded x₀, where the very first " +
+  "rows half-sweep rises ×4.10).";
+
+// diverging blue-white-red colormap, t in [-1, 1]
+function divColor(t) {
+  if (t > 1) t = 1; if (t < -1) t = -1;
+  var r, g, bb;
+  if (t >= 0) { r = 255 + t * (178 - 255); g = 255 + t * (24 - 255); bb = 255 + t * (43 - 255); }
+  else { t = -t; r = 255 + t * (33 - 255); g = 255 + t * (102 - 255); bb = 255 + t * (172 - 255); }
+  return "rgb(" + Math.round(r) + "," + Math.round(g) + "," + Math.round(bb) + ")";
+}
+
+var CELL = 8; // 32 * 8 = 256 px, nearest-neighbor
+function drawField(ctx, field, sub, scale, outlineRods) {
+  for (var i = 0; i < n; i++) {
+    for (var j = 0; j < n; j++) {
+      var v = sub ? field[i * n + j] - xstar[i * n + j] : field[i * n + j];
+      ctx.fillStyle = divColor(v / scale);
+      ctx.fillRect(j * CELL, i * CELL, CELL, CELL);
+    }
+  }
+  if (outlineRods) {
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "#b2182b";
+    ctx.strokeRect(4 * CELL + 0.75, 3 * CELL + 0.75, CELL - 1.5, 6 * CELL - 1.5);
+    ctx.strokeStyle = "#2166ac";
+    ctx.strokeRect(27 * CELL + 0.75, 23 * CELL + 0.75, CELL - 1.5, 6 * CELL - 1.5);
+  }
+}
+
+var estCtx = $("estCanvas").getContext("2d");
+var errCtx = $("errCanvas").getContext("2d");
+var curveCanvas = $("curve"), cvCtx = curveCanvas.getContext("2d");
+
+// log-scale rel-error-vs-half-sweep curve with a marker at the slider position
+var CV = { left: 46, right: 10, top: 12, bottom: 26, ymin: 1e-5, ymax: 2.0 };
+function cx(k) { return CV.left + (curveCanvas.width - CV.left - CV.right) * k / KMAX; }
+function cy(v) {
+  var lo = Math.log10(CV.ymin), hi = Math.log10(CV.ymax);
+  var t = (Math.log10(Math.max(v, CV.ymin)) - lo) / (hi - lo);
+  return curveCanvas.height - CV.bottom - t * (curveCanvas.height - CV.top - CV.bottom);
+}
+function drawCurve(kSel) {
+  var w = curveCanvas.width, hgt = curveCanvas.height;
+  cvCtx.clearRect(0, 0, w, hgt);
+  cvCtx.font = "11px sans-serif";
+  cvCtx.strokeStyle = "#e4e4e4"; cvCtx.fillStyle = "#888";
+  cvCtx.lineWidth = 1;
+  for (var d = 0; d >= -5; d--) {                      // decade gridlines
+    var yv = Math.pow(10, d), yy = cy(yv);
+    cvCtx.beginPath(); cvCtx.moveTo(CV.left, yy); cvCtx.lineTo(w - CV.right, yy); cvCtx.stroke();
+    cvCtx.textAlign = "right"; cvCtx.textBaseline = "middle";
+    cvCtx.fillText(d === 0 ? "1" : "1e" + d, CV.left - 5, yy);
+  }
+  cvCtx.textAlign = "center"; cvCtx.textBaseline = "top";
+  for (var xt = 0; xt <= KMAX; xt += 10) {
+    cvCtx.fillText(String(xt), cx(xt), hgt - CV.bottom + 5);
+    cvCtx.beginPath(); cvCtx.moveTo(cx(xt), hgt - CV.bottom); cvCtx.lineTo(cx(xt), hgt - CV.bottom + 3);
+    cvCtx.strokeStyle = "#aaa"; cvCtx.stroke();
+  }
+  cvCtx.fillText("half-sweep k", (CV.left + w - CV.right) / 2, hgt - 13);
+  cvCtx.save();
+  cvCtx.translate(11, (CV.top + hgt - CV.bottom) / 2); cvCtx.rotate(-Math.PI / 2);
+  cvCtx.textBaseline = "middle";
+  cvCtx.fillText("rel error (log)", 0, 0);
+  cvCtx.restore();
+  cvCtx.strokeStyle = "#0072B2"; cvCtx.lineWidth = 1.6;
+  cvCtx.beginPath();
+  for (var kq = 0; kq <= KMAX; kq++) {
+    if (kq === 0) cvCtx.moveTo(cx(kq), cy(relErr[kq])); else cvCtx.lineTo(cx(kq), cy(relErr[kq]));
+  }
+  cvCtx.stroke();
+  cvCtx.fillStyle = "#D55E00";                          // marker at the slider position
+  cvCtx.beginPath();
+  cvCtx.arc(cx(kSel), cy(relErr[kSel]), 4.5, 0, 2 * Math.PI);
+  cvCtx.fill();
+}
+
+var slider = $("slider"), playBtn = $("playBtn"), playTimer = null;
+
+function fmtExp(v) {
+  var sup = { "-": "⁻", "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴",
+              "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹" };
+  var parts = v.toExponential(3).split("e");
+  var expo = String(Number(parts[1])).split("").map(function (c) { return sup[c]; }).join("");
+  return parts[0] + " × 10" + expo;
+}
+
+function render() {
+  var kSel = Number(slider.value);
+  var lbl;
+  if (kSel === 0) lbl = "initial guess x₀ = 0";
+  else {
+    var mm = Math.ceil(kSel / 2);
+    lbl = "after " + (kSel % 2 === 1 ? "ROWS" : "COLUMNS") + " half-sweep " + mm +
+          "  (half-sweep " + kSel + " of " + KMAX + ")";
+  }
+  $("stepLabel").textContent = lbl;
+  $("errLabel").textContent = "rel error = " + fmtExp(relErr[kSel]);
+  drawField(estCtx, states[kSel], false, vmax, true);
+  drawField(errCtx, states[kSel], true, errVmax, false);
+  drawCurve(kSel);
+}
+
+function setK(kNew) {
+  kNew = Math.max(0, Math.min(KMAX, kNew));
+  if (kNew !== Number(slider.value)) { slider.value = String(kNew); render(); }
+}
+
+slider.addEventListener("input", render);
+$("minusBtn").addEventListener("click", function () { setK(Number(slider.value) - 1); });
+$("plusBtn").addEventListener("click", function () { setK(Number(slider.value) + 1); });
+
+document.addEventListener("keydown", function (e) {
+  if (e.target === slider) return;                     // native range handling
+  if (e.key === "ArrowRight") { setK(Number(slider.value) + 1); e.preventDefault(); }
+  else if (e.key === "ArrowLeft") { setK(Number(slider.value) - 1); e.preventDefault(); }
+});
+
+function stopPlay() {
+  if (playTimer !== null) { clearInterval(playTimer); playTimer = null; }
+  playBtn.textContent = "Play";
+}
+playBtn.addEventListener("click", function () {
+  if (playTimer !== null) { stopPlay(); return; }
+  if (Number(slider.value) >= KMAX) { slider.value = "0"; render(); }
+  playBtn.textContent = "Stop";
+  playTimer = setInterval(function () {                // 6 half-sweeps per second
+    var kNow = Number(slider.value);
+    if (kNow >= KMAX) { stopPlay(); return; }
+    slider.value = String(kNow + 1); render();
+  }, 1000 / 6);
+});
+
+render();
+</script>
+</body>
+</html>

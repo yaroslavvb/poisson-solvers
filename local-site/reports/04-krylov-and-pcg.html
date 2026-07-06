@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>04 — Krylov Subspaces and (Preconditioned) Conjugate Gradients</title>
+<style>
+body { margin: 0; color: #1b1f23; background: #fff;
+       font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI",
+             Helvetica, Arial, sans-serif; }
+.page { max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+nav.site { font-size: .85rem; color: #57606a; margin-bottom: 1.5rem;
+           border-bottom: 1px solid #d8dee4; padding-bottom: .5rem; }
+nav.site a { color: #0969da; text-decoration: none; }
+nav.site a:hover { text-decoration: underline; }
+nav.site .sep { margin: 0 .45em; color: #8c959f; }
+h1, h2, h3, h4 { line-height: 1.25; margin: 1.6em 0 .6em; }
+h1 { font-size: 1.9rem; border-bottom: 1px solid #d8dee4;
+     padding-bottom: .3em; margin-top: .2em; }
+h2 { font-size: 1.45rem; border-bottom: 1px solid #eaecef;
+     padding-bottom: .25em; }
+a { color: #0969da; }
+img { max-width: 100%; height: auto; }
+pre { background: #f6f8fa; padding: .9em 1.1em; overflow-x: auto;
+      border-radius: 6px; font-size: .85em; line-height: 1.45; }
+code { font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo,
+       Consolas, monospace; background: #f6f8fa; padding: .1em .3em;
+       border-radius: 4px; font-size: .9em; }
+pre code { background: none; padding: 0; font-size: 1em; }
+table { border-collapse: collapse; margin: 1em 0; display: block;
+        overflow-x: auto; max-width: 100%; }
+th, td { border: 1px solid #d0d7de; padding: .35em .7em; }
+th { background: #f6f8fa; }
+blockquote { margin: 0 0 1em; padding: 0 1em; color: #57606a;
+             border-left: .25em solid #d0d7de; }
+hr { border: none; border-top: 1px solid #d8dee4; margin: 2em 0; }
+.citation { color: #57606a; word-break: break-all; }
+mjx-container[jax="SVG"][display="true"] { overflow-x: auto;
+                                           overflow-y: hidden; }
+</style>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  options: {
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  svg: { fontCache: 'local' }
+};
+</script>
+<script defer src="../vendor/mathjax-tex-svg.js"></script>
+</head>
+<body>
+<div class="page">
+<nav class="site"><a href="../index.html">index</a><span class="sep">&middot;</span><a href="03-gaussian-random-fields.html">&larr; 03-gaussian-random-fields</a><span class="sep">&middot;</span><a href="05-classical-preconditioners.html">05-classical-preconditioners &rarr;</a></nav>
+<h1 id="04--krylov-subspaces-and-preconditioned-conjugate-gradients">04 — Krylov Subspaces and (Preconditioned) Conjugate Gradients</h1>
+<p>This report derives everything the repo's solver layer does: the conjugate gradient method as $A$-norm minimization over Krylov subspaces, the exact 5-line state recurrence implemented in <a href="../python/pcg.py">python/pcg.py</a> and why it is a line-for-line match of the Mathematica <code>pcgStep</code> in <a href="../mathematica/poisson_pcg.wls">mathematica/poisson_pcg.wls</a>, preconditioning as a change of inner product, the $\sqrt{\kappa}$ Chebyshev convergence bound checked against the measured iteration counts, the scale-invariance of PCG in the preconditioner (which is why Jacobi is <em>exactly</em> plain CG on the canonical problem), and the flexible-CG (Polak–Ribière) variant that the nonlinear neural preconditioner requires.</p>
+<p>Siblings: <a href="01-code-walkthrough.html">01-code-walkthrough.md</a>, <a href="02-eigenvalues.html">02-eigenvalues.md</a> (spectrum of $A$), <a href="03-gaussian-random-fields.html">03-gaussian-random-fields.md</a> (the RHS), <a href="05-classical-preconditioners.html">05-classical-preconditioners.md</a>, <a href="06-neural-preconditioner.html">06-neural-preconditioner.md</a>, <a href="07-nystrom-preconditioning.html">07-nystrom-preconditioning.md</a>, <a href="08-results.html">08-results.md</a>.</p>
+<p><strong>The concrete system throughout</strong> (from <a href="../results/results.json">results/results.json</a> <code>config</code>): $A = \texttt{poisson\_2d}(32)$, the 5-point Dirichlet Laplacian on a $32\times 32$ interior grid, $N = n^2 = 1024$, $h = 1/33$; $b = \texttt{grf\_rhs}(32, \alpha{=}2, \tau{=}3, \text{seed}{=}42)$; stopping rule $\Vert r_k\Vert _2/\Vert b\Vert _2 \le 10^{-10}$, <code>maxiter</code> 2000, $x_0 = 0$. From <a href="../results/spectra.json">results/spectra.json</a>: $\lambda_{\min}(A) = 19.7243$, $\lambda_{\max}(A) = 8692.28$, $\kappa(A) = 440.6886$ (dense eigensolve and the analytic formula $\sin^2(n\pi h/2)/\sin^2(\pi h/2)$ agree to all printed digits — see <a href="02-eigenvalues.html">02-eigenvalues.md</a>).</p>
+<hr />
+<h2 id="1-krylov-subspaces">1. Krylov subspaces</h2>
+<p>For $Ax = b$ with $x_0 = 0$ (so $r_0 = b$), the $k$-th <strong>Krylov subspace</strong> is</p>
+<p>$$
+\mathcal{K}_k(A, b) \;=\; \operatorname{span}\{\,b,\; Ab,\; A^2 b,\; \dots,\; A^{k-1} b\,\}.
+$$</p>
+<p>Why this space? Because $A^{-1}b$ is <em>itself</em> a polynomial in $A$ applied to $b$: if $q_A(\lambda) = \prod_{j}(\lambda - \lambda_j)$ is the minimal polynomial of $A$ restricted to the invariant subspace containing $b$ (degree $d$ = number of distinct eigenvalues with nonzero component in $b$), then $q_A(A)b = 0$ rearranges to</p>
+<p>$$
+A^{-1} b \;=\; -\frac{1}{q_A(0)}\Big( A^{d-1} b + c_{d-1} A^{d-2} b + \dots + c_1 b \Big) \;\in\; \mathcal{K}_d(A, b),
+$$</p>
+<p>with $q_A(0) \ne 0$ since $A$ is SPD. So Krylov methods are polynomial methods: any iterate $x_k \in \mathcal{K}_k$ can be written $x_k = q_{k-1}(A)\, b$ for a polynomial $q_{k-1}$ of degree $\le k-1$, and the residual is</p>
+<p>$$
+r_k \;=\; b - A x_k \;=\; \big(I - A\,q_{k-1}(A)\big)\, b \;=\; p_k(A)\, b,
+\qquad p_k(0) = 1,\ \deg p_k \le k .
+$$</p>
+<p>Every Krylov solver is a rule for choosing the <strong>residual polynomial</strong> $p_k$ subject to the normalization $p_k(0)=1$.</p>
+<p><strong>Finite termination.</strong> In exact arithmetic, CG terminates in at most $d$ = (number of distinct eigenvalues of $A$ represented in $b$) iterations. For our $A$ the eigenvalues are $(\lambda^{(1)}_k + \lambda^{(1)}_l)/h^2$ with $\lambda^{(1)}_k = 2 - 2\cos\frac{k\pi}{n+1}$ (<a href="02-eigenvalues.html">02-eigenvalues.md</a>); the sum is symmetric in $(k,l)$, so there are at most $n(n+1)/2 = 528$ distinct values in a space of dimension $1024$. This already halves the trivial termination bound — and it is a first hint that convergence is governed by the <em>distribution</em> of eigenvalues, not just their extremes. In practice CG reached $10^{-10}$ in <strong>116</strong> iterations, far below 528, for reasons quantified in §5.</p>
+<h2 id="2-cg-as-xmathphx60xendx-norm-minimization">2. CG as $A$-norm minimization</h2>
+<p>$A$ SPD defines the inner product $\langle u, v\rangle_A = u^{\top} A v$ and the <strong>energy norm</strong> $\Vert u\Vert _A = \sqrt{u^{\top} A u}$. Let $x^\star = A^{-1}b$ and $e = x^\star - x$. Minimizing the quadratic</p>
+<p>$$
+\phi(x) \;=\; \tfrac12 x^{\top} A x - b^{\top} x
+\;=\; \tfrac12 \Vert x - x^\star\Vert _A^2 \;-\; \tfrac12 \Vert x^\star\Vert _A^2
+$$</p>
+<p>is equivalent to minimizing $\Vert e\Vert _A$. <strong>CG is defined by</strong></p>
+<p>$$
+x_k \;=\; \operatorname*{arg\,min}_{x \in \mathcal{K}_k(A,b)} \;\Vert x - x^\star\Vert _A .
+$$</p>
+<h3 id="21-optimality-xmathphx67xendx-galerkin-orthogonality">2.1 Optimality $\Leftrightarrow$ Galerkin orthogonality</h3>
+<p>$x_k$ is the $A$-orthogonal projection of $x^\star$ onto $\mathcal{K}_k$, i.e.</p>
+<p>$$
+\langle x^\star - x_k,\; v\rangle_A = 0 \quad \forall v \in \mathcal{K}_k
+\qquad\Longleftrightarrow\qquad
+r_k = A(x^\star - x_k) \;\perp\; \mathcal{K}_k .
+$$</p>
+<p>Since $r_k \in \mathcal{K}_{k+1}$ (it is $p_k(A)b$) and $r_k \perp \mathcal{K}_k$, the residuals $\{r_0, \dots, r_{k}\}$ are <strong>mutually orthogonal</strong> and form an orthogonal basis of $\mathcal{K}_{k+1}$.</p>
+<h3 id="22-why-a-short-recurrence-exists">2.2 Why a short recurrence exists</h3>
+<p>Expand $x_{k+1} = x_k + \sum_{i\le k}\gamma_i p_i$ over any basis $\{p_i\}$ of $\mathcal{K}_{k+1}$ that is <strong>$A$-conjugate</strong> ($p_i^{\top} A p_j = 0$, $i\ne j$). Conjugacy decouples the minimization: each coefficient is a 1-D exact line search independent of the others,</p>
+<p>$$
+\gamma_i \;=\; \frac{p_i^{\top} r_k}{p_i^{\top} A p_i},
+$$</p>
+<p>and Galerkin orthogonality makes $p_i^{\top} r_k = 0$ for all $i &lt; k$ — so only <strong>one</strong> new coefficient per step survives. The deep structural reason a conjugate basis can itself be built with a short recurrence is symmetry of $A$: the Lanczos process $A V_k = V_{k+1} \tilde{T}_k$ produces a <em>tridiagonal</em> $T_k$ when $A = A^{\top}$ (a Hessenberg matrix that is also symmetric), so orthogonalizing $A p_k$ against all previous directions reduces to orthogonalizing against the last one. CG is exactly the LDL$^\top$ factorization of that tridiagonal system, giving the coupled two-term recurrences:</p>
+<p>$$
+\boxed{
+\begin{aligned}
+\alpha_k &amp;= \frac{r_k^{\top} r_k}{p_k^{\top} A p_k}, &amp;
+x_{k+1} &amp;= x_k + \alpha_k p_k, &amp;
+r_{k+1} &amp;= r_k - \alpha_k A p_k, \\[2pt]
+\beta_k &amp;= \frac{r_{k+1}^{\top} r_{k+1}}{r_k^{\top} r_k}, &amp;
+p_{k+1} &amp;= r_{k+1} + \beta_k p_k, &amp; p_0 &amp;= r_0 = b .
+\end{aligned}}
+$$</p>
+<p>Derivation of the two formulas:</p>
+<ul>
+<li><strong>$\alpha_k$ (exact line search):</strong> $\frac{d}{d\alpha}\phi(x_k + \alpha p_k) = 0 \Rightarrow \alpha_k = \frac{p_k^{\top} r_k}{p_k^{\top} A p_k}$; then $p_k^{\top} r_k = (r_k + \beta_{k-1} p_{k-1})^{\top} r_k = r_k^{\top} r_k$ using $p_{k-1} \perp r_k$.</li>
+<li><strong>$\beta_k$ (one-step $A$-conjugacy):</strong> require $p_{k+1}^{\top} A p_k = 0$ with $p_{k+1} = r_{k+1} + \beta_k p_k$:</li>
+</ul>
+<p>$$
+\beta_k \;=\; -\frac{r_{k+1}^{\top} A p_k}{p_k^{\top} A p_k}
+\;=\; \frac{r_{k+1}^{\top}(r_{k+1} - r_k)}{\alpha_k\, p_k^{\top} A p_k}
+\;=\; \frac{r_{k+1}^{\top}(r_{k+1} - r_k)}{r_k^{\top} r_k}
+\;\overset{r_{k+1}\perp r_k}{=}\; \frac{r_{k+1}^{\top} r_{k+1}}{r_k^{\top} r_k},
+$$</p>
+<p>where the second equality substitutes $A p_k = (r_k - r_{k+1})/\alpha_k$. The middle expression is the <strong>Polak–Ribière</strong> form, the right one the <strong>Fletcher–Reeves</strong> form; <em>they coincide only because</em> $r_{k+1}^{\top} r_k = 0$, which is a global consequence of running exact CG with a fixed operator. Keep this in mind — §6 shows the two forms diverge, catastrophically, when the preconditioner is nonlinear.</p>
+<p>An induction (Saad, <em>Iterative Methods for Sparse Linear Systems</em>, 2nd ed., §6.7) confirms that these local conditions propagate globally: $r_i^{\top} r_j = 0$ and $p_i^{\top} A p_j = 0$ for all $i \ne j$, so the greedy one-step construction achieves the <em>global</em> $A$-norm minimum over $\mathcal{K}_k$ — the defining miracle of CG.</p>
+<h2 id="3-the-implementation-and-the-exact-match-with-mathematica">3. The implementation, and the exact match with Mathematica</h2>
+<h3 id="31-the-5-line-state-recurrence">3.1 The 5-line state recurrence</h3>
+<p><a href="../python/pcg.py">python/pcg.py</a> lines 67–79 (the loop body of <code>pcg</code>) implement the preconditioned version of the boxed recurrence, with $z = M(r)$ and $r^{\top}z$ replacing $r^{\top}r$:</p>
+<pre><code class="language-python">Ap = A @ p
+alpha = rz / (p @ Ap)          # alpha_k = (r_k.z_k)/(p_k.A p_k)
+x = x + alpha * p
+r = r - alpha * Ap
+relres = np.linalg.norm(r) / bnorm
+res_hist.append(relres)
+z = M(r)
+rz_new = r @ z
+p = z + (rz_new / rz) * p      # Fletcher-Reeves beta = rz_new/rz
+rz = rz_new
+if relres &lt;= tol:
+    break
+</code></pre>
+<p>Initialization (lines 61–65): $x_0 = 0$, $r_0 = b$, $z_0 = M(b)$, $p_0 = z_0$, $\rho_0 = r_0^{\top} z_0$. This is Saad Algorithm 9.1 verbatim, with the state tuple $(x, r, p, \rho)$ carried between iterations so each step costs exactly <strong>one matvec with $A$, one preconditioner apply, two inner products plus one norm, and three AXPYs</strong>.</p>
+<h3 id="32-line-for-line-correspondence-with-pcgstep">3.2 Line-for-line correspondence with <code>pcgStep</code></h3>
+<p>The Mathematica reference <code>PCGSolve</code> (<a href="../mathematica/poisson_pcg.wls">mathematica/poisson_pcg.wls</a> lines 57–74) advances the state $\{x, r, p, rz, \mathit{relRes}\}$ with <code>NestWhile[pcgStep, ..., (#[[5]] &gt; tol &amp;), 1, maxIter]</code>. The map:</p>
+<table>
+<thead>
+<tr>
+<th>Mathematica (<code>pcgStep</code>, lines 60–68)</th>
+<th>Python (<code>pcg</code>, lines 68–77)</th>
+<th>quantity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Ap = matA . p</code></td>
+<td><code>Ap = A @ p</code></td>
+<td>$Ap_k$</td>
+</tr>
+<tr>
+<td><code>aStep = rz/(p . Ap)</code></td>
+<td><code>alpha = rz / (p @ Ap)</code></td>
+<td>$\alpha_k = \rho_k / p_k^{\top}Ap_k$</td>
+</tr>
+<tr>
+<td><code>xNew = x + aStep*p</code></td>
+<td><code>x = x + alpha * p</code></td>
+<td>$x_{k+1}$</td>
+</tr>
+<tr>
+<td><code>rNew = r - aStep*Ap</code></td>
+<td><code>r = r - alpha * Ap</code></td>
+<td>$r_{k+1}$</td>
+</tr>
+<tr>
+<td><code>relRes = Norm[rNew]/bNorm; Sow[relRes]</code></td>
+<td><code>relres = norm(r)/bnorm; res_hist.append(...)</code></td>
+<td>history entry</td>
+</tr>
+<tr>
+<td><code>zNew = precondFunc[rNew]</code></td>
+<td><code>z = M(r)</code></td>
+<td>$z_{k+1} = M r_{k+1}$</td>
+</tr>
+<tr>
+<td><code>rzNew = rNew . zNew</code></td>
+<td><code>rz_new = r @ z</code></td>
+<td>$\rho_{k+1}$</td>
+</tr>
+<tr>
+<td><code>zNew + (rzNew/rz)*p</code></td>
+<td><code>p = z + (rz_new / rz) * p</code></td>
+<td>$p_{k+1} = z_{k+1} + \beta_k p_k$, FR $\beta_k = \rho_{k+1}/\rho_k$</td>
+</tr>
+<tr>
+<td>predicate <code>#[[5]] &gt; tol</code> (continue)</td>
+<td><code>if relres &lt;= tol: break</code></td>
+<td>same boundary: stop at $\mathit{relres} \le \mathrm{tol}$</td>
+</tr>
+</tbody>
+</table>
+<p>Both start the history at <code>1.0</code> (<code>Sow[1.0]</code> / <code>res_hist = [1.0]</code>), so <code>iterations = len(res_hist) - 1</code> on both sides; both evaluate convergence on the <em>post-step</em> residual, so even the final iteration performs its (unused) preconditioner apply and direction update — the trajectories are state-identical, not merely output-identical. Two harmless implementation asymmetries: Mathematica's initial state (line 72) calls <code>precondFunc[vecB]</code> twice where Python reuses <code>z</code>, and the default <code>maxIter</code> is 1000 vs Python's 2000 — neither affects any converged run. The empirical check is necessarily qualitative, not bit-for-bit: the two languages draw the GRF noise from different generators (<code>SeedRandom[42]</code>/<code>RandomVariate</code> in Wolfram vs numpy's PCG64 with seed 42), so the right-hand sides — and hence iteration counts — differ. Running <code>wolframscript -file mathematica/poisson_pcg.wls</code> prints <strong>115</strong> iterations at final relres $7.379\times 10^{-11}$ for <em>both</em> CG and Jacobi-PCG (figure <a href="../figures/mma_convergence.png">../figures/mma_convergence.png</a>), versus Python's 116 at $6.67\times 10^{-11}$ (<a href="../results/baseline.json">results/baseline.json</a>). What does transfer across languages is the structural signature: on each side CG and Jacobi-PCG are iteration-identical with matching residual histories (Mathematica reports $\Vert x_{\mathrm{none}} - x_{\mathrm{Jacobi}}\Vert  = 2.0\times 10^{-16}$) — the scale-invariance proven in §4.1, reproduced independently by both implementations.</p>
+<p>The convention <code>M</code>$\,\approx A^{-1}$ <em>as an apply</em> ($z = M(r)$, <a href="../python/pcg.py">pcg.py</a> line 37) is shared by every preconditioner in the repo: <a href="../python/preconditioners.py">python/preconditioners.py</a> (identity/Jacobi/ILU), <a href="../python/nystrom.py">python/nystrom.py</a>, and the neural <a href="../python/neural/npo.py">python/neural/npo.py</a>.</p>
+<h2 id="4-preconditioning-change-of-inner-product-split-preconditioner-equivalence">4. Preconditioning: change of inner product, split-preconditioner equivalence</h2>
+<p>Let $M \approx A^{-1}$ be SPD (note: in this repo $M$ denotes the <em>applied inverse</em>, matching the code; textbooks often write $M \approx A$ and apply $M^{-1}$). Three equivalent constructions produce the algorithm of §3.1:</p>
+<p><strong>(a) Split preconditioner.</strong> Factor $M = E E^{\top}$ (e.g. Cholesky) and run plain CG on the SPD system</p>
+<p>$$
+\hat{A}\, y = \hat{b}, \qquad \hat{A} = E^{\top} A E, \quad \hat{b} = E^{\top} b, \quad x = E y .
+$$</p>
+<p>Push the change of variables through the plain-CG recurrence: with $\hat{r}_k = E^{\top} r_k$, $\hat{p}_k = E^{-1} p_k$ one finds
+$\hat{r}_k^{\top}\hat{r}_k = r_k^{\top} E E^{\top} r_k = r_k^{\top} M r_k = r_k^{\top} z_k$ and $\hat{p}_k^{\top}\hat{A}\hat{p}_k = p_k^{\top} A p_k$, so <strong>every scalar in the recurrence is computable from $A$, $M$-applies, and inner products — $E$ never appears</strong>. The result is exactly <code>pcg</code> with $z = M r$. Consequence: PCG's convergence is governed by the spectrum of $\hat{A} = E^{\top} A E$, which is similar to $MA$; hence "the spectrum of the preconditioned operator $MA$" is the object of interest even though $MA$ is nonsymmetric.</p>
+<p><strong>(b) Change of inner product.</strong> $MA$ is self-adjoint and positive definite in the $M^{-1}$-inner product: $\langle MAu, v\rangle_{M^{-1}} = u^{\top} A v = \langle u, MAv\rangle_{M^{-1}}$. PCG is literally plain CG applied to $MAx = Mb$ with every Euclidean inner product replaced by $\langle\cdot,\cdot\rangle_{M^{-1}}$; the error functional being minimized is <em>still</em> $\Vert x - x^\star\Vert _A$, now over the preconditioned Krylov space $\mathcal{K}_k(MA,\, Mb)$.</p>
+<p><strong>(c) Polynomial view.</strong> $x_k = q_{k-1}(MA)\, Mb$: the preconditioner reshapes the spectrum that the optimal polynomial must be small on. Good preconditioning = clustering $\Lambda(MA)$, so a low-degree polynomial can nearly vanish on it.</p>
+<h3 id="41-scale-invariance-of-pcg-in-xmathphx157xendx--why-jacobi-xmathphx158xendx-plain-cg-here">4.1 Scale invariance of PCG in $M$ — why Jacobi $\equiv$ plain CG here</h3>
+<p><strong>Theorem.</strong> Replacing $M$ by $cM$ for any constant $c &gt; 0$ leaves every iterate $x_k$ and every residual $r_k$ of PCG unchanged.</p>
+<p><em>Proof (induction on the state $(x, r, p, \rho)$).</em> Under $M \to cM$: $z_k \to c z_k$, hence $\rho_k = r_k^{\top} z_k \to c\rho_k$ and initially $p_0 = z_0 \to c p_0$. Inductively assume $x_k, r_k$ unchanged and $p_k \to c p_k$, $\rho_k \to c\rho_k$. Then $\alpha_k = \rho_k/(p_k^{\top}Ap_k) \to c\rho_k/(c^2 p_k^{\top}Ap_k) = \alpha_k / c$, so $\alpha_k p_k$ is <strong>invariant</strong>: $x_{k+1}, r_{k+1}$ unchanged. Next $z_{k+1} \to c z_{k+1}$, $\rho_{k+1} \to c\rho_{k+1}$, $\beta_k = \rho_{k+1}/\rho_k$ <strong>invariant</strong>, and $p_{k+1} = z_{k+1} + \beta_k p_k \to c\, p_{k+1}$, closing the induction. $\square$</p>
+<p>Now the punchline for the canonical problem: the constant-coefficient Dirichlet Laplacian has <strong>constant diagonal</strong> $\operatorname{diag}(A) = 4/h^2 = 4\cdot 33^2 = 4356$ (this is also the median eigenvalue: <code>eig_A.median</code> $= 4356.0$ in <a href="../results/npo_spectrum.json">results/npo_spectrum.json</a>). So the Jacobi preconditioner (<a href="../python/preconditioners.py">preconditioners.py</a> lines 22–41) is</p>
+<p>$$
+M_{\mathrm{Jac}} = \operatorname{diag}(A)^{-1} = \tfrac{h^2}{4} I = c\,I, \quad c = \tfrac{1}{4356},
+$$</p>
+<p>a positive scalar multiple of the identity — by the theorem, Jacobi-PCG is <em>iteration-identical</em> to plain CG, differing only by float rounding. Measured (<a href="../results/results.json">results/results.json</a>, <a href="../results/baseline.json">results/baseline.json</a>):</p>
+<table>
+<thead>
+<tr>
+<th>method</th>
+<th>iterations</th>
+<th>final relres</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CG (none)</td>
+<td>116</td>
+<td>$6.666547523655469\times 10^{-11}$</td>
+</tr>
+<tr>
+<td>CG (Jacobi)</td>
+<td>116</td>
+<td>$6.666547523655465\times 10^{-11}$</td>
+</tr>
+</tbody>
+</table>
+<p>Maximum deviation between the two full residual histories: $4.441\times 10^{-16}$ — two ULPs. This is the sanity check <code>jacobi_equals_none_constant_coeff: true</code> asserted in <a href="../python/experiments/run_all.py">python/experiments/run_all.py</a> (lines 177–179, 254–261), visible as perfectly overlapping curves in <a href="../figures/baseline_convergence.png">../figures/baseline_convergence.png</a>.</p>
+<p>The contrast case proves it's the <em>constancy</em> of the diagonal, not weakness of Jacobi: on <code>variable_poisson_2d(32, contrast=100)</code> the diagonal jumps from $4/h^2 = 4356$ to $400/h^2 = 435600$ across the material interface (<a href="../python/poisson.py">python/poisson.py</a> lines 71–128), Jacobi is no longer $cI$, and it cuts iterations from <strong>771 to 137</strong> — a $5.6\times$ reduction (sanity check <code>jacobi_beats_none_variable_coeff: true</code>). Full discussion of Jacobi/ILU mechanics in <a href="05-classical-preconditioners.html">05-classical-preconditioners.md</a>.</p>
+<p>The same scale-invariance is load-bearing for the neural preconditioner: <a href="../python/neural/npo.py">npo.py</a> (module comment, lines 47–53) trains $M_\theta \approx \hat{A}^{-1}$ for the <em>scaled</em> operator $\hat{A} = h^2 A$ and uses it on $A$ unchanged, because $M_\theta \approx h^{-2}A^{-1}$ is a positive multiple of $A^{-1}$.</p>
+<h2 id="5-convergence-theory-the-chebyshev-xmathphx194xendx-bound-vs-reality">5. Convergence theory: the Chebyshev $\sqrt{\kappa}$ bound vs. reality</h2>
+<h3 id="51-derivation">5.1 Derivation</h3>
+<p>From §1, $e_k = p_k(A)\,e_0$ with $p_k(0)=1$ chosen $A$-norm-optimally. Expanding $e_0$ in eigenvectors of $A$,</p>
+<p>$$
+\Vert e_k\Vert _A \;=\; \min_{p_k(0)=1}\; \Vert p_k(A) e_0\Vert _A
+\;\le\; \min_{p_k(0)=1}\; \max_{\lambda \in \Lambda(A)} \vert p_k(\lambda)\vert \; \cdot \Vert e_0\Vert _A
+\;\le\; \min_{p_k(0)=1}\; \max_{\lambda \in [\lambda_{\min}, \lambda_{\max}]} \vert p_k(\lambda)\vert  \;\cdot\Vert e_0\Vert _A .
+$$</p>
+<p>The last min–max problem is solved by shifted-and-scaled Chebyshev polynomials
+$p_k^\star(\lambda) = T_k\!\big(\tfrac{\lambda_{\max}+\lambda_{\min}-2\lambda}{\lambda_{\max}-\lambda_{\min}}\big) \big/ T_k\!\big(\tfrac{\lambda_{\max}+\lambda_{\min}}{\lambda_{\max}-\lambda_{\min}}\big)$, giving the classical bound</p>
+<p>$$
+\frac{\Vert e_k\Vert _A}{\Vert e_0\Vert _A} \;\le\; \frac{2}{\rho^{-k} + \rho^{k}} \;\le\; 2\rho^{\,k},
+\qquad
+\rho = \frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}, \quad \kappa = \frac{\lambda_{\max}}{\lambda_{\min}} .
+$$</p>
+<p>Asymptotically $\rho \approx 1 - 2/\sqrt{\kappa}$, so $k \approx \tfrac{\sqrt{\kappa}}{2}\ln(2/\varepsilon)$ — the famous $O(\sqrt{\kappa})$ iteration complexity (vs. $O(\kappa)$ for steepest descent). Since the code stops on the 2-norm residual rather than the $A$-norm error, convert via $\Vert r_k\Vert _2 = \Vert e_k\Vert _{A^2} \le \sqrt{\lambda_{\max}}\Vert e_k\Vert _A$ and $\Vert e_0\Vert _A \le \Vert r_0\Vert _2/\sqrt{\lambda_{\min}}$:</p>
+<p>$$
+\frac{\Vert r_k\Vert _2}{\Vert b\Vert _2} \;\le\; 2\sqrt{\kappa}\;\rho^{\,k}.
+$$</p>
+<h3 id="52-predicted-vs-measured">5.2 Predicted vs. measured</h3>
+<p>Plugging in the exact $\kappa(A) = 440.6886$ (<a href="../results/spectra.json">results/spectra.json</a>, <code>kappa_analytic_exact</code> $= 440.6885603836582$): $\sqrt{\kappa} = 20.993$, $\rho = 19.993/21.993 = 0.90906$, $\ln(1/\rho) = 0.09534$. For $\varepsilon = 10^{-10}$:</p>
+<table>
+<thead>
+<tr>
+<th>bound</th>
+<th>predicted $k$</th>
+<th>formula</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>$A$-norm error $\le \varepsilon$</td>
+<td>$\lceil \ln(2/\varepsilon)/\ln(1/\rho)\rceil = \mathbf{249}$</td>
+<td>$23.72/0.09534$</td>
+</tr>
+<tr>
+<td>relative residual $\le \varepsilon$ (as coded)</td>
+<td>$\lceil \ln(2\sqrt{\kappa}/\varepsilon)/\ln(1/\rho)\rceil = \mathbf{281}$</td>
+<td>$26.76/0.09534$</td>
+</tr>
+<tr>
+<td><strong>measured</strong> (<a href="../results/results.json">results/results.json</a>)</td>
+<td><strong>116</strong> (final relres $6.67\times 10^{-11}$)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>The bound is <strong>pessimistic by a factor of $\sim 2.1$–$2.4$</strong> ($249/116 = 2.15$, $281/116 = 2.42$). Equivalently: the observed geometric-mean convergence factor is $(6.67\times 10^{-11})^{1/116} = 0.817$ per iteration versus the bound's $\rho = 0.909$. Three compounding reasons:</p>
+<ol>
+<li><strong>The bound only sees the endpoints $[\lambda_{\min}, \lambda_{\max}]$.</strong> The true minimization is over the 1024 <em>discrete</em> eigenvalues (at most 528 distinct, §1). The optimal polynomial exploits gaps: once low-degree factors have effectively annihilated the outermost eigenvalues, the remaining convergence is governed by an <em>effective</em> condition number of the interior spectrum — the mechanism behind CG's well-known superlinear convergence.</li>
+<li><strong>Eigenvalue multiplicity and clustering.</strong> The 2-D Laplacian spectrum $(\lambda^{(1)}_k+\lambda^{(1)}_l)/h^2$ is dense in the middle (82.0% of eigenvalues lie within $[0.5, 2]\times$ the median 4356 — <code>eig_A.frac_within_half_to_2x_median</code> in <a href="../results/npo_spectrum.json">results/npo_spectrum.json</a>): a polynomial that is small on that bulk plus a handful of stragglers needs far fewer degrees than the interval bound assumes.</li>
+<li><strong>The RHS is not adversarial.</strong> The Chebyshev bound is worst-case over $e_0$. Our $b$ is a GRF with spectral density $(\vert k\vert ^2+\tau^2)^{-1}$ (<a href="03-gaussian-random-fields.html">03-gaussian-random-fields.md</a>): its components along the rough, high-$\lambda$ eigenvectors are strongly damped, so the error CG must remove barely excites the top of the spectrum.</li>
+</ol>
+<p>Two instructive extremes from the same benchmark (<a href="../results/results.json">results/results.json</a>, figure <a href="../figures/all_convergence.png">../figures/all_convergence.png</a>):</p>
+<ul>
+<li><strong>ILU</strong>: 5 iterations to relres $6.21\times 10^{-13}$ — the preconditioned spectrum is so tightly clustered near 1 that a degree-5 polynomial suffices; endpoint-based $\kappa$ reasoning is irrelevant. See <a href="05-classical-preconditioners.html">05-classical-preconditioners.md</a>.</li>
+<li><strong>Nyström rank 16</strong>: exact preconditioned $\kappa = 439.62 &lt; 440.69$ (<a href="../results/nystrom.json">results/nystrom.json</a>) yet <strong>123 iterations $&gt; 116$</strong>. A (marginally) smaller $\kappa$ does <em>not</em> guarantee fewer iterations — the randomized sketch slightly rearranges the interior spectrum, and on this flat-top Laplacian spectrum that distortion outweighs the negligible endpoint gain. Iteration counts by rank: 123, 123, 122, 119 for ranks 16, 64, 128, 256 (<code>nystrom_iterations_by_rank</code>; note the reported-not-asserted tie 123==123 in the strict-monotonicity sanity check, <a href="../python/experiments/run_all.py">run_all.py</a> lines 183–189). Full analysis in <a href="07-nystrom-preconditioning.html">07-nystrom-preconditioning.md</a>.</li>
+</ul>
+<p>The moral, which recurs in §6: <strong>clustering of $\Lambda(MA)$ is the real predictor; $\kappa$ is only a proxy.</strong></p>
+<p>For scaling in $n$: $\kappa \sim 4(n+1)^2/\pi^2$, so CG iterations grow like $O(n) = O(\sqrt{\kappa})$; $\kappa$ values 32.16, 116.46, 440.69, 1711.66, 6743.68 for $n = 8, 16, 32, 64, 128$ with $\kappa/n^2 \to \approx 0.41$ (<a href="../results/spectra.json">results/spectra.json</a>, figure <a href="../figures/kappa_scaling.png">../figures/kappa_scaling.png</a>; derivation in <a href="02-eigenvalues.html">02-eigenvalues.md</a>).</p>
+<h2 id="6-flexible-cg-polakribière-xmathphx249xendx-and-nonlinear-preconditioners">6. Flexible CG: Polak–Ribière $\beta$ and nonlinear preconditioners</h2>
+<h3 id="61-the-derivation-that-makes-pr-inevitable">6.1 The derivation that makes PR inevitable</h3>
+<p>Suppose the preconditioner <strong>changes from iteration to iteration</strong> — $z_k = M_k(r_k)$ with $M_k$ possibly nonlinear, as with the NPO where the ReLU network is not any fixed matrix. The global orthogonality structure of §2 is gone; the best we can do is enforce <strong>local $A$-conjugacy</strong> $p_{k+1}^{\top} A p_k = 0$ exactly, by construction. With $p_{k+1} = z_{k+1} + \beta_k p_k$:</p>
+<p>$$
+\beta_k \;=\; -\frac{z_{k+1}^{\top} A p_k}{p_k^{\top} A p_k}
+\;\overset{A p_k = (r_k - r_{k+1})/\alpha_k}{=}\;
+\frac{z_{k+1}^{\top}(r_{k+1} - r_k)}{\alpha_k\, p_k^{\top} A p_k}
+\;=\; \boxed{\ \frac{z_{k+1}^{\top}(r_{k+1} - r_k)}{z_k^{\top} r_k}\ }
+$$</p>
+<p>using $\alpha_k p_k^{\top} A p_k = r_k^{\top} z_k$ from the line-search formula. This is the <strong>Polak–Ribière</strong> $\beta$ of Notay, <em>Flexible Conjugate Gradients</em>, SIAM J. Sci. Comput. 22(4), 2000: it makes consecutive directions exactly $A$-conjugate <strong>for any preconditioner whatsoever</strong>, because the only identity it uses is the residual update itself.</p>
+<p>The Fletcher–Reeves form $\beta_k^{FR} = \frac{r_{k+1}^{\top} z_{k+1}}{r_k^{\top} z_k}$ used by classical PCG differs from PR by the term $\frac{z_{k+1}^{\top} r_k}{z_k^{\top} r_k}$. For a <em>fixed SPD</em> $M$ that term vanishes: $z_{k+1}^{\top} r_k = r_{k+1}^{\top} M r_k = r_{k+1}^{\top} z_k = 0$ by symmetry of $M$ plus the exact-PCG orthogonality $r_{k+1} \perp_{\,} z_k$. For a nonlinear, nonsymmetric $M_\theta$ <strong>neither ingredient holds</strong>, so FR's $\beta$ carries a spurious component, $p_{k+1}$ loses $A$-conjugacy even with its immediate predecessor, and the "line searches" start fighting each other — the method degrades toward (erratic) preconditioned steepest descent and stalls once the accumulated non-conjugacy balances the per-step reduction.</p>
+<h3 id="62-the-implementation-delta">6.2 The implementation delta</h3>
+<p><a href="../python/pcg.py">python/pcg.py</a> <code>flexible_pcg</code> (lines 126–139) is identical to <code>pcg</code> except:</p>
+<pre><code class="language-python">beta = (z_new @ (r_new - r)) / rz   # line 134: Polak-Ribiere (Notay 2000)
+p = z_new + beta * p
+</code></pre>
+<p>with <code>rz</code> holding the <em>previous</em> $z_k^{\top} r_k$. Cost: the same one matvec + one $M$-apply per iteration, plus <strong>one extra stored vector</strong> (the previous residual <code>r</code>, needed for $r_{k+1}-r_k$), one extra AXPY-sized subtraction, and one extra inner product — <code>pcg</code> computes two per iteration ($p^{\top}Ap$, $r^{\top}z$) where <code>flexible_pcg</code> computes three ($p^{\top}Ap$, $z_{k+1}^{\top}(r_{k+1}-r_k)$, $r^{\top}z$; lines 128, 134, 137). All $O(N)$ and negligible next to the matvec.</p>
+<h3 id="63-measured-npo-with-plain-vs-flexible-pcg">6.3 Measured: NPO with plain vs. flexible PCG</h3>
+<p>The trained NPO (<a href="06-neural-preconditioner.html">06-neural-preconditioner.md</a>, NPO paper: Li, Xiao, Lai &amp; Wang, <em>Neural Preconditioning Operator for Efficient PDE Solves</em>, https://arxiv.org/abs/2502.01337) is quantifiably far from a fixed SPD matrix (<a href="../results/npo_spectrum.json">results/npo_spectrum.json</a>, computed by <a href="../python/experiments/npo_spectrum.py">python/experiments/npo_spectrum.py</a>):</p>
+<ul>
+<li><strong>nonsymmetry</strong> of the column linearization $\tilde{M}$ (with $\tilde{M}_{:,j} = M_\theta(e_j)$): $\Vert \tilde{M}-\tilde{M}^{\top}\Vert _F/\Vert \tilde{M}\Vert _F = 0.568$;</li>
+<li><strong>nonlinearity</strong>: $\Vert \tilde{M} b - M_\theta(b)\Vert  / \Vert M_\theta(b)\Vert  = 0.432$ on the canonical GRF $b$ — the linearization mispredicts the actual apply by 43%. (The wrapper <em>is</em> positively homogeneous, $M_\theta(cr) = c\,M_\theta(r)$ for $c&gt;0$, by unit-norm input normalization — <a href="../python/neural/npo.py">npo.py</a> lines 218–227 — but homogeneity is much weaker than linearity.)</li>
+</ul>
+<p>Results on the canonical problem (<a href="../results/results.json">results/results.json</a>, reproduced in <a href="../results/npo_eval.json">results/npo_eval.json</a>; figure <a href="../figures/npo_convergence.png">../figures/npo_convergence.png</a>):</p>
+<table>
+<thead>
+<tr>
+<th>solver</th>
+<th>iterations</th>
+<th>final relres</th>
+<th>converged</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CG, no preconditioner</td>
+<td>116</td>
+<td>$6.67\times 10^{-11}$</td>
+<td>yes</td>
+</tr>
+<tr>
+<td><strong>FCG (NPO, Notay PR $\beta$)</strong></td>
+<td><strong>30</strong></td>
+<td>$7.16\times 10^{-11}$</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>CG (NPO, plain FR $\beta$)</td>
+<td>2000 (max)</td>
+<td>$9.65\times 10^{-6}$</td>
+<td><strong>no — stalls near $10^{-5}$</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The plain-PCG run is a deliberate negative control (<a href="../python/neural/eval_npo.py">python/neural/eval_npo.py</a> lines 9–11, 50): identical preconditioner, identical everything, only $\beta^{FR}$ vs $\beta^{PR}$ — and it stalls five orders of magnitude short after $67\times$ more iterations (1.68 s vs 0.028 s solve wall time). Flexible CG converges in 30 iterations, a $116/30 = 3.87\times$ reduction over plain CG (<code>speedup_fcg_vs_cg</code> $= 3.8667$).</p>
+<p><strong>Why 30 works: clustering, not symmetry.</strong> The linearized preconditioned spectrum $\operatorname{eig}(\tilde{M}A)$ has all 1024 eigenvalues in the open right half-plane ($\mathrm{Re}\,\lambda \in [248.8,\ 3125.2]$, $\max\vert \mathrm{Im}\,\lambda\vert  = 257.1$, zero nonpositive real parts) with spread $\max\vert \lambda\vert /\min\vert \lambda\vert  = 12.56$ versus $\kappa(A) = 440.69$ — $35\times$ tighter — and 98.1% of eigenvalues within $[0.5, 2]\times$ the median versus 82.0% for $A$ (figure <a href="../figures/npo_spectrum.png">../figures/npo_spectrum.png</a>). Feeding the spread into the Chebyshev heuristic as if it were a condition number: $\sqrt{12.56} = 3.54$, $\rho_{\mathrm{eff}} = 0.560$, predicted $k \approx \ln(2\cdot 10^{10})/\ln(1/0.560) \approx 41$ — the actual 30 (observed factor $0.459$/iteration) again beats the endpoint bound, for the same clustering reasons as §5.2. None of the classical theory <em>applies</em> rigorously here (the operator isn't even linear), but the scale-invariant clustering diagnostic predicts the behavior well — which is exactly why <a href="../python/experiments/npo_spectrum.py">npo_spectrum.py</a> measures median-relative clustering rather than a raw "$\kappa$".</p>
+<h2 id="7-gmres-vs-cg-and-where-fcg-sits">7. GMRES vs. CG (and where FCG sits)</h2>
+<p>The NPO paper (https://arxiv.org/abs/2502.01337) deploys its preconditioner inside <strong>GMRES</strong>; this repo uses <strong>flexible CG</strong>. Both are Krylov methods — iterates from $\mathcal{K}_k(MA, Mb)$ — differing in <em>which</em> optimality they enforce and what that costs:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>CG</th>
+<th>flexible CG (Notay)</th>
+<th>GMRES / FGMRES</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>optimality</td>
+<td>global $\min \Vert e_k\Vert _A$ over $\mathcal{K}_k$</td>
+<td>local only ($p_{k+1} \perp_A p_k$); global optimality not guaranteed</td>
+<td>global $\min \Vert r_k\Vert _2$ over $\mathcal{K}_k$</td>
+</tr>
+<tr>
+<td>requires</td>
+<td>$A$ SPD, <strong>fixed</strong> SPD $M$</td>
+<td>$A$ SPD; $M$ arbitrary (varying/nonlinear)</td>
+<td>any nonsingular $A$; FGMRES allows varying $M$</td>
+</tr>
+<tr>
+<td>recurrence</td>
+<td>2-term coupled; $O(1)$ vectors</td>
+<td>2-term + 1 extra vector</td>
+<td>full Arnoldi orthogonalization: $k$ vectors, $O(Nk)$ work at step $k$ (or restarts, losing optimality)</td>
+</tr>
+<tr>
+<td>per-iteration cost here</td>
+<td>1 matvec + 1 $M$-apply + $O(N)$</td>
+<td>same + $O(N)$</td>
+<td>1 matvec + 1 $M$-apply + $O(Nk)$</td>
+</tr>
+</tbody>
+</table>
+<p>GMRES is the conservative choice when the preconditioned operator may be badly nonsymmetric or indefinite — its residual is monotone by construction, and FGMRES (Saad 1993) tolerates a different $M_k$ each step by storing both Arnoldi bases. The NPO paper needs that generality across its PDE suite. Here, the measured linearized spectrum of $\tilde{M}A$ is entirely in the right half-plane with small imaginary parts and heavy clustering (§6.3), and $A$ itself is SPD — precisely the regime where Notay showed local $A$-conjugacy is enough in practice. FCG then delivers Krylov acceleration at CG-like memory ($O(1)$ vectors vs GMRES's $O(k)$: at $k=30$ that is ~30 stored basis vectors of length 1024 plus a growing Hessenberg least-squares problem, vs. 5–6 vectors total for FCG). The empirical justification is the table in §6.3: FCG converges in 30 iterations to $7.2\times 10^{-11}$ with true-residual accuracy confirmed against a direct solve (<code>relerr_vs_spsolve</code> $= 3.10\times 10^{-11}$).</p>
+<hr />
+<h2 id="summary-of-load-bearing-facts-all-from-results-jsons">Summary of load-bearing facts (all from <a href="../results">results/</a> JSONs)</h2>
+<ul>
+<li>CG = $A$-norm-optimal polynomial method on $\mathcal{K}_k(A,b)$; the 5-line loop in <a href="../python/pcg.py">pcg.py</a> (lines 67–79) is state-identical to Mathematica <code>pcgStep</code> (<a href="../mathematica/poisson_pcg.wls">poisson_pcg.wls</a> lines 59–68), Saad Alg. 9.1.</li>
+<li>Chebyshev bound with exact $\kappa = 440.6886$ predicts 249 ($A$-norm) / 281 (residual) iterations at $10^{-10}$; measured: <strong>116</strong> — pessimistic $\sim 2.1$–$2.4\times$ because the bound ignores spectral clustering (82% of $\Lambda(A)$ within $[0.5,2]\times$ median) and RHS smoothness.</li>
+<li>PCG is invariant under $M \to cM$, $c&gt;0$; since $\operatorname{diag}(A) \equiv 4/h^2 = 4356$, Jacobi $= \frac{h^2}{4}I$ and matches plain CG to $4.4\times 10^{-16}$ over the whole residual history (116 = 116 its). On the variable-coefficient problem (diagonal 4356 → 435600) Jacobi wins 137 vs 771. See <a href="05-classical-preconditioners.html">05-classical-preconditioners.md</a>.</li>
+<li>Smaller exact $\kappa$ does not imply fewer iterations: Nyström rank 16 has $\kappa_{\mathrm{prec}} = 439.62 &lt; 440.69$ but takes 123 &gt; 116 iterations. See <a href="07-nystrom-preconditioning.html">07-nystrom-preconditioning.md</a>.</li>
+<li>Polak–Ribière $\beta = z_{k+1}^{\top}(r_{k+1}-r_k)/z_k^{\top}r_k$ enforces exact local $A$-conjugacy for <em>any</em> preconditioner; Fletcher–Reeves equals it only for fixed SPD $M$. With the nonlinear NPO (nonsymmetry 0.568, nonlinearity 0.432), FR-PCG stalls at $9.65\times 10^{-6}$ after 2000 iterations while PR-FCG converges in <strong>30</strong> ($3.87\times$ fewer than plain CG), driven by a $35\times$ tighter, 98.1%-clustered right-half-plane spectrum of $\tilde{M}A$. See <a href="06-neural-preconditioner.html">06-neural-preconditioner.md</a>.</li>
+<li>GMRES (used by the NPO paper) and (F)CG optimize $\Vert r\Vert _2$ vs $\Vert e\Vert _A$ over the same Krylov spaces; FCG trades guaranteed global optimality for $O(1)$ memory, and the measured spectrum justifies that trade here.</li>
+</ul>
+<p>Full cross-method numbers and figures: <a href="08-results.html">08-results.md</a>.</p>
+</div>
+</body>
+</html>

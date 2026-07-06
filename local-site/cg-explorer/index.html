@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iterative solvers — 1D heat conduction</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; color: #1b1b20; background: #fafafa; }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 20px 18px 48px; }
+  header h1 { font-size: 22px; font-weight: 650; margin: 4px 0 2px; }
+  header p.sub { margin: 0 0 4px; color: #555; }
+  header a { color: #1f5fbf; text-decoration: none; }
+  header a:hover { text-decoration: underline; }
+  .topnav { font-size: 13px; color: #777; margin-bottom: 14px; }
+  .schematic { margin: 14px 0 4px; }
+  .schematic svg { width: 100%; max-width: 720px; height: auto; display: block; }
+  .controlsRow { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin: 12px 0 8px; }
+  .solverBtns { display: flex; flex-wrap: wrap; gap: 8px; }
+  .solverBtns button { font: 14px system-ui, sans-serif; padding: 7px 13px; border: 1px solid #ccc; border-radius: 8px; background: #fff; cursor: pointer; display: flex; align-items: center; gap: 7px; }
+  .solverBtns button.active { border-color: #1f5fbf; background: #eef4ff; font-weight: 600; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+  .toggleWrap { display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 7px 13px; border: 1px solid #ccc; border-radius: 8px; background: #fff; cursor: pointer; user-select: none; }
+  .toggleWrap input { accent-color: #d62728; width: 16px; height: 16px; cursor: pointer; }
+  .toggleWrap span.hint { color: #888; font-size: 12.5px; }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 6px 0 4px; }
+  .controls input[type=range] { flex: 1; min-width: 220px; }
+  .controls button { font: 13px system-ui, sans-serif; padding: 5px 10px; border: 1px solid #ccc; border-radius: 7px; background: #fff; cursor: pointer; }
+  #stepLabel { font-size: 13px; color: #444; min-width: 280px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 10px; }
+  @media (max-width: 780px) { .grid { grid-template-columns: 1fr; } }
+  .grid canvas { width: 100%; height: 300px; background: #fff; border: 1px solid #e2e2e6; border-radius: 10px; }
+  #status { color: #946200; font-size: 14px; margin: 8px 0; min-height: 20px; }
+  .facts { font-size: 13px; color: #666; margin: 4px 0 0; }
+  table.summary { border-collapse: collapse; width: 100%; margin-top: 18px; font-size: 14px; background: #fff; border: 1px solid #e2e2e6; border-radius: 10px; overflow: hidden; }
+  table.summary th, table.summary td { text-align: left; padding: 7px 12px; border-bottom: 1px solid #ececf0; }
+  table.summary th { background: #f4f4f7; font-weight: 600; font-size: 13px; }
+  table.summary td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.summary .dot { margin-right: 8px; vertical-align: -1px; }
+  .notes { margin-top: 26px; font-size: 14.5px; }
+  .notes h2 { font-size: 17px; margin: 22px 0 6px; }
+  .notes li { margin: 5px 0; }
+  #insight .impulseControls { display: flex; align-items: center; gap: 12px; margin: 8px 0 4px; font-size: 13px; color: #444; }
+  #insight .impulseControls input[type=range] { flex: 1; max-width: 420px; }
+  .legendLine { font-size: 13px; color: #666; margin: 6px 0 0; }
+  .legendLine .sw { display: inline-block; width: 22px; height: 0; border-top: 2.5px solid; vertical-align: 3px; margin: 0 5px 0 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="topnav"><a href="../index.html">← poisson-solvers reports</a> · GitHub<span class="citation"> (https://github.com/yaroslavvb/poisson-solvers)</span></div>
+  <h1>Iterative solvers on a 1D heat conduction problem</h1>
+  <p class="sub">A rod is heated at one end and chilled at the other; the steady-state temperature is a linear ramp.
+  The dashboard compares classical iterative solvers on the resulting discrete Poisson system, with an optional
+  neural preconditioner applied to the residual-based methods.</p>
+  <p class="facts" id="facts"></p>
+</header>
+
+<div class="schematic">
+  <svg viewBox="0 0 720 104" role="img" aria-label="Schematic: heater at the left end of a rod, chiller at the right end, temperature ramps linearly from hot to cold">
+    <defs>
+      <linearGradient id="tempGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#e05545"/>
+        <stop offset="0.5" stop-color="#f4f0e8"/>
+        <stop offset="1" stop-color="#4d7fd0"/>
+      </linearGradient>
+    </defs>
+    <rect x="14" y="22" width="58" height="44" rx="7" fill="#e05545"/>
+    <path d="M32 14 q4 -7 0 -12 M43 14 q4 -7 0 -12 M54 14 q4 -7 0 -12" stroke="#e05545" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <text x="43" y="49" text-anchor="middle" fill="#fff" font-size="13" font-weight="600" font-family="system-ui">heater</text>
+    <rect x="72" y="30" width="576" height="28" fill="url(#tempGrad)" stroke="#9a9aa2" stroke-width="1"/>
+    <text x="360" y="48" text-anchor="middle" fill="#333" font-size="12.5" font-family="system-ui">rod: temperature u(x) ramps from hot to cold</text>
+    <rect x="648" y="22" width="58" height="44" rx="7" fill="#4d7fd0"/>
+    <g stroke="#4d7fd0" stroke-width="2" stroke-linecap="round">
+      <path d="M670 8 v8 M666 12 h8 M683 6 v8 M679 10 h8"/>
+    </g>
+    <text x="677" y="49" text-anchor="middle" fill="#fff" font-size="13" font-weight="600" font-family="system-ui">chiller</text>
+    <text x="76" y="84" fill="#777" font-size="11.5" font-family="system-ui">+q into the first cell</text>
+    <text x="644" y="84" text-anchor="end" fill="#777" font-size="11.5" font-family="system-ui">−q out of the last cell</text>
+    <text x="360" y="84" text-anchor="middle" fill="#777" font-size="11.5" font-family="system-ui">−u″ = f on (0,1), ends held at ambient u = 0</text>
+  </svg>
+</div>
+
+<div id="status">computing solver histories…</div>
+
+<div id="dashboard" style="display:none">
+  <div class="controlsRow">
+    <div class="solverBtns">
+      <button id="btn-cg"><span class="dot" style="background:#1f77b4"></span>Conjugate gradient</button>
+      <button id="btn-sor"><span class="dot" style="background:#9467bd"></span>SOR</button>
+      <button id="btn-grad"><span class="dot" style="background:#2ca02c"></span>Gradient descent</button>
+    </div>
+    <label class="toggleWrap"><input type="checkbox" id="npoToggle">
+      neural preconditioner
+    </label>
+  </div>
+
+  <div class="controls">
+    <button id="playBtn">▶ play</button>
+    <input type="range" id="slider" min="0" max="1" value="0">
+    <span id="stepLabel"></span>
+  </div>
+
+  <div class="grid">
+    <canvas id="plotU"></canvas>
+    <canvas id="plotR"></canvas>
+    <canvas id="plotD"></canvas>
+    <canvas id="plotC"></canvas>
+  </div>
+
+  <table class="summary">
+    <thead><tr><th>method</th><th>details</th><th style="text-align:right">iterations to ‖r‖/‖b‖ ≤ 10⁻⁴</th><th style="text-align:right">final rel. residual</th><th style="text-align:right">solution error ‖u−u*‖/‖u*‖ at stop</th></tr></thead>
+    <tbody id="summaryBody"></tbody>
+  </table>
+</div>
+
+<div class="notes">
+  <h2>The problem</h2>
+  <p>Steady-state heat conduction: &minus;u&Prime;(x) = f on (0,1), with both ends held at ambient temperature (u = 0),
+  discretized on n = 256 cells as A = tridiag(&minus;1, 2, &minus;1)/h&sup2;, h = 1/257. The heater injects +1 into the first cell
+  and the chiller removes 1 from the last, so the exact temperature (dashed gray in the first panel) is essentially
+  a straight ramp from hot to cold. The eigenvalues of A are &lambda;<sub>k</sub> = (2 &minus; 2cos(k&pi;h))/h&sup2;,
+  giving condition number &kappa; &asymp; 2.7&times;10&#8308; — the single number that separates these methods.</p>
+
+  <h2>The four panels</h2>
+  <p>Current temperature u (with the exact solution dashed), current residual r = b &minus; Au, the computed step &Delta;u
+  applied at this iteration, and the convergence tracker (log-log; red marker = current step; all methods overlaid,
+  the selected one highlighted). Axes are frozen over the whole history and shared across the preconditioner toggle,
+  and the step selector holds a single global iteration value across methods and the toggle — switching anything keeps
+  the view on the same step, so any two states are directly comparable. The computed-step panel shows most directly
+  what the preconditioner changes: raw residual-shaped corrections become global, solution-shaped ones.</p>
+
+  <h2>The methods</h2>
+  <ul>
+    <li><b>Gradient descent</b>: step along the residual, x &larr; x + &alpha;r, with the exact line search
+    &alpha; = r&#7488;r&#8725;r&#7488;Ar. (With a fixed &alpha; this same family is called Richardson iteration, and for this
+    constant-diagonal A it coincides with Jacobi.) Worst-case rate O(&kappa;) per digit.</li>
+    <li><b>SOR</b>: a Gauss–Seidel sweep with over-relaxation at the optimal &omega; = 2/(1+sin &pi;h) &asymp; 1.976,
+    which improves O(&kappa;) to O(&radic;&kappa;).</li>
+    <li><b>Conjugate gradient</b>: also O(&radic;&kappa;) but parameter-free and optimal over the whole Krylov space.
+    Heat &ldquo;information&rdquo; spreads inward from the two ends roughly one cell per iteration — and CG terminates at
+    <em>exactly</em> 128 = n/2 steps, where the residual falls off a cliff: the antisymmetric source excites only
+    the 128 antisymmetric eigenmodes, and CG finds them all.</li>
+  </ul>
+
+  <h2>The neural preconditioner</h2>
+  <p>The toggle applies a toy version of the Neural Preconditioning Operator
+  (arXiv:2502.01337<span class="citation"> (https://arxiv.org/abs/2502.01337)</span>): a two-scale convolutional network — a local
+  fine-grid stencil plus a coarse-grid branch, a miniature of the paper&rsquo;s multigrid design, 1,154 weights running
+  directly in the browser — trained offline on this A with the paper&rsquo;s condition/residual losses to output
+  z = M(r) &asymp; A&#8315;&sup1;r. With the toggle on, conjugate gradient becomes <em>flexible</em> PCG
+  (Polak&ndash;Ribi&egrave;re &beta;, with a fallback to z = r whenever the network fails to produce a descent direction),
+  gradient descent steps along z instead of r, and each SOR sweep is followed by a line-searched correction along z —
+  the smoother-plus-coarse-correction structure of classical multigrid, with the network in the coarse-correction role.
+  The network is deliberately small: it accelerates the solvers severalfold without making the solve trivial.</p>
+
+  <p>The stopping rule is a <em>residual</em> test; the last table column measures each solver&rsquo;s actual distance
+  to the exact ramp at the moment it stopped — with &kappa; &asymp; 2.7&times;10&#8308; those two notions of
+  &ldquo;converged&rdquo; can differ more than you&rsquo;d expect.</p>
+</div>
+
+<div id="insight" class="notes" style="display:none">
+  <h2>Inside the preconditioner</h2>
+  <p>Two ways to see what the network learned. <b>Left</b>: its response to a unit impulse — for the exact inverse
+  this is the discrete Green&rsquo;s function, a tent peaked at the impulse (dashed); move the slider to probe how well
+  the network reproduces it across the rod. <b>Right</b>: the Rayleigh gain v&#7488;M(v)&#8725;v&#7488;v for each
+  eigenmode v<sub>k</sub> = sin(k&pi;x), against the exact inverse spectrum 1/&lambda;&#770;<sub>k</sub> (dashed).
+  The coarse-grid branch supplies the large low-mode gains a local stencil cannot produce, while the fine stencil
+  handles the high frequencies — the same division of labor as classical multigrid. Note the network still undershoots
+  the very lowest modes by orders of magnitude; that shortfall is exactly why it accelerates the solvers severalfold
+  rather than solving the system in one application. Both plots are in
+  h&sup2;A units, the scale the network was trained at; preconditioned CG is invariant to that overall scale.</p>
+  <div class="impulseControls">
+    <span id="impulseLabel">impulse at x = 0.500</span>
+    <input type="range" id="impulseSlider" min="0" max="255" value="127">
+  </div>
+  <div class="grid">
+    <canvas id="plotImpulse"></canvas>
+    <canvas id="plotGain"></canvas>
+  </div>
+  <p class="legendLine"><span class="sw" style="border-color:#d62728"></span>network M
+    <span class="sw" style="border-color:#b6b6be; border-top-style: dashed"></span>exact inverse</p>
+</div>
+
+<div class="notes">
+  <p>For the full theory, see the report series in this repo:
+  <a href="../reports/04-krylov-and-pcg.html">Krylov methods &amp; PCG</a>,
+  <a href="../reports/06-neural-preconditioner.html">neural preconditioning</a>,
+  <a href="../reports/02-eigenvalues.html">the eigenvalue story</a>.</p>
+</div>
+</div>
+<script src="npo_weights.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

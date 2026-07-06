@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>07 — Randomized Nyström Preconditioning</title>
+<style>
+body { margin: 0; color: #1b1f23; background: #fff;
+       font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI",
+             Helvetica, Arial, sans-serif; }
+.page { max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+nav.site { font-size: .85rem; color: #57606a; margin-bottom: 1.5rem;
+           border-bottom: 1px solid #d8dee4; padding-bottom: .5rem; }
+nav.site a { color: #0969da; text-decoration: none; }
+nav.site a:hover { text-decoration: underline; }
+nav.site .sep { margin: 0 .45em; color: #8c959f; }
+h1, h2, h3, h4 { line-height: 1.25; margin: 1.6em 0 .6em; }
+h1 { font-size: 1.9rem; border-bottom: 1px solid #d8dee4;
+     padding-bottom: .3em; margin-top: .2em; }
+h2 { font-size: 1.45rem; border-bottom: 1px solid #eaecef;
+     padding-bottom: .25em; }
+a { color: #0969da; }
+img { max-width: 100%; height: auto; }
+pre { background: #f6f8fa; padding: .9em 1.1em; overflow-x: auto;
+      border-radius: 6px; font-size: .85em; line-height: 1.45; }
+code { font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo,
+       Consolas, monospace; background: #f6f8fa; padding: .1em .3em;
+       border-radius: 4px; font-size: .9em; }
+pre code { background: none; padding: 0; font-size: 1em; }
+table { border-collapse: collapse; margin: 1em 0; display: block;
+        overflow-x: auto; max-width: 100%; }
+th, td { border: 1px solid #d0d7de; padding: .35em .7em; }
+th { background: #f6f8fa; }
+blockquote { margin: 0 0 1em; padding: 0 1em; color: #57606a;
+             border-left: .25em solid #d0d7de; }
+hr { border: none; border-top: 1px solid #d8dee4; margin: 2em 0; }
+.citation { color: #57606a; word-break: break-all; }
+mjx-container[jax="SVG"][display="true"] { overflow-x: auto;
+                                           overflow-y: hidden; }
+</style>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  options: {
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  svg: { fontCache: 'local' }
+};
+</script>
+<script defer src="../vendor/mathjax-tex-svg.js"></script>
+</head>
+<body>
+<div class="page">
+<nav class="site"><a href="../index.html">index</a><span class="sep">&middot;</span><a href="06-neural-preconditioner.html">&larr; 06-neural-preconditioner</a><span class="sep">&middot;</span><a href="08-results.html">08-results &rarr;</a></nav>
+<h1 id="07--randomized-nyström-preconditioning">07 — Randomized Nyström Preconditioning</h1>
+<p><strong>Paper</strong>: Frangella, Tropp &amp; Udell, <em>Randomized Nyström Preconditioning</em>, arXiv:2110.02820<span class="citation"> (https://arxiv.org/abs/2110.02820)</span> (SIAM J. Matrix Anal. Appl. 44(2), 2023).
+<strong>Code</strong>: <a href="../python/nystrom.py">python/nystrom.py</a> (preconditioner), <a href="../python/experiments/run_nystrom.py">python/experiments/run_nystrom.py</a> (rank sweep + exact preconditioned spectra), <a href="../mathematica/nystrom_pcg.wls">mathematica/nystrom_pcg.wls</a> (independent Wolfram implementation).
+<strong>Results</strong>: <a href="../results/nystrom.json">results/nystrom.json</a>, cross-checked against <a href="../results/results.json">results/results.json</a>.</p>
+<p><strong>Numbering note.</strong> In-text citations follow the arXiv rendering of the paper, which numbers algorithms and display equations sequentially: the stabilized Nyström construction is <strong>Algorithm 1</strong>, and the preconditioner/inverse pair is <strong>Eq. (3)</strong> at first appearance (their §1.1), restated as <strong>Eq. (17)</strong> in their §5. The code comments carry section-style labels from the journal typesetting instead — <code>Algorithm 2.1</code> / <code>Eq. (5.3)</code> in <a href="../python/nystrom.py">python/nystrom.py</a> and <a href="../mathematica/nystrom_pcg.wls">mathematica/nystrom_pcg.wls</a> (with $P$ alone as <code>Eq. (1.3)</code>) — mapped positionally: §5's displayed equations run (5.1)–(5.4) = arXiv (15)–(18), so the $P$/$P^{-1}$ pair Eq. (17) is the journal's (5.3), and §1.1's Eq. (3) is (1.3). (An earlier <code>.wls</code> header citation of "(5.2)" — which is the <em>optimal</em> low-rank preconditioner's condition number, arXiv (16) — was off by one and has been corrected.) Theorem environments are per-section in both renderings; Lemma 2.1, Theorem 5.1 and Proposition 5.3 are cited as printed.</p>
+<p><strong>TL;DR.</strong> We implement the stabilized single-pass Nyström approximation (their Algorithm 1) and the Nyström preconditioner (their Eq. 17) exactly, verify the construction against exact dense eigensolves, and run it on the 32×32 2-D Poisson problem at ranks {16, 64, 128, 256}. It <em>loses</em> to plain CG on every rank (119–123 iterations vs 116) even though the exact preconditioned condition number is (marginally) smaller (407.46–439.62 vs 440.69). This is not a bug — it is the predicted behavior on the adversarial input: the discrete Laplacian's spectrum decays <em>slowly from the top</em>, so low-rank deflation buys almost nothing, and at $\mu = 0$ the effective dimension is the full problem size, putting the experiment deliberately outside the paper's theory. The negative result is the point of this report; the section <a href="#8-where-nyström-pcg-actually-shines">Where Nyström-PCG actually shines</a> explains the regime the method was built for.</p>
+<p>Contrast with the sibling experiments on the identical problem instance: ILU converges in 5 iterations (<a href="05-classical-preconditioners.html">05-classical-preconditioners.md</a>) and the neural preconditioner in 30 under flexible CG (<a href="06-neural-preconditioner.html">06-neural-preconditioner.md</a>).</p>
+<hr />
+<h2 id="1-the-nyström-approximation">1. The Nyström approximation</h2>
+<p>Given symmetric PSD $A \in \mathbb{R}^{n \times n}$ and a test matrix $\Omega \in \mathbb{R}^{n \times \ell}$, the (column) Nyström approximation is</p>
+<p>$$
+\hat{A} \;=\; A\langle\Omega\rangle \;=\; (A\Omega)\,(\Omega^{\mathsf T} A \Omega)^{+}\,(A\Omega)^{\mathsf T},
+$$</p>
+<p>the best approximation of $A$ that agrees with $A$ on the sketch: it is the PSD matrix whose range is $\mathrm{range}(A\Omega)$ and which matches the "measurement" $\Omega^{\mathsf T} A \Omega$. Two structural facts from the paper's Lemma 2.1 drive everything downstream:</p>
+<ol>
+<li><strong>PSD sandwich</strong>: $0 \preceq \hat{A} \preceq A$ in the Loewner order.</li>
+<li><strong>Eigenvalue undershoot</strong>: writing $\hat{A} = U \hat\Lambda U^{\mathsf T}$ with $\hat\lambda_1 \ge \cdots \ge \hat\lambda_\ell$, each estimate is dominated by the true eigenvalue, $\hat\lambda_j \le \lambda_j(A)$.</li>
+</ol>
+<p>With a Gaussian $\Omega$, $\hat{A}$ is a near-optimal rank-$\ell$ approximation when the spectrum of $A$ decays fast past index $\ell$; the error $E = A - \hat{A} \succeq 0$ is controlled by the tail $\sum_{j&gt;\ell}\lambda_j$ (their Sec. 2 / the Halko–Martinsson–Tropp analysis). Only $\ell$ mat-vecs with $A$ are needed — no factorization, no explicit entries — which is the whole appeal: for our 5-point stencil each mat-vec is $\sim 5n$ flops.</p>
+<p>The naive formula above is numerically treacherous: $\Omega^{\mathsf T} A \Omega$ can be nearly singular when $A$ has small eigenvalues, and forming the pseudoinverse squares the trouble. Algorithm 1 of the paper is the numerically stable reformulation, and <a href="../python/nystrom.py">python/nystrom.py</a> follows it step for step.</p>
+<h2 id="2-stable-construction-code-walkthrough-of-nystrompreconditioner__init__">2. Stable construction: code walkthrough of <code>NystromPreconditioner.__init__</code></h2>
+<p><a href="../python/nystrom.py">python/nystrom.py</a> lines 96–148. The nine steps (numbered as in the class docstring, lines 30–41):</p>
+<pre><code class="language-python">rng = np.random.default_rng(seed)
+omega = rng.standard_normal((n, rank))          # step 1
+omega, _ = np.linalg.qr(omega)                  # step 2: thin QR
+y = A @ omega                                   # step 3: rank matvecs
+nu = np.spacing(np.linalg.norm(y, &quot;fro&quot;))       # step 4: eps(||Y||_F)
+</code></pre>
+<ul>
+<li><strong>Step 1–2</strong> (lines 104–105): Gaussian test matrix, then thin QR. Orthonormalizing $\Omega$ does not change $\mathrm{range}(A\Omega)$ or the Nyström approximation in exact arithmetic (the formula is invariant under $\Omega \mapsto \Omega R^{-1}$ for invertible $R$), but it dramatically improves the conditioning of the core matrix $\Omega^{\mathsf T} Y$.</li>
+<li><strong>Step 3</strong> (line 106): $Y = A\Omega$ — the only access to $A$ in the whole constructor. <code>rank</code> sparse mat-vecs.</li>
+<li><strong>Step 4</strong> (line 107): the stabilization shift $\nu = \mathrm{eps}(\lVert Y\rVert_F)$ (<code>np.spacing</code> returns the ulp at that magnitude, i.e. $\approx 2^{-52}\lVert Y\rVert_F$) — verbatim line 6 of the paper's Algorithm 1, <code>nu = eps(norm(Y,'fro'))</code>. The Mathematica port uses the more conservative $\nu = \sqrt{N}\,\varepsilon_{\text{mach}}\lVert Y\rVert_F$ (see §7), a factor $\sim\sqrt{N}$ larger. Both are machine-precision scale, both are subtracted off in step 9, and a retry loop (below) escalates $\nu$ if Cholesky fails.</li>
+</ul>
+<pre><code class="language-python">for _ in range(4):
+    y_nu = y + nu * omega                       # step 5
+    try:
+        c = sla.cholesky(omega.T @ y_nu, lower=False)  # step 6
+        break
+    except np.linalg.LinAlgError:
+        nu *= 100.0
+else:
+    raise np.linalg.LinAlgError(...)
+</code></pre>
+<ul>
+<li><strong>Step 5</strong> (line 114): $Y_\nu = Y + \nu\,\Omega = (A + \nu I)\,\Omega$ — sketching the shifted matrix instead. Since $A + \nu I \succ 0$ strictly, the core matrix $\Omega^{\mathsf T} Y_\nu = \Omega^{\mathsf T}(A+\nu I)\Omega$ is SPD, so a Cholesky factorization exists in exact arithmetic.</li>
+<li><strong>Step 6</strong> (lines 113–124): upper-triangular Cholesky $C^{\mathsf T} C = \Omega^{\mathsf T} Y_\nu$, with the paper's remark implemented as a retry loop: on failure, $\nu \mathrel{*}= 100$ and retry, up to 4 attempts, then raise with the diagnostic that $A$ is probably not symmetric PSD.</li>
+</ul>
+<pre><code class="language-python">b_mat = sla.solve_triangular(c, y_nu.T, trans=&quot;T&quot;, lower=False).T  # step 7
+u, sigma, _ = np.linalg.svd(b_mat, full_matrices=False)           # step 8
+lams = np.maximum(0.0, sigma**2 - nu)                             # step 9
+</code></pre>
+<ul>
+<li><strong>Step 7</strong> (line 127): $B = Y_\nu C^{-1}$, computed via the triangular solve $C^{\mathsf T} B^{\mathsf T} = Y_\nu^{\mathsf T}$ (never forming $C^{-1}$). Why this works: the shifted Nyström approximation is
+  $$
+  \widehat{A_\nu} = Y_\nu\,(\Omega^{\mathsf T} Y_\nu)^{-1} Y_\nu^{\mathsf T}
+  = Y_\nu C^{-1} C^{-\mathsf T}\, Y_\nu^{\mathsf T} = B B^{\mathsf T},
+  $$
+  so the eigendecomposition of $\widehat{A_\nu}$ is obtained from a <strong>thin SVD of the tall matrix $B$</strong> — a backward-stable computation on an $n\times\ell$ matrix — instead of an explicit pseudoinverse of an ill-conditioned $\ell\times\ell$ core.</li>
+<li><strong>Step 8</strong> (line 128): $B = U\Sigma V^{\mathsf T}$, giving $\widehat{A_\nu} = U\Sigma^2 U^{\mathsf T}$.</li>
+<li><strong>Step 9</strong> (line 129): remove the shift, $\hat\lambda_j = \max(0,\, \sigma_j^2 - \nu)$. The subtraction undoes the $+\nu I$ from step 5; the clip at 0 keeps $\hat{A} = U\,\mathrm{diag}(\hat\lambda)\,U^{\mathsf T}$ PSD when a $\sigma_j^2$ falls below $\nu$ (i.e. when the sketch has resolved nothing beyond the artificial shift in that direction).</li>
+</ul>
+<p><strong>The $\mu = 0$ guard</strong> (lines 135–148, rationale in the docstring lines 54–62). Step 9's clip can produce exact zeros, and the preconditioner formula below divides by $\hat\lambda_j + \mu$ — singular at $\mu = 0$. The implementation <strong>drops</strong> nonpositive eigenpairs rather than flooring them: since <code>sigma</code> is descending, positives form a prefix, and <code>rank_eff = count_nonzero(lams &gt; 0)</code> (line 137, only at $\mu=0$; at $\mu&gt;0$ all <code>rank</code> pairs are kept). Dropping treats unresolved directions as part of $\mathrm{range}(U)^\perp$, on which $P$ acts as the identity anyway — structurally consistent with Eq. (17) — whereas flooring at $\nu$ would inject a machine-precision scale ($\sim 10^{-12}$) into the preconditioned spectrum and destroy it. In the degenerate case where <em>everything</em> is dropped ($\hat{A}=0$ at $\mu=0$), the preconditioner degrades to the identity (lines 139–143). In our runs on the PD Laplacian this guard never fires: all sketch eigenvalues are far above $\nu$, so <code>rank_eff == rank</code> throughout.</p>
+<h2 id="3-the-preconditioner-xmathphx81xendx-and-its-inverse">3. The preconditioner $P$ and its inverse</h2>
+<p>With $\hat{A} = U\hat\Lambda U^{\mathsf T}$ ($U$ orthonormal, $n\times\ell$), $\hat\lambda_\ell$ the smallest retained Nyström eigenvalue, and regularizer $\mu \ge 0$ for the system $(A+\mu I)x = b$, the paper's preconditioner (Eq. 17; first displayed as Eq. 3) is</p>
+<p>$$
+P \;=\; \frac{1}{\hat\lambda_\ell + \mu}\, U\,(\hat\Lambda + \mu I)\,U^{\mathsf T} \;+\; \big(I - UU^{\mathsf T}\big),
+\qquad
+P^{-1} \;=\; (\hat\lambda_\ell + \mu)\, U\,(\hat\Lambda + \mu I)^{-1} U^{\mathsf T} \;+\; \big(I - UU^{\mathsf T}\big).
+$$</p>
+<p>(Inverse by inspection: $P$ acts as the scalar $(\hat\lambda_j+\mu)/(\hat\lambda_\ell+\mu)$ on the $j$-th column of $U$ and as the identity on $\mathrm{range}(U)^\perp$; both actions invert independently.)</p>
+<p><strong>Matrix-free apply</strong> (<a href="../python/nystrom.py">python/nystrom.py</a> lines 150–172): folding the two terms,</p>
+<p>$$
+P^{-1}r \;=\; U\Big[(\hat\lambda_\ell+\mu)(\hat\Lambda+\mu I)^{-1} - I\Big]U^{\mathsf T} r \;+\; r
+\;=\; U\,(d \odot U^{\mathsf T} r) \;+\; r,
+\qquad
+d_j = \frac{\hat\lambda_\ell + \mu}{\hat\lambda_j + \mu} - 1,
+$$</p>
+<p>which is exactly lines 169–170 (<code>w = self._u_act.T @ r; return self._u_act @ (self._d * w) + r</code>), with $d$ precomputed once at line 148. Cost per application: two skinny GEMVs, $O(n\,\ell_{\text{eff}})$, no $n\times n$ objects ever formed. <code>__call__ = apply</code> (line 172) lets the object drop directly into <code>pcg(A, b, M=pre)</code> (<a href="../python/pcg.py">python/pcg.py</a> line 15).</p>
+<h3 id="why-xmathphx96xendx-deflates-the-top-of-the-spectrum-to-xmathphx97xendx">Why $P$ deflates the top of the spectrum to $\approx \hat\lambda_\ell$</h3>
+<p>Consider first the <strong>idealized</strong> case where the Nyström factors are exact: $U$ = the top-$\ell$ eigenvectors of $A$ and $\hat\lambda_j = \lambda_j$. Then $A + \mu I$ and $P$ commute, and the preconditioned operator's eigenvalues are, mode by mode (eigenvalues of $A$ in descending order $\lambda_1 \ge \cdots \ge \lambda_n$):</p>
+<ul>
+<li><strong>Top modes</strong> $j \le \ell$: $P$ scales mode $j$ by $(\lambda_j+\mu)/(\lambda_\ell+\mu)$, so $P^{-1}(A+\mu I)$ has eigenvalue
+  $$
+  \frac{(\lambda_\ell + \mu)(\lambda_j + \mu)}{\lambda_j + \mu} \;=\; \lambda_\ell + \mu
+  \qquad\text{— the entire top of the spectrum collapses to the single value } \lambda_\ell + \mu .
+  $$</li>
+<li><strong>Bottom modes</strong> $j &gt; \ell$: $P$ acts as the identity, eigenvalue $\lambda_j + \mu$ unchanged.</li>
+</ul>
+<p>So the preconditioned spectrum is $\{\lambda_\ell+\mu\ (\text{multiplicity }\ell)\} \cup \{\lambda_{\ell+1}+\mu, \dots, \lambda_n+\mu\}$, whose maximum is the deflated cluster $\lambda_\ell+\mu$ (since $\lambda_\ell \ge \lambda_{\ell+1}$), giving</p>
+<p>$$
+\kappa\big(P^{-1/2}(A+\mu I)P^{-1/2}\big) \;=\; \frac{\lambda_{\ell} + \mu}{\lambda_n + \mu}.
+$$</p>
+<p>The <strong>optimal rank-$\ell$ deflation preconditioner</strong> of the paper's Sec. 5.1 normalizes by $\lambda_{\ell+1}+\mu$ instead of $\lambda_\ell+\mu$, parking the deflated modes at $\lambda_{\ell+1}+\mu$ — flush with the top of the untouched part of the spectrum — and achieving the slightly better</p>
+<p>$$
+\kappa_{\text{opt}} \;=\; \frac{\lambda_{\ell+1} + \mu}{\lambda_n + \mu},
+$$</p>
+<p>a hard floor: no rank-$\ell$ preconditioner of this form can do better. (On our spectrum $\lambda_\ell \approx \lambda_{\ell+1}$ — the top is dense, §5 — so the two normalizations are practically indistinguishable.) The experiment script computes this floor exactly at line 104 of <a href="../python/experiments/run_nystrom.py">python/experiments/run_nystrom.py</a> (<code>kappa_opt = eigs_a[::-1][rank] / eigs_a[0]</code>) and stores it as <code>kappa_optimal_rank_ell</code> in <a href="../results/nystrom.json">results/nystrom.json</a>.</p>
+<p>The real Nyström $P$ replaces the unknown $\lambda_{\ell+1}$ by the computable proxy $\hat\lambda_\ell$ (which satisfies $\hat\lambda_\ell \le \lambda_\ell$ by Lemma 2.1) and uses randomized estimates $U, \hat\Lambda$ instead of exact eigenpairs; the sketch error $E = A - \hat{A}$ leaks un-deflated energy back into the top of the spectrum, so the measured $\kappa$ sits <em>between</em> the optimal floor and the unpreconditioned value — precisely what the numbers in §6 show.</p>
+<p><strong>The choice of the $(\hat\lambda_\ell+\mu)$ normalization</strong> is what makes $P$ act as the identity on $\mathrm{range}(U)^\perp$ <em>in a spectrally consistent way</em>: the deflated modes land at $\hat\lambda_\ell + \mu$, which abuts the untouched part of the spectrum ($\lambda_{\ell+1}+\mu \le \lambda_\ell + \mu \approx \hat\lambda_\ell + \mu$) instead of opening a gap. Their Proposition 5.3 turns this into a deterministic bound on $\kappa(P^{-1/2}A_\mu P^{-1/2})$ in terms of $\hat\lambda_\ell$, $\mu$, and $\lVert E\rVert$.</p>
+<h3 id="exact-evaluation-of-the-preconditioned-spectrum">Exact evaluation of the preconditioned spectrum</h3>
+<p>Since $P^{-1}$ has a closed-form eigendecomposition, so does its principal square root:</p>
+<p>$$
+P^{-1/2} \;=\; I + U\big(\sqrt{s} - 1\big)U^{\mathsf T},
+\qquad s_j = \frac{\hat\lambda_\ell + \mu}{\hat\lambda_j + \mu},
+$$</p>
+<p>implemented in <code>preconditioned_spectrum</code> (<a href="../python/experiments/run_nystrom.py">python/experiments/run_nystrom.py</a> lines 39–66). The experiment forms the dense $1024\times1024$ product $P^{-1/2} A P^{-1/2}$, symmetrizes it ($\tfrac12(S+S^{\mathsf T})$, killing roundoff asymmetry), and calls <code>eigvalsh</code> — guaranteed-real eigenvalues, unlike a nonsymmetric <code>eig(P^{-1}A)</code>. Every <code>kappa_precond</code> quoted below is an <strong>exact dense eigensolve</strong>, not an estimate.</p>
+<h2 id="4-theory-effective-dimension-and-where-the-guarantees-live">4. Theory: effective dimension and where the guarantees live</h2>
+<p>The paper's headline result (Theorem 5.1): define the <strong>effective dimension</strong></p>
+<p>$$
+d_{\mathrm{eff}}(\mu) \;=\; \operatorname{tr}\!\big(A(A+\mu I)^{-1}\big) \;=\; \sum_{j=1}^{n} \frac{\lambda_j}{\lambda_j + \mu},
+$$</p>
+<p>the "number of eigenvalues that matter at regularization level $\mu$." If the sketch size satisfies $\ell = 2\lceil 1.5\, d_{\mathrm{eff}}(\mu)\rceil + 1$, then</p>
+<p>$$
+\mathbb{E}\,\kappa\big(P^{-1/2}(A+\mu I)P^{-1/2}\big) \;&lt;\; 28,
+$$</p>
+<p>i.e. PCG converges in $O(1)$ iterations <em>independent of $n$ and of $\kappa(A)$</em> (the constant 28 gives a residual reduction factor $\approx (\sqrt{28}-1)/(\sqrt{28}+1) \approx 0.68$ per iteration, ~60 iterations for $10^{-10}$). The docstring of <a href="../python/nystrom.py">python/nystrom.py</a> records this prescription at lines 72–73.</p>
+<p>The theorem is powerful exactly when $d_{\mathrm{eff}}(\mu) \ll n$, which happens when the spectrum decays fast past some index, or $\mu$ is large enough to drown the tail — the regularized least-squares / kernel-ridge regime the paper targets.</p>
+<p><strong>Our experiment sits deliberately outside this regime.</strong> We solve the pure Poisson system, $\mu = 0$, where $d_{\mathrm{eff}}(0) = \operatorname{rank}(A) = n^2 = 1024$ — the full dimension. The theorem's prescription would be $\ell = 2\lceil 1.5 \cdot 1024\rceil + 1 = 3073$ test vectors for a $1024$-dimensional problem, i.e. the theory declines to promise anything at any useful rank. Even artificially regularizing doesn't help: computing $d_{\mathrm{eff}}$ from the analytic Laplacian spectrum (verified in <a href="02-eigenvalues.html">02-eigenvalues.md</a>) gives $d_{\mathrm{eff}}(\mu) = 1014.4$ at $\mu = \lambda_{\min} = 19.72$, $987.7$ at $\mu = 0.01\lambda_{\max}$, and still $322.2$ at the absurd $\mu = \lambda_{\max} = 8692.3$. There is no $\mu$ at which this operator has a small effective dimension — which is a statement about the <em>shape</em> of its spectrum:</p>
+<h2 id="5-why-the-laplacian-is-the-adversarial-case">5. Why the Laplacian is the adversarial case</h2>
+<p>From <a href="02-eigenvalues.html">02-eigenvalues.md</a>: the eigenvalues of $A$ are</p>
+<p>$$
+\lambda_{k,l} \;=\; \frac{4}{h^2}\left[\sin^2\!\frac{k\pi}{2(n+1)} + \sin^2\!\frac{l\pi}{2(n+1)}\right],
+\qquad k,l = 1,\dots,n,\quad h = \tfrac{1}{n+1},
+$$</p>
+<p>verified numerically to $2.73\times10^{-11}$ against the dense eigensolve. For $n=32$: $\lambda_{\min} = 19.724$, $\lambda_{\max} = 8692.28$, $\kappa = 440.69$.</p>
+<p>The number of eigenvalues <strong>below</strong> a level $t$ grows like the area of a quarter disk in $(k,l)$ frequency space (Weyl counting), so the counting function is <em>concave from below</em> — eigenvalues are <strong>sparse at the bottom and dense at the top</strong>. Concretely, from the analytic spectrum:</p>
+<ul>
+<li><strong>528 of 1024</strong> eigenvalues (51.6%) exceed $\lambda_{\max}/2$;</li>
+<li><strong>64</strong> eigenvalues exceed $0.9\,\lambda_{\max}$;</li>
+<li>deflating the top 16 modes lowers the top of the spectrum only to $\lambda_{17} = 8460.0 = 0.973\,\lambda_{\max}$;</li>
+<li>deflating the top <strong>256 modes — a quarter of the entire spectrum</strong> — only reaches $\lambda_{257} = 5885.9 = 0.677\,\lambda_{\max}$.</li>
+</ul>
+<p>Nyström preconditioning is top-down surgery: it flattens the largest $\ell$ eigenvalues and leaves the rest. On a spectrum that decays slowly <em>from the top</em>, the optimal-deflation floor $\kappa_{\text{opt}}(\ell) = \lambda_{\ell+1}/\lambda_{\min}$ barely moves:</p>
+<table>
+<thead>
+<tr>
+<th>rank $\ell$</th>
+<th>$\lambda_{\ell+1}$</th>
+<th>$\kappa_{\text{opt}} = \lambda_{\ell+1}/\lambda_{\min}$</th>
+<th>vs $\kappa(A) = 440.69$</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>16</td>
+<td>8460.02</td>
+<td>428.91</td>
+<td>−2.7%</td>
+</tr>
+<tr>
+<td>64</td>
+<td>7804.27</td>
+<td>395.67</td>
+<td>−10.2%</td>
+</tr>
+<tr>
+<td>128</td>
+<td>7093.02</td>
+<td>359.61</td>
+<td>−18.4%</td>
+</tr>
+<tr>
+<td>256</td>
+<td>5885.92</td>
+<td>298.41</td>
+<td>−32.3%</td>
+</tr>
+</tbody>
+</table>
+<p>(The $\kappa_{\text{opt}}$ column is <code>kappa_optimal_rank_ell</code> in <a href="../results/nystrom.json">results/nystrom.json</a>; the $\lambda_{\ell+1}$ values are from the analytic formula and match.) Even a <em>perfect</em> rank-256 deflation — exact top eigenvectors, zero sketch error — would leave $\kappa = 298$, predicting an iteration reduction of only $\sqrt{298/441} \approx 18\%$. <strong>The flat top of the Laplacian spectrum, not the randomized sketch, is what caps the achievable gain</strong> — this is spelled out in the comment at <a href="../python/experiments/run_nystrom.py">python/experiments/run_nystrom.py</a> lines 98–103 and in the module docstring of <a href="../python/nystrom.py">python/nystrom.py</a> lines 13–20, both written <em>before</em> the run as the honest expectation.</p>
+<p>Note the contrast with what CG itself exploits: CG loves <em>clustered</em> eigenvalues anywhere in the spectrum and effectively deflates well-separated extremes on its own (see <a href="04-krylov-and-pcg.html">04-krylov-and-pcg.md</a>). A preconditioner that turns "top 128 spread over $[7093, 8692]$" into "128 copies of $\hat\lambda_{128}$" barely changes what the Chebyshev bound sees, and CG was already handling that dense top cluster efficiently.</p>
+<h2 id="6-rank-sweep-results">6. Rank sweep results</h2>
+<p>Setup (<a href="../python/experiments/run_nystrom.py">python/experiments/run_nystrom.py</a> lines 69–115): <code>poisson_2d(32)</code> ($N=1024$), GRF right-hand side <code>grf_rhs(32, alpha=2.0, tau=3.0, seed=42)</code> (see <a href="03-gaussian-random-fields.html">03-gaussian-random-fields.md</a>), $\mu = 0$ (valid: $A$ is positive definite), Nyström seed 0, PCG from <a href="../python/pcg.py">python/pcg.py</a> to relative residual $10^{-10}$, <code>maxiter</code> 2000.</p>
+<p>From <a href="../results/nystrom.json">results/nystrom.json</a>, with wall/setup times from <a href="../results/results.json">results/results.json</a> (<code>canonical.cg_nystrom_rank*</code>):</p>
+<table>
+<thead>
+<tr>
+<th>method</th>
+<th>iterations</th>
+<th>final relres</th>
+<th>$\kappa$ exact (preconditioned)</th>
+<th>$\kappa_{\text{opt}}$ (rank-$\ell$ floor)</th>
+<th>setup (s)</th>
+<th>solve wall (s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CG (none)</td>
+<td><strong>116</strong></td>
+<td>6.667e-11</td>
+<td>440.69</td>
+<td>—</td>
+<td>0</td>
+<td>0.00117</td>
+</tr>
+<tr>
+<td>Nyström rank 16</td>
+<td>123</td>
+<td>9.518e-11</td>
+<td>439.62</td>
+<td>428.91</td>
+<td>0.00074</td>
+<td>0.00184</td>
+</tr>
+<tr>
+<td>Nyström rank 64</td>
+<td>123</td>
+<td>8.005e-11</td>
+<td>434.52</td>
+<td>395.67</td>
+<td>0.00418</td>
+<td>0.00188</td>
+</tr>
+<tr>
+<td>Nyström rank 128</td>
+<td>122</td>
+<td>7.727e-11</td>
+<td>426.58</td>
+<td>359.61</td>
+<td>0.01156</td>
+<td>0.00200</td>
+</tr>
+<tr>
+<td>Nyström rank 256</td>
+<td>119</td>
+<td>9.183e-11</td>
+<td>407.46</td>
+<td>298.41</td>
+<td>0.02384</td>
+<td>0.00233</td>
+</tr>
+</tbody>
+</table>
+<p>All four preconditioned solves converge and match <code>spsolve</code> to <code>relerr</code> ≤ 2.6e-11 (worst case 2.54e-11, at rank 256; <a href="../results/results.json">results/results.json</a>). Three observations, in increasing order of interest:</p>
+<p><strong>(a) Measured $\kappa$ sits between the optimal floor and $\kappa(A)$, closer to $\kappa(A)$.</strong> At rank 128: 426.58 measured vs 359.61 optimal vs 440.69 unpreconditioned — the sketch recovers only ~17% of the (already small) available gain. This is the Lemma 2.1 undershoot plus sketch error at work: with no spectral gap anywhere in the dense top of the spectrum, the Gaussian sketch's eigenvector estimates mix heavily among near-degenerate modes, $\hat\lambda_j$ undershoots $\lambda_j$, and the residual $E = A - \hat{A}$ keeps un-deflated energy near the top.</p>
+<p><strong>(b) All Nyström variants take MORE iterations than plain CG despite smaller exact $\kappa$.</strong> The $\sqrt{\kappa}$ heuristic predicts $116 \cdot \sqrt{\kappa_P/440.69} = \{115.9,\ 115.2,\ 114.1,\ 111.5\}$ iterations for ranks $\{16,64,128,256\}$; measured is $\{123, 123, 122, 119\}$ — a consistent ~7-iteration penalty. $\kappa$ bounds are worst-case over eigenvalue <em>distributions</em>; actual CG iteration count depends on the whole distribution. The preconditioner slightly <em>smears</em> the spectrum (randomized $\hat\lambda_j$ scatter the deflated modes around $\hat\lambda_\ell$ rather than collapsing them onto one point, and perturb the complement through $E$), degrading the clustering that plain CG was exploiting, and at this scale that loss outweighs the 0.2–7.5% $\kappa$ gain. Wall-clock tells the same story with interest: every Nyström solve is slower per-iteration too (the $O(N\ell)$ apply), so rank 256 costs 0.0238 s setup + 0.0023 s solve vs plain CG's 0.0012 s total — a net <strong>22× slowdown</strong> for a nominally better $\kappa$.</p>
+<p><strong>(c) The sanity-check anomaly.</strong> The suite's strict check "Nyström iterations strictly decrease with rank" <strong>fails</strong>: the counts $[123, 123, 122, 119]$ tie between ranks 16 and 64 (<a href="../results/results.json">results/results.json</a> → <code>sanity_checks.nystrom_strictly_decreasing_with_rank: false</code>). The relaxed check — non-increasing with a strict overall decrease — passes (<code>nystrom_noninc_and_overall_decrease: true</code>) and is the one asserted in <code>run_all.py</code>; the strict version is computed and reported rather than crashing the suite. The tie is exactly what the $\kappa$ column predicts: between ranks 16 and 64 the exact condition number moves only from 439.62 to 434.52 (1.2%), i.e. $\sqrt{\kappa}$ moves by 0.6% — a predicted gap of ~0.7 iterations, below one iteration of resolution. See <a href="08-results.html">08-results.md</a> for the full sanity-check table.</p>
+<p><img alt="Nyström-PCG convergence, ranks 16–256 vs plain CG" src="../figures/nystrom_convergence.png" /></p>
+<p>The convergence histories are near-indistinguishable for the first ~100 iterations — the black CG(none) curve is hidden under the colored ones — and the curves only fan out in the last decade, where rank 256 (red) finishes at 119 and the low ranks trail to 123. The preconditioner is doing <em>almost exactly nothing</em>, visually.</p>
+<p><img alt="Spectrum of A vs preconditioned system, rank 128" src="../figures/nystrom_spectrum.png" /></p>
+<p>The spectrum plot is the punchline: $\lambda_j(P^{-1/2}AP^{-1/2})$ (orange) runs just below $\lambda_j(A)$ (blue) — a visible but modest depression that is not confined to the deflated top 128 indices but smears over roughly the top ~600–700 of 1024 (the sketched eigenvectors mix among near-degenerate modes, spreading the deflation down-spectrum) — before the two curves merge on the tail. Nowhere does the spectrum change shape. Compare the NPO spectrum figure in <a href="06-neural-preconditioner.html">06-neural-preconditioner.md</a>, where the preconditioned eigenvalue spread collapses from 440.7 to 12.6 — <em>that</em> is what a spectrum-transforming preconditioner looks like; this is what deflation on a flat-top spectrum looks like.</p>
+<h2 id="7-mathematica-implementation">7. Mathematica implementation</h2>
+<p><a href="../mathematica/nystrom_pcg.wls">mathematica/nystrom_pcg.wls</a> is an independent implementation against the identical problem (same $A$ construction, same GRF pipeline with <code>SeedRandom[42]</code>, same <code>PCGSolve</code> driver as <code>poisson_pcg.wls</code> — a <code>NestWhile</code> over the 5-tuple $(x, r, p, r{\cdot}z, \text{relres})$ with <code>Sow</code>/<code>Reap</code> residual history, which <a href="../python/pcg.py">python/pcg.py</a> ports statement for statement). Differences worth flagging:</p>
+<ol>
+<li><strong>Shift constant</strong> (line 78): $\nu = \sqrt{N}\,\varepsilon_{\text{mach}}\lVert Y\rVert_F$ — a factor $\sqrt{N}$ more conservative than the paper's Algorithm 1 line <code>nu = eps(norm(Y,'fro'))</code>, which Python follows verbatim. Both are machine-precision-scale; both are removed in step 9.</li>
+<li><strong>Explicit symmetrization before Cholesky</strong> (lines 81–82): <code>CholeskyDecomposition[(M + Transpose[M])/2]</code> where $M = \Omega^{\mathsf T}Y_\nu$ — Mathematica's Cholesky is strict about exact symmetry, whereas SciPy's <code>cholesky(..., lower=False)</code> simply consumes the upper triangle (noted at <a href="../python/nystrom.py">python/nystrom.py</a> lines 110–112), which is an implicit symmetrization.</li>
+<li><strong>Same triangular-solve trick</strong> (line 84): <code>B = Transpose[LinearSolve[Transpose[cholC], Transpose[Ynu]]]</code>, matching Python's <code>solve_triangular(c, y_nu.T, trans="T")</code>.</li>
+<li><strong>Same drop-not-floor guard</strong> (lines 87–90): positions with $\hat\lambda &gt; 0$ are kept, $\hat\lambda_\ell = $ <code>Min[lams]</code> of the retained set.</li>
+<li><strong>Apply as a slot function, not <code>Function[r, ...]</code></strong> (lines 91–93): a named formal parameter <code>r</code> would be captured by the pattern variable <code>r_</code> inside <code>PCGSolve</code>'s <code>pcgStep</code> — a genuine Wolfram-language scoping trap, documented in the comment. The apply is the algebraically identical $\hat\lambda_\ell\, U(\hat\Lambda^{-1}(U^{\mathsf T}r)) + (r - U(U^{\mathsf T}r))$ form of $P^{-1}$ at $\mu=0$ — the two-term form displayed in the paper's Eq. (17), vs Python's folded $d$-vector form; same operator. (The <code>.wls</code> header cites the journal-style <code>Eq. (5.3)</code> for this formula, with $P$ alone as <code>Eq. (1.3)</code> — see the numbering note at the top.)</li>
+</ol>
+<p>The script runs a single sketch size $\ell = 128$ and exports <a href="../figures/mma_nystrom_convergence.png">figures/mma_nystrom_convergence.png</a>; its no-preconditioner baseline reproduces the <strong>115</strong>-iteration CG run of <code>poisson_pcg.wls</code> (final relres $7.379\times10^{-11}$; see <a href="04-krylov-and-pcg.html">04-krylov-and-pcg.md</a>) — one iteration below Python's 116 because the RNG streams differ between Mathematica and NumPy PCG64, so the GRF right-hand side and the sketch are different draws. For the same reason the Mathematica Nyström count (121 at $\ell=128$) needn't match Python's 122 bit-for-bit; the qualitative "no better than plain CG" outcome is the same.</p>
+<h2 id="8-where-nyström-pcg-actually-shines">8. Where Nyström-PCG actually shines</h2>
+<p>The fair scorecard: nothing in §6 contradicts arXiv:2110.02820<span class="citation"> (https://arxiv.org/abs/2110.02820)</span> — we ran the method on the complement of its design envelope, on purpose, as the "slow-decay" endpoint of this repo's preconditioner comparison. The method is built for:</p>
+<ul>
+<li><strong>Kernel ridge regression / regularized least squares</strong> $(K + \mu I)\alpha = y$: kernel matrices (RBF, Matérn) have polynomially or exponentially decaying spectra, and the statistically sensible $\mu$ (e.g. $\mu \sim 10^{-6} n$ in the paper's experiments) makes $d_{\mathrm{eff}}(\mu)$ tens-to-hundreds for $n$ in the tens of thousands. A rank-$O(d_{\mathrm{eff}})$ sketch then certifies $\mathbb{E}\,\kappa &lt; 28$ — condition numbers of $10^7$–$10^9$ collapse to $O(1)$, and CG counts drop from thousands (or non-convergence) to tens. This is the paper's headline experiment class.</li>
+<li><strong>Random-features and Gaussian-process regression, ridge-regularized covariance solves</strong> — same spectral profile: a short steep head, a long thin tail, and an explicit $\mu$ that truncates the tail's contribution to $d_{\mathrm{eff}}$.</li>
+<li>Generally: any SPD solve where (i) the spectrum has <strong>fast decay past some modest index</strong> or a strong regularizer, and (ii) $A$ is available <strong>only through mat-vecs</strong> (dense kernel matrices where ILU-type factorizations are unavailable and even forming $A$ is $O(n^2)$). Setup is $\ell$ mat-vecs + $O(n\ell^2)$, apply is $O(n\ell)$, and the whole pipeline parallelizes trivially.</li>
+</ul>
+<p>Property (ii) is exactly where our winner ILU (5 iterations, <a href="05-classical-preconditioners.html">05-classical-preconditioners.md</a>) is unusable: <code>spilu</code> needs the explicit sparse matrix and a factorization. The methods are not really competitors — ILU exploits sparsity structure, Nyström exploits spectral decay, and the neural preconditioner (<a href="06-neural-preconditioner.html">06-neural-preconditioner.md</a>, NPO, arXiv:2502.01337<span class="citation"> (https://arxiv.org/abs/2502.01337)</span>) amortizes over a problem distribution. The 2-D Laplacian has sparsity and a problem distribution but <em>no spectral decay from the top</em> — so the ranking on this benchmark (ILU ≫ NPO ≫ none ≥ Nyström) says more about the problem than about the methods.</p>
+<p>One caveat the code handles that the benchmark never exercises: at $\mu = 0$ with a genuinely rank-deficient PSD $A$, the theory does not apply at all (their guarantees require $\mu &gt; 0$ or PD $A$); the drop-guard of §2 keeps the implementation well-defined there, degrading gracefully to identity preconditioning.</p>
+<hr />
+<p><em>Previous: <a href="06-neural-preconditioner.html">06-neural-preconditioner.md</a> — Next: <a href="08-results.html">08-results.md</a>. Spectrum facts used here are derived and verified in <a href="02-eigenvalues.html">02-eigenvalues.md</a>; the PCG driver is dissected in <a href="04-krylov-and-pcg.html">04-krylov-and-pcg.md</a>.</em></p>
+</div>
+</body>
+</html>

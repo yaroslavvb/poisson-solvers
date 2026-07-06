@@ -15,3 +15,5 @@ exclude:
   - uv.lock
   - pyproject.toml
   - .python-version
+  - local-site   # offline mirror built by tools/build_local_site.py — not for Pages
+  - tools

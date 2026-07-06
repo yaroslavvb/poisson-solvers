@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Hierarchical Structure of the Inverse</title>
+<style>
+body { margin: 0; color: #1b1f23; background: #fff;
+       font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI",
+             Helvetica, Arial, sans-serif; }
+.page { max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+nav.site { font-size: .85rem; color: #57606a; margin-bottom: 1.5rem;
+           border-bottom: 1px solid #d8dee4; padding-bottom: .5rem; }
+nav.site a { color: #0969da; text-decoration: none; }
+nav.site a:hover { text-decoration: underline; }
+nav.site .sep { margin: 0 .45em; color: #8c959f; }
+h1, h2, h3, h4 { line-height: 1.25; margin: 1.6em 0 .6em; }
+h1 { font-size: 1.9rem; border-bottom: 1px solid #d8dee4;
+     padding-bottom: .3em; margin-top: .2em; }
+h2 { font-size: 1.45rem; border-bottom: 1px solid #eaecef;
+     padding-bottom: .25em; }
+a { color: #0969da; }
+img { max-width: 100%; height: auto; }
+pre { background: #f6f8fa; padding: .9em 1.1em; overflow-x: auto;
+      border-radius: 6px; font-size: .85em; line-height: 1.45; }
+code { font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo,
+       Consolas, monospace; background: #f6f8fa; padding: .1em .3em;
+       border-radius: 4px; font-size: .9em; }
+pre code { background: none; padding: 0; font-size: 1em; }
+table { border-collapse: collapse; margin: 1em 0; display: block;
+        overflow-x: auto; max-width: 100%; }
+th, td { border: 1px solid #d0d7de; padding: .35em .7em; }
+th { background: #f6f8fa; }
+blockquote { margin: 0 0 1em; padding: 0 1em; color: #57606a;
+             border-left: .25em solid #d0d7de; }
+hr { border: none; border-top: 1px solid #d8dee4; margin: 2em 0; }
+.citation { color: #57606a; word-break: break-all; }
+mjx-container[jax="SVG"][display="true"] { overflow-x: auto;
+                                           overflow-y: hidden; }
+</style>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  options: {
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  svg: { fontCache: 'local' }
+};
+</script>
+<script defer src="../vendor/mathjax-tex-svg.js"></script>
+</head>
+<body>
+<div class="page">
+<nav class="site"><a href="../index.html">index</a><span class="sep">&middot;</span><a href="13-preconditioning-as-decoupling.html">&larr; 13-preconditioning-as-decoupling</a><span class="sep">&middot;</span><span>(last report) &rarr;</span></nav>
+<h1 id="the-hierarchical-structure-of-the-inverse">The Hierarchical Structure of the Inverse</h1>
+<h3 id="xmathphx2xendx-is-xmathphx3xendx-numbers-and-xmathphx4xendx-is-dense--yet-the-inverse-compresses-to-xmathphx5xendx-because-every-long-range-dependence-in-the-field-is-squeezed-through-a-separator">$A$ is $O(N)$ numbers and $A^{-1}$ is dense — yet the inverse compresses to $O(N r \log N)$, because every long-range dependence in the field is squeezed through a separator</h3>
+<p><em>The structural sequel to <a href="13-preconditioning-as-decoupling.html">13 §3–4</a>. <a href="09-stiffness-as-precision.html">09</a> said $A^{-1}$ is the covariance of the Gibbs field $u \sim \mathcal N(A^{-1}b, A^{-1})$ and that zeros of the precision are conditional independences; <a href="13-preconditioning-as-decoupling.html">13 §3</a> found the 1-D inverse is exactly a rank-1 triangle and that far 2-D blocks of $A^{-1}$ have numerical rank 11 out of 256; <a href="13-preconditioning-as-decoupling.html">13 §4.1</a> measured $\mathrm{Cov}(u_L, u_R \mid u_I) = 0$ across a two-column separator. This report shows those three facts are one fact — </em><em>conditional independence across a separator is a rank bound on covariance blocks</em><em>, $\Sigma_{LR} = \Sigma_{LI}\Sigma_{II}^{-1}\Sigma_{IR}$, hence $\mathrm{rank}(\Sigma_{LR}) \le \vert I\vert$ — and follows it to its algorithmic conclusion: the </em><em>hierarchical (HODLR / $\mathcal H$-) matrix</em><em> representation of $A^{-1}$ (Hackbusch 1999), built, measured, and run as a preconditioner. Notation is the suite's: $h = 1/(n+1)$, 1-D $A_1 = d_1/h^2$ (<code>laplacian_1d(n)/h**2</code>), 2-D $A = $ <code>poisson_2d(32)</code>, $N = 1024$, $\kappa(A) = 440.69$, hot/cold-rod right-hand side of <a href="11-regressions-and-multiscale.html">11 §6</a>. Every claim is machine-checked by <a href="../python/experiments/hierarchical.py">python/experiments/hierarchical.py</a> (</em><em>31 checks, all PASS</em><em>, ~6 s; every quoted number in <a href="../results/hierarchical.json">results/hierarchical.json</a>); the schematic figures carry their own assertions in <a href="../python/experiments/make_report14_diagrams.py">make_report14_diagrams.py</a>; deviations from the planned story are logged in <code>results/hierarchical.json → deviations</code> and flagged inline. A companion <a href="../interactive/hierarchical-solvers.html">interactive solver race</a> (§5) runs the whole of §4 live in your browser.</em></p>
+<hr />
+<h2 id="1-the-tension-sparse-precision-dense-covariance-compressible-covariance">1. The tension: sparse precision, dense covariance, compressible covariance</h2>
+<p>The suite has lived with an asymmetry since <a href="09-stiffness-as-precision.html">09 §2</a>: the precision matrix $A$ of the temperature field is <strong>4992 nonzeros</strong> — five-point stencil, $O(N)$ numbers — while its inverse, the covariance $\Sigma = A^{-1}$, is a full dense matrix of $N^2 = 1{,}048{,}576$ entries, every one strictly positive (a point source warms the whole plate). Conditional structure is local; marginal structure is global. Storing the solution operator looks hopeless at scale.</p>
+<p>But <a href="13-preconditioning-as-decoupling.html">13 §3</a> already saw the loophole twice without naming it: the 1-D inverse's entire upper triangle is a <em>single outer product</em> ($n^2$ correlations from $O(n)$ numbers), and a far-field $256\times256$ block of the 2-D inverse carries numerical rank 11. Dense does not mean incompressible. The resolution is <strong>hierarchy</strong>: tile $\Sigma$ by a recursive bisection, keep the small diagonal blocks dense, and store every off-diagonal block as a low-rank factorization $UV^\top$. That is the HODLR format (hierarchically off-diagonal low-rank — the weak-admissibility special case of Hackbusch's $\mathcal H$-matrices):</p>
+<p><img alt="HODLR partition of the inverse: dense 64x64 diagonal leaves, low-rank off-diagonal blocks at four scales, the big upper-right block drawn with its thin-U-column, thin-V-row storage pictogram" src="../figures/diagram14_hodlr_partition.png" /></p>
+<p><em>The whole report in one picture: the $1024\times1024$ covariance $\Sigma = A^{-1}$ tiled by 4-level recursive bisection — 16 dense $64\times64$ leaves (red) on the diagonal, 30 low-rank blocks (green) off it. The largest block is $512\times512$ but stored as $U V^\top$ with $2\cdot\tfrac N2\cdot r$ numbers instead of $(N/2)^2$; darker green = bigger block, and the point of the whole construction is that </em><em>the rank does not grow with the block</em><em> ($r$ vs the separator bound 32, §2–3). Total storage $O(Nr\log N)$ instead of $N^2$.</em></p>
+<p>The two questions the picture begs — <em>why</em> are those blocks low-rank, and <em>what does the compressed inverse buy as a solver</em> — are §2 and §4. §3 does the anatomy and the arithmetic.</p>
+<hr />
+<h2 id="2-where-the-low-rank-comes-from-the-separator-theorem">2. Where the low rank comes from: the separator theorem</h2>
+<p>This is the conceptual heart of the report, and it is nothing but <a href="09-stiffness-as-precision.html">09</a>'s Markov property promoted from a statement about <em>conditional</em> dependence to a statement about <em>marginal rank</em>.</p>
+<h3 id="21-conditional-independence-is-a-matrix-factorization">2.1 Conditional independence is a matrix factorization</h3>
+<p>Split the grid as in <a href="13-preconditioning-as-decoupling.html">13 §4.1</a>: $L$ = grid columns 0–14, $I$ = columns 15–16, $R$ = columns 17–31. The five-point stencil has no edge from $L$ to $R$: $\mathrm{nnz}(A_{LR}) = 0$, re-verified here (PASS 3). The GMRF global Markov property (Rue &amp; Held) then says the halves are independent given the interface, and 13 measured exactly that: $\mathrm{Cov}(u_L, u_R \mid u_I) = \Sigma_{LR} - \Sigma_{LI}\Sigma_{II}^{-1}\Sigma_{IR} = 0$. Now read that equation <em>the other way around</em>:</p>
+<p>$$\Sigma_{LR} \;=\; \Sigma_{LI}\,\Sigma_{II}^{-1}\,\Sigma_{IR}.$$</p>
+<p>The left side is the full $480\times480$ marginal cross-covariance of the two halves — the dense, strictly-positive, thoroughly-coupled object of §1. The right side is a product of three matrices whose <strong>inner dimension is $\vert I\vert = 64$</strong>. A product cannot have rank exceeding its inner dimension, so</p>
+<p>$$\mathrm{rank}(\Sigma_{LR}) \;\le\; \vert I\vert.$$</p>
+<p>Machine-checked (PASS 4–5): the identity holds to relative deviation $1.0\times10^{-15}$, and the bound bites hard — the singular values of $\Sigma_{LR}$ fall off a machine-precision cliff, $s_{65}/s_1 = 3.0\times10^{-17}$. In fact the measured numerical rank at $10^{-10}$ is <strong>32, not 64</strong>: the <em>minimal</em> separator is a single grid column (32 nodes — the stencil has no diagonal edges, so one column already blocks every $L$–$R$ path), and the true rank obeys the tighter bound. The two-column bound is loose by exactly the factor 2 the graph predicts.</p>
+<p>Three vocabularies for one theorem:</p>
+<ul>
+<li><strong>Physics.</strong> Every unit of heat exchanged between the left and right halves of the plate flows <em>through the interface</em>. The $480^2$ pairwise thermal responses between $L$ and $R$ are therefore compositions (response of $L$ to the interface) $\circ$ (interface physics) $\circ$ (response of the interface to $R$) — a linear map factoring through a 32-dimensional channel.</li>
+<li><strong>Statistics.</strong> $I$ is a <strong>Markov blanket</strong> separating $L$ from $R$: all dependence between the halves is <em>mediated</em> — $u_L \leftarrow u_I \rightarrow u_R$ — so the cross-covariance is the covariance of two regressions on a shared 32-dimensional predictor. Low rank is what "dependence factors through a bottleneck" looks like in a covariance matrix; it is a factor model (<a href="09-stiffness-as-precision.html">09 §6</a>) that the field imposes on itself.</li>
+<li><strong>Linear algebra.</strong> Block-eliminate: with $A_{LR} = 0$, the $(L,R)$ block of $A^{-1}$ computed from the block $LDL^\top$/Schur factorization is $A_{LL}^{-1}A_{LI}\,S^{-1}\,A_{IR}A_{RR}^{-1}$-shaped — every term threads the $\vert I\vert$-dimensional index. Zero pattern in $A$ $\Rightarrow$ rank pattern in $A^{-1}$.</li>
+</ul>
+<p><img alt="Separator rank schematic: 1-D chain with a one-node separator giving rank 1, 2-D grid with a one-column separator giving rank at most 32, and the identity Sigma_LR = Sigma_LI Sigma_II^-1 Sigma_IR drawn as shapes" src="../figures/diagram14_separator_rank.png" /></p>
+<p><em>The theorem as shapes: the $\vert L\vert\times\vert R\vert$ cross-covariance equals a (tall $\vert L\vert\times\vert I\vert$) $\cdot$ (small $\vert I\vert\times\vert I\vert$) $\cdot$ (wide $\vert I\vert\times\vert R\vert$) product — the whole block is squeezed through the interface. In 1-D the interface is one node (rank 1); on the $32\times32$ grid it is one column of 32 nodes (rank $\le 32$, numerically ~11 for far blocks).</em></p>
+<h3 id="22-the-1-d-base-case-rank-1-and-it-is-13s-semiseparable-identity">2.2 The 1-D base case: rank 1, and it is 13's semiseparable identity</h3>
+<p>On the chain the separator between any contiguous left piece and the rest is a <strong>single node</strong>, so every off-diagonal block of $A_1^{-1}$ must have rank exactly 1. Measured at $n = 64$ (PASS 6): the $32\times32$ block $A_1^{-1}[0{:}32, 32{:}64]$ has $s_2/s_1 = 9.5\times10^{-17}$ — rank 1 to the last bit. And the block is not just <em>some</em> rank-1 matrix: it equals $h\,x_i(1-x_j)$ entrywise to $4.1\times10^{-15}$ (PASS 7) — <strong><a href="13-preconditioning-as-decoupling.html">13 §3</a>'s Gantmacher–Krein semiseparable identity is the one-node-separator theorem</strong>, re-derived from conditional independence. The Brownian-bridge reading (<a href="09-stiffness-as-precision.html">09 §2</a>): given $u$ at one point, past and future of the bridge are independent — a Markov chain's blanket is a single node — so $\mathrm{Cov}(u_i, u_j) = \mathrm{Cov}(u_i, u_m)\mathrm{Var}(u_m)^{-1}\mathrm{Cov}(u_m, u_j)$ for any $m$ between $i$ and $j$: the outer-product structure is mediation, written out.</p>
+<h3 id="23-the-2-d-case-measured-at-every-scale--and-an-honest-surprise">2.3 The 2-D case, measured at every scale — and an honest surprise</h3>
+<p>Apply the theorem to every off-diagonal block of the HODLR partition (lexicographic bisection, leaf 64). A contiguous index block is a band of grid rows; adjacent bands are separated by <strong>one grid row = 32 nodes</strong> (peel the first row of the right band off as $I$: the whole HODLR block is $[\Sigma_{LI}\;\; \Sigma_{LI}\Sigma_{II}^{-1}\Sigma_{IR'}]$, every column in the span of the 32 columns of $\Sigma_{LI}$). So the a-priori bound is <strong>32 at every level</strong>, from the $512\times512$ block down to the $64\times64$ ones. Measured (PASS 8–9):</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">level</th>
+<th style="text-align: right;">block size</th>
+<th style="text-align: right;">blocks (upper)</th>
+<th style="text-align: right;">bound</th>
+<th style="text-align: right;">num. rank @ $10^{-6}$</th>
+<th style="text-align: right;">num. rank @ $10^{-10}$</th>
+<th style="text-align: right;">$s_{33}/s_1$ (max)</th>
+<th style="text-align: right;">$s_{32}/s_1$</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">$512$</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">$4.6\times10^{-16}$</td>
+<td style="text-align: right;">$1.6\times10^{-3}$</td>
+</tr>
+<tr>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">$256$</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">$1.9\times10^{-16}$</td>
+<td style="text-align: right;">$2.3\times10^{-3}$</td>
+</tr>
+<tr>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">$128$</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">$1.1\times10^{-16}$</td>
+<td style="text-align: right;">$5.2\times10^{-3}$</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">$64$</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">$1.2\times10^{-16}$</td>
+<td style="text-align: right;">$1.4\times10^{-2}$</td>
+</tr>
+</tbody>
+</table>
+<p>The bound holds <em>exactly</em> — at every level the spectrum falls off a machine-precision cliff at the separator width 32: $s_{32}$ is the last surviving singular value, and $s_{33}/s_1 \le 4.6\times10^{-16}$. But note the surprise (deviations log, entry 2, and the honest headline of Part A): the numerical rank at both $10^{-6}$ and $10^{-10}$ <strong>equals</strong> the bound. The singular values above the cliff decay <em>slowly</em> — at level 0 they crawl from $1$ down only to $s_{32}/s_1 = 1.6\times10^{-3}$ before plunging sixteen orders of magnitude; at level 3 they barely reach $1.4\times10^{-2}$. For these <strong>adjacent</strong> blocks the compression comes entirely from the separator bound, not from spectral decay. Decay-before-the-cliff belongs to <em>far</em> blocks: the report-13 far block (grid rows 0–7 × 24–31) is re-measured here with numerical rank <strong>11</strong> at $10^{-8}$ ($s_1 = 1.76\times10^{-3}$, successive singular values falling by factors that ease from ≈ 8 down to ≈ 4 over the first ten indices, mean ratio ≈ 6; PASS 10). Distance from the separator is what buys decay; adjacency only buys the hard ceiling.</p>
+<p><img alt="Singular value decay of HODLR off-diagonal blocks: four adjacent-level curves crawling to the exact-rank cliff at 32, the far block decaying geometrically to rank 11, and the 1-D curve cliffing at 1" src="../figures/hierarchical_sval_decay.png" /></p>
+<p><em>The whole of Part A in one plot. Adjacent 2-D blocks (viridis curves, levels 0–3): slow decay, then the exact-rank cliff at $i = 32$ — the separator width of one grid row — with $s_{33}/s_1 \le 4.6\times10^{-16}$. The far block (red): genuine geometric decay, rank 11 at $10^{-8}$ — <a href="13-preconditioning-as-decoupling.html">13 §3</a>'s number reproduced. The 1-D block (grey dotted): cliff at $i = 2$ — a one-node separator. Rank = separator width, at machine precision.</em></p>
+<hr />
+<h2 id="3-hodlr-anatomy-the-tree-the-arithmetic-and-1-d-vs-2-d">3. HODLR anatomy: the tree, the arithmetic, and 1-D vs 2-D</h2>
+<h3 id="31-the-bisection-tree">3.1 The bisection tree</h3>
+<p>The partition of §1's figure is generated by a binary tree on the index set:</p>
+<p><img alt="Recursive bisection tree of indices 0..1023 with leaf size 64: each split spawns one low-rank block pair, the sixteen leaves stay dense" src="../figures/diagram14_tree.png" /></p>
+<p><em>Recursive bisection of $0..1023$, leaf size 64. Each internal node's split spawns one off-diagonal block pair — $\Sigma[0{:}512, 512{:}1024]$ and its mirror at the root, and so on down — giving $1 + 2 + 4 + 8 = 15$ upper blocks of sizes $512, 256, 128, 64$; the 16 leaves keep their $64\times64$ diagonal blocks dense. One block per tree-edge pair plus the leaves tiles all of $\Sigma$, each entry covered exactly once (machine-verified in the experiment's partition check).</em></p>
+<p><strong>Weak admissibility</strong> is the design decision hiding in the picture: HODLR compresses <em>every</em> off-diagonal block, including the ones touching the diagonal — the two index sets are adjacent in the grid, their separator sits right at the boundary, and §2.3 showed the price: rank exactly 32, no decay to exploit below the ceiling. The classical <strong>strong admissibility</strong> condition of $\mathcal H$-matrices (compress a block only when the clusters' distance is comparable to their diameter — Hackbusch 1999, Grasedyck–Hackbusch 2003) keeps near-diagonal blocks dense precisely to avoid this, compressing only blocks like our far one, where rank ~11 is available at $10^{-8}$ and, in the theory, grows only like $\log(1/\varepsilon)$ — this is the fast-multipole far-field idea (smooth far-field kernels admit short expansions) recast as linear algebra.</p>
+<h3 id="32-storage-and-apply-cost-worked-out-xmathphx136xendx-leaf-64-rank-xmathphx137xendx">3.2 Storage and apply cost, worked out ($N = 1024$, leaf 64, rank $r = 8$)</h3>
+<p>Every number below is in <code>results/hierarchical.json → part_b.sweep</code>:</p>
+<ul>
+<li><strong>Dense leaves</strong>: $16 \times 64^2 = 65{,}536$ floats.</li>
+<li><strong>Low-rank blocks</strong>: an $m\times m$ block at rank $r$ costs $2mr$ floats ($U$ and $V$). Summing $m + m$ over the 15 upper blocks gives $1024 + 1024 + 1024 + 1024 = 4096$ per unit of rank (each level's blocks sum to $N$ — that is the $\log$ in $O(Nr\log N)$); storing the mirrored lower factors too (as the apply rule of §5 does) gives $8192\,r$ floats — $65{,}536$ at $r = 8$.</li>
+<li><strong>Total</strong>: $131{,}072$ floats $= 12.5\%$ of $N^2$, an <strong>8.0× compression</strong>; the matrix–vector apply is 2 flops per stored float: $262{,}144$ flops vs the dense $2N^2 = 2{,}097{,}152$ — the same 8×.</li>
+</ul>
+<p>(Deviations log, entry 4: counting both triangles is the honest match to the browser apply; symmetric storage would halve the off-diagonal part.) The asymptotic scaling is the point: storage and apply are $O(Nr\log N)$, so on a $256\times256$ grid ($N = 65{,}536$) the same $r = 8$ format would be ~$0.3\%$ of the dense inverse instead of $12.5\%$. At our toy $N$, hierarchy is a nicety; at PDE scale it is the difference between storable and not.</p>
+<h3 id="33-1-d-vs-2-d-separator-width-1-vs-32">3.3 1-D vs 2-D: separator width 1 vs 32</h3>
+<p>Run the identical partition on the 1-D chain at $N = 1024$: <strong>all 15 upper blocks have rank exactly 1 at $10^{-14}$</strong> (max $s_2/s_1 = 1.1\times10^{-15}$, PASS 12), and the dense inverse matches the closed form $h\min(x_i,x_j)(1-\max(x_i,x_j))$ to $3.3\times10^{-13}$ (PASS 11). Same format, same tree — but in 1-D the "approximation" is exact at rank 1, because the separator is one node at every scale. The structural contrast, side by side:</p>
+<p><img alt="Log-magnitude heatmaps of the 1-D and 2-D inverses under the same HODLR partition: the 1-D inverse smooth within every block, the 2-D inverse showing thick diagonal teeth inside each off-diagonal block" src="../figures/diagram14_1d_vs_2d.png" /></p>
+<p><em>Same partition, different separator: $\log_{10}\vert\Sigma_{ij}\vert$ for the chain (left, $n = 64$) and the grid (right, $N = 64$, i.e. <code>poisson_2d(8)</code>). The 1-D blocks are smooth outer products — rank 1, exactly. The 2-D off-diagonal blocks carry bright diagonal "teeth" — the strong row-$k$-to-row-$k$ correlations that a lexicographic split cannot mediate away — which is exactly the slowly-decaying, ceiling-hitting spectrum of §2.3. The figure's own assertions verify the rank-1 identity ($2.1\times10^{-17}$) and the rank of the 2-D level-0 </em>adjacent<em> block $\Sigma[0{:}32, 32{:}64]$ (8/32 at $10^{-8}$ — exactly this grid's one-row separator bound of 8 nodes, §2.3's hard ceiling rather than far-field decay) before drawing.</em></p>
+<p>So a fair summary of the dimension gap: <strong>1-D inverses are semiseparable (rank 1, exact); 2-D inverses are hierarchically low-rank with teeth</strong> — the rank ceiling is the separator width $n = \sqrt N$, reached at any practical tolerance for adjacent blocks. What the literature does about the teeth:</p>
+<ul>
+<li><strong>Strong admissibility</strong> ($\mathcal H$, Hackbusch 1999; Grasedyck–Hackbusch 2003): keep adjacent blocks dense or recurse into them; compress only well-separated blocks, where §2.3's far-block decay makes rank $O(\log 1/\varepsilon)$ real. More blocks, smaller ranks.</li>
+<li><strong>Nested bases</strong> (HSS / $\mathcal H^2$; Martinsson–Rokhlin 2005): make the $U, V$ factors of a parent expressible through its children's, removing the $\log$ from storage — the linear-algebra form of the fast multipole method's translation operators.</li>
+<li><strong>Nested dissection</strong> (George 1973; and the modern hierarchical solvers built on it — Ho–Ying 2016's hierarchical interpolative factorization factors exactly our $A$ in near-$O(N)$): don't fight the teeth in the inverse, reorder the <em>elimination</em> so that all fill is confined to separators, then compress the separators' Schur complements, which are again hierarchically low-rank.</li>
+</ul>
+<p><img alt="Nested dissection ordering on a 16x16 grid: recursive cross-shaped separators, interiors eliminated first, center cross last" src="../figures/diagram14_nested_dissection.png" /></p>
+<p><em>Nested dissection: eliminate subdomain interiors first (they are conditionally independent given the crosses — §2's theorem again, used as an ordering), separators last. Cholesky fill is confined to separator blocks, and the Schur complements that appear on the separators are themselves hierarchically low-rank — the recursion that powers $O(N\log N)$ direct solvers. This is <a href="09-stiffness-as-precision.html">09 §6</a>'s "fill-in is marginalization-induced dependence", managed by keeping every Markov blanket small.</em></p>
+<hr />
+<h2 id="4-from-structure-to-solver-the-hodlr-preconditioner-sweep">4. From structure to solver: the HODLR preconditioner sweep</h2>
+<p>If $A^{-1}$ is (approximately) a HODLR matrix, then a truncated HODLR copy of it, $M_r \approx A^{-1}$, is an <em>apply-ready approximate inverse</em>: no solve needed, one $O(Nr\log N)$ matvec per application. The experiment builds $M_r$ for $r \in \{1, 2, 4, 8, 16\}$ by truncated SVD of the off-diagonal blocks of the exact dense inverse (dense $64\times64$ leaves kept; upper truncation mirrored to the lower triangle, so $M_r$ is symmetric to the bit — max asymmetry $0.0$, PASS 15) and runs it three ways on the hot/cold-rod problem. All five $M_r$ are SPD (min eigenvalue $1.33\times10^{-4} &gt; 0$ at every rank, PASS 16), so PCG is legitimate throughout. The full sweep (PASS 17–24; error criterion $\Vert x_k - x^\star\Vert/\Vert x^\star\Vert \le 10^{-10}$):</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">$r$</th>
+<th style="text-align: right;">$\dfrac{\Vert M_r - A^{-1}\Vert_2}{\Vert A^{-1}\Vert_2}$</th>
+<th style="text-align: right;">storage (floats)</th>
+<th style="text-align: right;">compression</th>
+<th style="text-align: right;">apply flops</th>
+<th style="text-align: right;">$\kappa(M_r A)$</th>
+<th style="text-align: right;">$\rho$ undamped</th>
+<th style="text-align: right;">$\rho$ damped</th>
+<th style="text-align: right;">PCG its</th>
+<th style="text-align: right;">solve flops to $10^{-10}$</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">$3.2\times10^{-1}$</td>
+<td style="text-align: right;">73,728</td>
+<td style="text-align: right;">14.2×</td>
+<td style="text-align: right;">147,456</td>
+<td style="text-align: right;">46.58</td>
+<td style="text-align: right;">8.486</td>
+<td style="text-align: right;">0.958</td>
+<td style="text-align: right;">45</td>
+<td style="text-align: right;">7,787,264</td>
+</tr>
+<tr>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">$1.5\times10^{-1}$</td>
+<td style="text-align: right;">81,920</td>
+<td style="text-align: right;">12.8×</td>
+<td style="text-align: right;">163,840</td>
+<td style="text-align: right;">23.42</td>
+<td style="text-align: right;">5.260</td>
+<td style="text-align: right;">0.918</td>
+<td style="text-align: right;">36</td>
+<td style="text-align: right;">6,865,920</td>
+</tr>
+<tr>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">$4.8\times10^{-2}$</td>
+<td style="text-align: right;">98,304</td>
+<td style="text-align: right;">10.7×</td>
+<td style="text-align: right;">196,608</td>
+<td style="text-align: right;">9.64</td>
+<td style="text-align: right;">2.703</td>
+<td style="text-align: right;">0.812</td>
+<td style="text-align: right;">27</td>
+<td style="text-align: right;">6,108,416</td>
+</tr>
+<tr>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">$1.1\times10^{-2}$</td>
+<td style="text-align: right;">131,072</td>
+<td style="text-align: right;">8.0×</td>
+<td style="text-align: right;">262,144</td>
+<td style="text-align: right;">3.85</td>
+<td style="text-align: right;">1.153</td>
+<td style="text-align: right;">0.588</td>
+<td style="text-align: right;">18</td>
+<td style="text-align: right;">5,383,680</td>
+</tr>
+<tr>
+<td style="text-align: right;">16</td>
+<td style="text-align: right;">$2.2\times10^{-3}$</td>
+<td style="text-align: right;">196,608</td>
+<td style="text-align: right;">5.3×</td>
+<td style="text-align: right;">393,216</td>
+<td style="text-align: right;">1.95</td>
+<td style="text-align: right;">0.443</td>
+<td style="text-align: right;">0.322</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: right;">4,965,632</td>
+</tr>
+</tbody>
+</table>
+<p><em>Flop accounting for the last column (PASS 30; apply cost independently recounted from the exported block lists): one PCG iteration = one $A$-matvec ($2\,\mathrm{nnz}(A) = 9{,}984$) + one $M_r$-apply ($2\times$ storage: dense block $2mn$, low-rank $2k(m+n_c)$) + six $2N$-flop vector operations ($12N = 12{,}288$), counted off <code>pcg.py</code>'s actual loop; setup adds one apply and one dot; total = iterations $\times$ per-iteration + setup. Offline construction of $M_r$ is excluded (finding 3). Plain CG under the identical model: $22{,}272$ flops/iteration $\times$ 73 iterations = </em><em>1,627,904</em><em> total.</em></p>
+<p>Baselines re-verified in the same run: plain CG <strong>73</strong> iterations (<a href="13-preconditioning-as-decoupling.html">13 §4.3</a>'s ladder number, PASS 13), block-Jacobi(2) $\kappa = 19.29$, <strong>12</strong> iterations (PASS 14). Everything in the table is monotone in $r$ — error, $\kappa$, iterations — and every PCG run converged to a solution matching <code>spsolve</code> (max final relative error $8.3\times10^{-11}$, PASS 20). Note the error column <em>is</em> §2.3's singular-value curve doing its work: truncating at rank $r$ discards singular values of relative size $\approx s_{r+1}/s_1$ of the level-0 block ($1.5\times10^{-2}$ at $r = 8$ — and $\Vert M_8 - A^{-1}\Vert$ lands at $1.1\times10^{-2}$).</p>
+<p><img alt="HODLR preconditioner sweep: PCG iterations and kappa vs rank on log axes, with plain-CG, block-Jacobi and kappa reference lines" src="../figures/hierarchical_precond_sweep.png" /></p>
+<p>Four honest findings, all logged as deviations and worth more than the monotone columns:</p>
+<ol>
+<li><strong>Block-Jacobi(2) wins the raw iteration race until $r = 16$</strong> (PASS 21–22). The task's naive hypothesis was that $M_8$ ($\kappa = 3.85$) would beat block-Jacobi(2) ($\kappa = 19.29$); it does not — 18 vs 12. The reason is <a href="13-preconditioning-as-decoupling.html">13 §5.3</a>'s lesson verbatim: block-Jacobi's spectrum has <strong>960 of 1024 eigenvalues exactly at 1</strong> ($N - 2\cdot32$ interface pairs), and CG pays per cluster, not per $\kappa$. The HODLR $M_r$ smear their spectra across $[\lambda_{\min}, \lambda_{\max}]$ — for them $\kappa$ is the honest predictor, and indeed its $\approx c\sqrt{\kappa'}$ with $c \in [6.6, 9.2]$ across all five ranks. $\kappa$-wise, HODLR passes block-Jacobi from $r = 4$ (9.64 &lt; 19.29); iteration-wise only at $r = 16$ (11 &lt; 12). Cost caveat in the other direction: one block-Jacobi apply is two <em>exact</em> $512$-dof Poisson solves, while $M_8$ is a 262k-flop matvec — the ladder compares iterations, not seconds.</li>
+<li><strong>Undamped Richardson diverges for $r \le 8$</strong> (PASS 23–24). $x \mapsto x + M_r(b - Ax)$ needs $\lambda_{\max}(M_r A) &lt; 2$; the truncation inflates the top of the spectrum ($\lambda_{\max} = 9.49$ at $r = 1$, $2.15$ at $r = 8$), so $\rho(I - M_rA) &gt; 1$ for $r \in \{1,2,4,8\}$ even though $\kappa$ is small — only $r = 16$ converges undamped ($\rho = 0.443$). Optimal damping $\omega = 2/(\lambda_{\min}+\lambda_{\max})$ fixes every rank at the textbook $\rho = (\kappa-1)/(\kappa+1)$: $0.958, 0.918, 0.812, 0.588, 0.322$. A good preconditioner for CG is not automatically a convergent stationary iteration — SPD-ness guarantees PCG, not Richardson.</li>
+<li><strong>The construction is pedagogical, not production</strong> (<code>part_b.cost_note</code>). Every $M_r$ here is assembled from the exact dense $A^{-1}$ — $O(N^3)$ offline work, which begs the question at scale. The honest claim is only about <em>structure</em>: the inverse admits this format. Building it without ever forming $A^{-1}$ is exactly what $\mathcal H$-arithmetic ($\mathcal H$-LU: Hackbusch 1999, Grasedyck–Hackbusch 2003), recursive skeletonization (Martinsson–Rokhlin 2005), and the hierarchical interpolative factorization (Ho–Ying 2016 — near-$O(N)$, for exactly our operator) do for a living.</li>
+<li><strong>Plain CG wins the raw flops race at $N = 1024$</strong> (PASS 31). The new last column settles what finding 1's caveat hinted at: within the sweep, total solve flops fall <em>monotonically</em> with rank — 7.79M at $r=1$ down to 4.97M at $r=16$ — because iterations drop faster than the apply grows; the flop-optimal HODLR rank here is the largest one tested. But plain CG's 1.63M undercuts every rank: at $\kappa = 440.69$ the problem is simply too benign to amortize a preconditioner whose apply costs $\sim$7–18× a stencil iteration ($M_{16}$: 393k vs 22k flops). The column is the quantitative version of the suite's recurring lesson — iteration counts are not cost — and the regime where hierarchical preconditioning pays is the one this toy cannot reach: $\kappa$ growing as $O(N)$ (report <a href="02-eigenvalues.html">02</a>'s $O(n^2)$ in $n$) while the apply stays $O(Nr\log N)$, or many right-hand sides amortizing one construction.</li>
+</ol>
+<p><strong>The 1-D punchline</strong> (PASS 25–26): at $n = 1024$, the <em>rank-1</em> HODLR inverse equals the exact inverse to $7.9\times10^{-16}$ (storage 73,728 floats, 14.2× compression) — §2.2 said it must — and damped Richardson with it converges in <strong>one iteration</strong> (relative error $1.8\times10^{-15}$ after one step; $\rho(I - MA_1) = 4.6\times10^{-11}$). In 1-D the hierarchical format is not an approximation, so the "preconditioner" is the inverse and the iteration is a direct solve. The 2-D sweep above is what remains of that miracle when the separator grows from 1 node to 32.</p>
+<p><img alt="Animation: temperature estimates of plain GD, CG, PCG with HODLR rank 2 and rank 8, iteration by iteration on the hot/cold-rod field" src="../figures/anim14_hodlr_pcg.gif" /></p>
+<p><em>The sweep as temperature movies (28 frames to $k = 24$; static key frames: <a href="../figures/anim14_hodlr_pcg_frames.png">anim14_hodlr_pcg_frames.png</a>). At $k = 24$: plain GD still carries 62% of the error and barely shows the sink; CG is at $1.7\times10^{-2}$; PCG + $M_2$ at $5.2\times10^{-7}$; PCG + $M_8$ at $1.2\times10^{-14}$ — converged to the eye by $k = 6$ ($9.1\times10^{-5}$), because its preconditioned spectrum spans only $[0.56, 2.15]$.</em></p>
+<p>Where does HODLR land on <a href="13-preconditioning-as-decoupling.html">13 §4.3</a>'s decoupling ladder? By $\kappa$: $M_8$'s 3.85 and $M_{16}$'s 1.95 undercut everything on the ladder (ADI 10.52, block-Jacobi 19.29, two-level 11.05). By iterations: $M_{16}$'s 11 edges out block-Jacobi's 12, the previous champion. By apply cost: a $2Nr\log_2(N/\mathrm{leaf})$-flop matvec, no solves, embarrassingly parallel. The ladder's five axes were all <em>operator</em> splits; this rung is different in kind — it approximates the <em>solution operator directly</em>, in the format §2 proved the solution operator natively has.</p>
+<hr />
+<h2 id="5-the-interactive-visualization">5. The interactive visualization</h2>
+<p><strong><a href="../interactive/hierarchical-solvers.html">Open the interactive solver race</a></strong> (serve the repo over HTTP so the page can fetch its data, e.g. <code>python3 -m http.server</code> from the repo root). The page runs §4 live: five solvers on the same hot/cold-rod problem, entirely in your browser — the matrix is applied as a five-point stencil and never stored, and the two HODLR preconditioners are the <em>actual</em> rank-2 and rank-8 blocks exported by the experiment (<a href="../results/hodlr_viz_data.json">results/hodlr_viz_data.json</a>, 2.61 MB: 46 blocks per rank — 16 dense leaves + 30 $UV^\top$ factors, floats rounded to 7 significant digits; the JS apply rule is machine-checked against the Python $M_r x$ to $2.4\times10^{-7}$, PASS 27–28).</p>
+<p>The five racers: <strong>plain gradient descent</strong>, <strong>CG</strong>, <strong>PCG + HODLR rank-2</strong>, <strong>PCG + HODLR rank-8</strong>, and <strong>damped Richardson + rank-8</strong> ($\omega = 0.7376$, the sweep's optimum — the page notes that undamped Richardson diverges at rank 8, §4's finding 2). Controls: a <strong>frame scrubber</strong> (slider over iterations) + play/step controls — every run is precomputed to convergence at load, the slider spans the full recorded history (0 to gradient descent's 1190), and a method scrubbed past its own convergence holds its final state with a "(converged)" tag; <strong>Play</strong> advances the scrubber at a selectable fps and stops at the end; arrow keys step $\pm 1$ (PageUp/PageDown $\pm 25$); <strong>Reset</strong> returns to $x_0 = 0$; per-method checkboxes hide or show a method's panel and error curve. Each panel renders the current temperature estimate $x_k$ on the $32\times32$ field with a fixed color scale taken from $x^\star$, so the hot spot (NW) and cold spot (SE) fade in at their true amplitudes; below, a shared log-scale chart shows all five full error curves $\Vert x_k - x^\star\Vert/\Vert x^\star\Vert$ against the dashed $10^{-6}$ line, with a vertical marker that follows the scrubbed frame.</p>
+<p>The page also computes an <strong>iterations-to-$10^{-6}$ table</strong> at load time by running each solver to convergence (cap 2000). Verified live in a browser against this build of the data:</p>
+<table>
+<thead>
+<tr>
+<th>method</th>
+<th style="text-align: right;">iterations to $10^{-6}$</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>gradient descent</td>
+<td style="text-align: right;">1190</td>
+</tr>
+<tr>
+<td>CG</td>
+<td style="text-align: right;">54</td>
+</tr>
+<tr>
+<td>PCG + HODLR rank-2</td>
+<td style="text-align: right;">24</td>
+</tr>
+<tr>
+<td>PCG + HODLR rank-8</td>
+<td style="text-align: right;"><strong>10</strong></td>
+</tr>
+<tr>
+<td>Richardson (damped) + rank-8</td>
+<td style="text-align: right;">21</td>
+</tr>
+</tbody>
+</table>
+<p>The CG/PCG counts coincide exactly with the offline error curves in <code>hierarchical.json</code> (first iteration with relative error $\le 10^{-6}$: 54, 24, 10). What to watch for: GD's <em>smooth stall</em> — the field looks right early but the readout crawls, the memoryless $(\kappa-1)/(\kappa+1)$ grind of <a href="13-preconditioning-as-decoupling.html">13 §5.1</a>; CG's <em>global sweeps</em> — visible whole-field corrections as each new Krylov direction lands, with the error dropping in lurches; and the HODLR panels <em>snapping</em> toward the answer — rank-8's first preconditioned step already applies an $8$×-compressed copy of the true solution operator to the residual, so $k = 1$ lands at 6% error and everything after is refinement.</p>
+<hr />
+<h2 id="6-dictionary-delta">6. Dictionary delta</h2>
+<p>Rows appended to <a href="09-stiffness-as-precision.html">09 §8</a> / <a href="13-preconditioning-as-decoupling.html">13 §6</a> — machine-checked in <a href="../python/experiments/hierarchical.py">hierarchical.py</a> except the rows marked †, which are the standard structural analogies:</p>
+<table>
+<thead>
+<tr>
+<th>Numerical linear algebra / PDE</th>
+<th>Statistics / probability</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Off-diagonal block of $A^{-1}$ low-rank: $\Sigma_{LR} = \Sigma_{LI}\Sigma_{II}^{-1}\Sigma_{IR}$, rank $\le \vert I\vert$ (identity to $1.0\times10^{-15}$, cliff $s_{33}/s_1 \le 4.6\times10^{-16}$)</td>
+<td>Dependence between regions factors through a Markov blanket; marginal cross-covariance of two regressions on a shared low-dimensional mediator</td>
+</tr>
+<tr>
+<td>Separator width (1 node in 1-D, one grid row = 32 in 2-D)</td>
+<td>Information bottleneck between the halves of the field; blanket size = number of effective factors carrying all cross-dependence</td>
+</tr>
+<tr>
+<td>Semiseparable 1-D inverse $h\,x_i(1-x_j)$ = one-node-separator rank bound (rank 1 to $9.5\times10^{-17}$)</td>
+<td>Markov chain: conditioning on any single midpoint splits past from future; mediation written as an outer product</td>
+</tr>
+<tr>
+<td>HODLR bisection tree; per-level blocks each summing to $N$ ($O(Nr\log N)$ storage, 8.0× at $r=8$)</td>
+<td>Multiscale factor model: cross-block dependence at every scale explained by $r$ factors per split†</td>
+</tr>
+<tr>
+<td>Weak admissibility (compress adjacent blocks): rank = bound 32, slow decay above the cliff</td>
+<td>Blanket at zero distance: mediation with no smoothing — every blanket dimension carries real information</td>
+</tr>
+<tr>
+<td>Strong admissibility / far-field blocks: rank 11 at $10^{-8}$, geometric decay</td>
+<td>Screening with distance: far dependence rides only the smoothest few factors (<a href="12-autoregressive-preconditioning.html">12 §3</a>, <a href="13-preconditioning-as-decoupling.html">13 §3</a>)</td>
+</tr>
+<tr>
+<td>$\mathcal H$-arithmetic, fast multipole, nested bases†</td>
+<td>Far-field expansions: compress messages between distant regions to few moments</td>
+</tr>
+<tr>
+<td>Nested dissection ordering; fill confined to separators†</td>
+<td>Conditioning order that keeps every Markov blanket small; marginalize interiors first (<a href="09-stiffness-as-precision.html">09 §6</a>'s fill-in row, made recursive)</td>
+</tr>
+<tr>
+<td>$M_r \approx A^{-1}$ apply-ready approximate inverse; $\kappa(M_rA)$: 46.6 → 1.95 for $r$: 1 → 16</td>
+<td>Truncated-factor model of the <em>covariance</em> (not the precision): keep $r$ factors per split of the kriging operator</td>
+</tr>
+<tr>
+<td>SPD but $\lambda_{\max}(M_rA) &gt; 2$: PCG converges, undamped Richardson diverges ($r \le 8$)</td>
+<td>A usable surrogate need not be a contraction; whitening quality and step-size safety are different properties</td>
+</tr>
+<tr>
+<td>960 unit eigenvalues beat $\kappa = 3.85$ (12 vs 18 its)</td>
+<td>Clusters, not spread: CG counts distinct variance scales (<a href="13-preconditioning-as-decoupling.html">13 §5.3</a>), and an exact-on-a-subspace surrogate leaves few scales to learn</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7-pointers">7. Pointers</h2>
+<p>Hierarchical matrices begin with Hackbusch (<em>Computing</em> 62, 1999; the book <em>Hierarchical Matrices: Algorithms and Analysis</em>, 2015); construction and formatted arithmetic ($\mathcal H$-LU) are Grasedyck &amp; Hackbusch (<em>Computing</em> 70, 2003); the guarantee that elliptic inverses admit the format is Bebendorf &amp; Hackbusch (<em>Numer. Math.</em> 95, 2003) — quoted in <a href="13-preconditioning-as-decoupling.html">13 §3</a>, measured here block-by-block. HODLR/HSS direct solvers and recursive skeletonization are Martinsson &amp; Rokhlin (<em>J. Comput. Phys.</em> 205, 2005) and the HSS literature (Chandrasekaran–Gu–Pals; Xia et al.); the hierarchical interpolative factorization for exactly our operator is Ho &amp; Ying (<em>Comm. Pure Appl. Math.</em> 69, 2016). Nested dissection is George (<em>SINUM</em> 10, 1973). Semiseparability of tridiagonal inverses is Gantmacher &amp; Krein (1941) via Vandebril–Van Barel–Mastronardi, as in <a href="13-preconditioning-as-decoupling.html">13 §3</a>. The Markov-blanket calculus is Rue &amp; Held (<em>Gaussian Markov Random Fields</em>, 2005) — the same source as <a href="09-stiffness-as-precision.html">09</a>'s half of the dictionary; the fast multipole reading is Greengard &amp; Rokhlin (1987)†. Siblings: the semiseparable identity and the far-block rank, <a href="13-preconditioning-as-decoupling.html">13 §3</a>; the separator and block-Jacobi(2), <a href="13-preconditioning-as-decoupling.html">13 §4</a>; clusters-beat-$\kappa$, <a href="13-preconditioning-as-decoupling.html">13 §5</a> and <a href="06-neural-preconditioner.html">06</a>; the covariance dictionary, <a href="09-stiffness-as-precision.html">09</a>; the roadmap, <a href="00-overview.html">00</a>.</p>
+<hr />
+<p><strong>Coda.</strong> <a href="09-stiffness-as-precision.html">09</a> ended on "sparse precision, dense covariance" as the field's central asymmetry, and <a href="13-preconditioning-as-decoupling.html">13</a> closed with solving-as-uncoupling. This report is the missing bracket between them: the dense covariance was never unstructured, because every zero in the precision is a mediation statement about the covariance — $\Sigma_{LR} = \Sigma_{LI}\Sigma_{II}^{-1}\Sigma_{IR}$, dependence squeezed through the blanket — and mediation is rank. Recurse that one identity down a bisection tree and the $N^2$-entry inverse collapses to $O(Nr\log N)$ numbers ($131{,}072$ of $1{,}048{,}576$ at $r = 8$), apply-ready, SPD, and worth a $\kappa$ of 3.85 against the raw 440.69; in 1-D, where the blanket is a single node, the collapse is exact at rank 1 and the iteration it powers terminates in one step. The solution operator does not have to be <em>given</em> reduced interactions — it <em>has</em> them, at every scale, in exactly the pattern the stencil's separators dictate; hierarchy is just the bookkeeping that collects them.</p>
+</div>
+</body>
+</html>

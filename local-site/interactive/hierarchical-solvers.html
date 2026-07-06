@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iterative solvers on the hot/cold-rod problem — HODLR preconditioning</title>
+<style>
+  :root {
+    --ink: #1a1a2e;
+    --muted: #667;
+    --line: #d8dbe2;
+    --bg: #fafbfc;
+    --panel: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0 auto;
+    max-width: 900px;
+    padding: 24px 16px 60px;
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+  }
+  h1 { font-size: 1.45em; margin: 0 0 8px; }
+  h2 { font-size: 1.05em; margin: 26px 0 8px; }
+  p.lede { color: var(--muted); margin: 0 0 18px; }
+  a { color: #1a5fb4; }
+  #status { margin: 14px 0; padding: 10px 12px; border-radius: 6px;
+            background: #fff6e0; border: 1px solid #eedca8; display: none; }
+  #status.err { background: #fde8e8; border-color: #f2b8b8; }
+
+  .controls {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+    padding: 12px; margin: 14px 0;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  }
+  .controls button {
+    font: inherit; padding: 6px 16px; border-radius: 6px; cursor: pointer;
+    border: 1px solid #b8bcc6; background: #f2f3f6;
+  }
+  .controls button:hover { background: #e6e8ee; }
+  .controls button.primary { background: #1a5fb4; border-color: #1a5fb4; color: #fff; }
+  .controls button.primary:hover { background: #14497f; }
+  .controls { flex-direction: column; align-items: stretch; }
+  .scrubRow { display: flex; align-items: center; gap: 8px; }
+  .scrubRow input[type=range] { flex: 1; accent-color: #1a5fb4; }
+  .scrubRow button { min-width: 34px; padding: 6px 8px; }
+  #frameVal { min-width: 122px; text-align: right; color: var(--ink); font-weight: 600;
+              font-size: 0.95em; font-variant-numeric: tabular-nums; }
+  .playRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .playRow label { display: flex; align-items: center; gap: 5px;
+                   font-size: 0.85em; color: var(--muted); }
+  .playRow select { font: inherit; font-size: 0.9em; padding: 2px 4px;
+                    border: 1px solid #c6c9d2; border-radius: 4px;
+                    background: #f7f8fa; color: var(--muted); }
+  .keysHint { font-size: 0.8em; color: var(--muted); margin-left: auto; }
+
+  .checks { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 6px 0 2px; }
+  .checks label { display: flex; align-items: center; gap: 6px; cursor: pointer;
+                  font-size: 0.93em; }
+  .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+
+  .panels { display: flex; flex-wrap: wrap; gap: 14px; margin: 14px 0; }
+  .mpanel {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px; width: 214px; text-align: center;
+  }
+  .mpanel h3 { font-size: 0.86em; margin: 0 0 8px; line-height: 1.3; min-height: 2.4em;
+               display: flex; align-items: center; justify-content: center; }
+  .mpanel canvas { width: 192px; height: 192px; image-rendering: pixelated; border: 1px solid var(--line); }
+  .mpanel .cap { font-size: 0.85em; color: var(--muted); margin-top: 6px;
+                 font-variant-numeric: tabular-nums; }
+  .mpanel .cap .tag { color: #1a7f37; opacity: 0.85; }
+  .mpanel .cap .tag.capped { color: #b4540a; }   /* hit CAP without converging */
+
+  #chartWrap { background: var(--panel); border: 1px solid var(--line);
+               border-radius: 8px; padding: 12px; margin: 14px 0; }
+  #chart { width: 100%; height: auto; display: block; }
+
+  table.tol { border-collapse: collapse; margin: 8px 0 4px; width: 100%;
+              background: var(--panel); font-variant-numeric: tabular-nums; }
+  table.tol th, table.tol td { border: 1px solid var(--line); padding: 6px 12px;
+                               text-align: left; font-size: 0.92em; }
+  table.tol th { background: #eef0f4; }
+  table.tol td.num { text-align: right; }
+  .note { font-size: 0.85em; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<h1>Iterative solvers on the hot/cold-rod problem</h1>
+<p class="lede">
+  Five iterative solvers race on the same 32&times;32 discrete Poisson problem
+  (&kappa;(A) &asymp; 441): a +1 heat source near the NW corner and a &minus;1 sink near
+  the SE corner, with the matrix applied as a 5-point stencil and never stored. The two PCG
+  variants use a HODLR approximation of A<sup>&minus;1</sup> &mdash; dense 64&times;64 diagonal
+  leaves plus off-diagonal blocks truncated to rank 2 or rank 8 &mdash; loaded from the exact
+  data exported by the experiments; Richardson uses the same rank-8 preconditioner with the
+  optimal damping &omega; &asymp; 0.7376 (undamped Richardson diverges at rank 8).
+  Every run is precomputed to convergence at load, so the main slider <em>scrubs the shared
+  iteration history</em>: drag it (or press Play) and all five panels plus the chart marker
+  jump to frame k, with converged methods holding their final state.
+  Background and derivations: <a href="../reports/14-hierarchical-inverse.html">report 14 &mdash;
+  the hierarchical structure of the inverse</a>.
+</p>
+
+<div id="status"></div>
+
+<div class="controls">
+  <div class="scrubRow">
+    <button id="minusBtn" aria-label="one iteration back" title="step back (&#8592;)">&minus;</button>
+    <input type="range" id="frame" min="0" max="0" step="1" value="0"
+           aria-label="iteration frame">
+    <button id="plusBtn" aria-label="one iteration forward" title="step forward (&#8594;)">+</button>
+    <span id="frameVal">k = 0 / 0</span>
+  </div>
+  <div class="playRow">
+    <button id="playBtn" class="primary">&#9654; Play</button>
+    <label>fps
+      <select id="fps" aria-label="playback frames per second">
+        <option value="5">5</option>
+        <option value="15">15</option>
+        <option value="30" selected>30</option>
+        <option value="60">60</option>
+      </select>
+    </label>
+    <button id="resetBtn">Reset</button>
+    <span class="keysHint">&#8592;/&#8594; &plusmn;1 &middot; PgUp/PgDn &plusmn;25 &middot; Home/End</span>
+  </div>
+</div>
+
+<div class="checks" id="checks"></div>
+
+<div class="panels" id="panels"></div>
+
+<h2>Relative error vs iteration</h2>
+<div id="chartWrap"><canvas id="chart" width="860" height="340"></canvas></div>
+
+<h2>Iterations to reach rel err 1e-6</h2>
+<table class="tol" id="tolTable">
+  <thead><tr><th>Method</th><th class="num">iterations to 1e-6</th>
+             <th class="num">rel err at that iteration</th></tr></thead>
+  <tbody></tbody>
+</table>
+<p class="note">Computed once at page load by running each solver to convergence
+(relative &#8467;<sup>2</sup> error vs the prefactored solution x*, capped at 2000 iterations).</p>
+
+<!-- OFFLINE PATCH (tools/build_local_site.py): preload the HODLR
+     data as a plain script so this page works from file:// with no
+     network request and no web server. -->
+<script src="../results/hodlr_viz_data.js"></script>
+<script>
+'use strict';
+
+/* ============================ numerics core ============================
+   Pure functions, no DOM: also runnable under node for verification.   */
+
+var TOL = 1e-6, CAP = 2000;
+/* optimal Richardson damping for the rank-8 HODLR preconditioner:
+   omega = 2/(lam_min + lam_max) of M_8 A, from the hierarchical.py sweep
+   (results/hierarchical.json part_b.sweep["8"].omega_opt).  Undamped
+   Richardson has rho(I - M_8 A) > 1 and diverges. */
+var OMEGA8 = 0.7375604774566534;
+
+var G = {};   // n, N, h2, b, xStar, xStarNorm, vmax, hodlr {rank2, rank8}
+
+function setupData(d) {
+  G.n = d.n;
+  G.N = d.n * d.n;
+  var h = 1.0 / (d.n + 1);          // house convention, exact
+  G.h2 = h * h;
+  G.b = Float64Array.from(d.b);
+  G.xStar = Float64Array.from(d.x_star);
+  var s = 0.0, m = 0.0;
+  for (var i = 0; i < G.N; i++) {
+    s += G.xStar[i] * G.xStar[i];
+    var a = Math.abs(G.xStar[i]);
+    if (a > m) m = a;
+  }
+  G.xStarNorm = Math.sqrt(s);
+  G.vmax = m;                        // fixed colormap scale = max|x*|
+  G.hodlr = {
+    rank2: prepBlocks(d.hodlr.rank2),
+    rank8: prepBlocks(d.hodlr.rank8)
+  };
+}
+
+function prepBlocks(raw) {
+  return raw.map(function (blk) {
+    var o = { r0: blk.r0, c0: blk.c0, m: blk.m, nc: blk.nc, type: blk.type };
+    if (blk.type === 'dense') {
+      o.d = Float64Array.from(blk.d);              // m x nc, row-major
+    } else {
+      o.k = blk.k;
+      o.U = Float64Array.from(blk.U);              // m x k, row-major
+      o.V = Float64Array.from(blk.V);              // nc x k, row-major
+      o.t = new Float64Array(blk.k);               // scratch for V^T x
+    }
+    return o;
+  });
+}
+
+/* y = A x : 5-point stencil with 1/h^2, Dirichlet BCs, k = i*n + j (row-major) */
+function applyA(x, y) {
+  var n = G.n, h2 = G.h2;
+  for (var i = 0; i < n; i++) {
+    for (var j = 0; j < n; j++) {
+      var k = i * n + j;
+      var v = 4.0 * x[k];
+      if (i > 0)     v -= x[k - n];
+      if (i < n - 1) v -= x[k + n];
+      if (j > 0)     v -= x[k - 1];
+      if (j < n - 1) v -= x[k + 1];
+      y[k] = v / h2;
+    }
+  }
+}
+
+/* y = M x per the hodlr_viz_data.json BLOCK contract:
+   dense:   y[r0:r0+m] += D @ x[c0:c0+nc]
+   lowrank: y[r0:r0+m] += U @ (V^T @ x[c0:c0+nc])   */
+function applyHodlr(blocks, x, y) {
+  y.fill(0.0);
+  for (var bi = 0; bi < blocks.length; bi++) {
+    var blk = blocks[bi], r0 = blk.r0, c0 = blk.c0, m = blk.m, nc = blk.nc;
+    var i, j, s;
+    if (blk.type === 'dense') {
+      var d = blk.d;
+      for (i = 0; i < m; i++) {
+        s = 0.0;
+        var row = i * nc;
+        for (j = 0; j < nc; j++) s += d[row + j] * x[c0 + j];
+        y[r0 + i] += s;
+      }
+    } else {
+      var k = blk.k, U = blk.U, V = blk.V, t = blk.t;
+      for (var kk = 0; kk < k; kk++) {        // t = V^T x_in
+        s = 0.0;
+        for (j = 0; j < nc; j++) s += V[j * k + kk] * x[c0 + j];
+        t[kk] = s;
+      }
+      for (i = 0; i < m; i++) {               // y_out += U t
+        s = 0.0;
+        var urow = i * k;
+        for (kk = 0; kk < k; kk++) s += U[urow + kk] * t[kk];
+        y[r0 + i] += s;
+      }
+    }
+  }
+}
+
+function dot(u, v) {
+  var s = 0.0;
+  for (var i = 0; i < u.length; i++) s += u[i] * v[i];
+  return s;
+}
+
+function relErr(x) {
+  var s = 0.0;
+  for (var i = 0; i < G.N; i++) {
+    var d = x[i] - G.xStar[i];
+    s += d * d;
+  }
+  return Math.sqrt(s) / G.xStarNorm;
+}
+
+/* --- solver factories: each returns {x, step()} with x0 = 0 ------------ */
+
+function makeGD() {                              // exact line search
+  var N = G.N;
+  var x = new Float64Array(N), r = Float64Array.from(G.b);
+  var Ar = new Float64Array(N);
+  return {
+    x: x,
+    step: function () {
+      applyA(r, Ar);
+      var alpha = dot(r, r) / dot(r, Ar);
+      for (var i = 0; i < N; i++) { x[i] += alpha * r[i]; r[i] -= alpha * Ar[i]; }
+    }
+  };
+}
+
+/* Hestenes-Stiefel PCG, state transition identical to python/pcg.py:
+   Ap; alpha = rz/(p.Ap); x += alpha p; r -= alpha Ap; z = M r;
+   beta = (r.z)/rz_old; p = z + beta p.   M = null means plain CG.     */
+function makePCG(blocks) {
+  var N = G.N;
+  var x = new Float64Array(N), r = Float64Array.from(G.b);
+  var z = new Float64Array(N), p = new Float64Array(N), Ap = new Float64Array(N);
+  if (blocks) applyHodlr(blocks, r, z); else z.set(r);
+  p.set(z);
+  var rz = dot(r, z);
+  return {
+    x: x,
+    step: function () {
+      applyA(p, Ap);
+      var alpha = rz / dot(p, Ap);
+      var i;
+      for (i = 0; i < N; i++) { x[i] += alpha * p[i]; r[i] -= alpha * Ap[i]; }
+      if (blocks) applyHodlr(blocks, r, z); else z.set(r);
+      var rzNew = dot(r, z);
+      var beta = rzNew / rz;
+      for (i = 0; i < N; i++) p[i] = z[i] + beta * p[i];
+      rz = rzNew;
+    }
+  };
+}
+
+function makeRichardson(blocks, omega) {         // x += omega M (b - A x)
+  var N = G.N;
+  var x = new Float64Array(N);
+  var r = new Float64Array(N), z = new Float64Array(N);
+  return {
+    x: x,
+    step: function () {
+      applyA(x, r);
+      for (var i = 0; i < N; i++) r[i] = G.b[i] - r[i];
+      applyHodlr(blocks, r, z);
+      for (i = 0; i < N; i++) x[i] += omega * z[i];
+    }
+  };
+}
+
+var METHODS = [
+  { id: 'gd',    name: 'Gradient Descent',                  color: '#7f7f7f',
+    make: function () { return makeGD(); } },
+  { id: 'cg',    name: 'Conjugate Gradient',                color: '#1f77b4',
+    make: function () { return makePCG(null); } },
+  { id: 'pcg2',  name: 'PCG + HODLR rank-2',                color: '#2ca02c',
+    make: function () { return makePCG(G.hodlr.rank2); } },
+  { id: 'pcg8',  name: 'PCG + HODLR rank-8',                color: '#d62728',
+    make: function () { return makePCG(G.hodlr.rank8); } },
+  { id: 'rich8', name: 'Richardson (damped) + HODLR rank-8', color: '#9467bd',
+    make: function () { return makeRichardson(G.hodlr.rank8, OMEGA8); } }
+];
+
+/* ONE recorded run per method: fresh instance to TOL (cap CAP), storing every
+   iterate.  Frames are display-only Float32Array(1024) copies of the Float64
+   iterate (the solver itself stays double precision — numerics unchanged).
+   Memory-sanity assertion, exact for this data: (1190 + 54 + 24 + 10 + 21)
+   recorded iterations + 5 initial zero frames = 1304 frames x 1024 floats
+   x 4 bytes ~= 5.3 MB total.  Do NOT store Float64 histories — that would
+   double it to ~10.7 MB.  Returns { frames, errs, K, reached } with
+   frames.length === errs.length === K + 1 and frame 0 = the zero guess.    */
+function runRecorded(meth) {
+  var inst = meth.make();
+  var frames = [new Float32Array(inst.x)];   // frame 0: x0 = 0
+  var errs = [relErr(inst.x)];               // rel err 1.0 at x0
+  var it = 0, err = errs[0];
+  while (err > TOL && it < CAP) {
+    inst.step();
+    it++;
+    err = relErr(inst.x);
+    frames.push(new Float32Array(inst.x));
+    errs.push(err);
+  }
+  return { frames: frames, errs: errs, K: it, reached: err <= TOL };
+}
+
+/* ============================== UI layer ============================== */
+
+function boot() {
+  var statusEl = document.getElementById('status');
+  function status(msg, isErr) {
+    statusEl.textContent = msg;
+    statusEl.className = isErr ? 'err' : '';
+    statusEl.style.display = msg ? 'block' : 'none';
+  }
+  /* OFFLINE PATCH (tools/build_local_site.py): data preloaded by
+     ../results/hodlr_viz_data.js into window.HODLR_VIZ_DATA —
+     replaces the runtime JSON request, which browsers block
+     from file://. */
+  if (window.HODLR_VIZ_DATA) {
+    setupData(window.HODLR_VIZ_DATA);
+    status('', false);
+    buildUI();
+  } else {
+    status('Offline data missing: ../results/hodlr_viz_data.js should define window.HODLR_VIZ_DATA. Re-run tools/build_local_site.py.', true);
+  }
+}
+
+function buildUI() {
+  var panelsEl = document.getElementById('panels');
+  var checksEl = document.getElementById('checks');
+  var tbody = document.querySelector('#tolTable tbody');
+  var chart = document.getElementById('chart');
+  var cctx = chart.getContext('2d');
+  var playBtn = document.getElementById('playBtn');
+  var resetBtn = document.getElementById('resetBtn');
+  var minusBtn = document.getElementById('minusBtn');
+  var plusBtn = document.getElementById('plusBtn');
+  var frameEl = document.getElementById('frame');
+  var frameVal = document.getElementById('frameVal');
+  var fpsEl = document.getElementById('fps');
+
+  var n = G.n;
+
+  /* --- record every method to convergence, once; the same single run fills
+     the tolerance table AND the frame store the scrubber replays from --- */
+  var KMAXG = 0;               // global scrubber range: max K over ALL methods
+  METHODS.forEach(function (m) {
+    var rec = runRecorded(m);
+    m.frames = rec.frames;     // Float32Array(1024) per frame, frame 0 = x0
+    m.errs = rec.errs;         // rel err per frame, errs[k] pairs frames[k]
+    m.K = rec.K;
+    m.reached = rec.reached;
+    if (m.K > KMAXG) KMAXG = m.K;
+
+    var tr = document.createElement('tr');
+    var itText = m.reached ? String(m.K) : '&gt;' + CAP + ' (not reached)';
+    tr.innerHTML =
+      '<td><span class="swatch" style="background:' + m.color + '"></span> ' +
+      m.name + '</td>' +
+      '<td class="num">' + itText + '</td>' +
+      '<td class="num">' + m.errs[m.K].toExponential(2) + '</td>';
+    tbody.appendChild(tr);
+  });
+
+  var kCur = 0;                // current scrubber frame, 0..KMAXG
+  frameEl.max = String(KMAXG);
+  frameEl.value = '0';
+
+  /* --- per-method panels + checkboxes --- */
+  METHODS.forEach(function (m) {
+    var lab = document.createElement('label');
+    lab.innerHTML = '<input type="checkbox" checked data-id="' + m.id + '">' +
+      '<span class="swatch" style="background:' + m.color + '"></span>' + m.name;
+    checksEl.appendChild(lab);
+    m.checkbox = lab.querySelector('input');
+    m.checkbox.addEventListener('change', function () {
+      m.enabled = m.checkbox.checked;
+      m.panel.style.display = m.enabled ? '' : 'none';
+      drawBase();              // enabled set (and possibly xmax) changed
+      renderAll();             // KMAXG stays global, so the scrubber never jumps
+    });
+
+    var panel = document.createElement('div');
+    panel.className = 'mpanel';
+    panel.innerHTML = '<h3><span class="swatch" style="background:' + m.color +
+      ';margin-right:6px"></span>' + m.name + '</h3>' +
+      '<canvas width="192" height="192"></canvas>' +
+      '<div class="cap"></div>';
+    panelsEl.appendChild(panel);
+    m.panel = panel;
+    m.canvas = panel.querySelector('canvas');
+    m.cap = panel.querySelector('.cap');
+    m.off = document.createElement('canvas');   // 32x32 offscreen buffer
+    m.off.width = n; m.off.height = n;
+    m.img = m.off.getContext('2d').createImageData(n, n);
+    m.enabled = true;
+  });
+
+  /* --- diverging blue-white-red, fixed scale [-vmax, +vmax] --- */
+  var NEG = [33, 102, 172], POS = [178, 24, 43];       // blue / red endpoints
+  function drawHeatmap(m, frame) {
+    var px = m.img.data, vmax = G.vmax;
+    for (var k = 0; k < G.N; k++) {
+      var t = frame[k] / vmax;
+      if (t > 1) t = 1; else if (t < -1) t = -1;
+      var e = t >= 0 ? POS : NEG, a = Math.abs(t), o = 4 * k;
+      px[o]     = Math.round(255 + (e[0] - 255) * a);
+      px[o + 1] = Math.round(255 + (e[1] - 255) * a);
+      px[o + 2] = Math.round(255 + (e[2] - 255) * a);
+      px[o + 3] = 255;
+    }
+    m.off.getContext('2d').putImageData(m.img, 0, 0);
+    var ctx = m.canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;                 // nearest-neighbor upscale
+    ctx.drawImage(m.off, 0, 0, 192, 192);
+  }
+
+  /* render one method's panel at scrubber frame k: clamp to its own history
+     length K_m, tag the clamp so it reads as "holding its final state" */
+  function updatePanel(m, k) {
+    var shown = Math.min(k, m.K);
+    drawHeatmap(m, m.frames[shown]);
+    var html = 'iter ' + shown + ' &mdash; rel err ' + m.errs[shown].toExponential(2);
+    if (k > m.K) {
+      html += m.reached ? ' <span class="tag">(converged)</span>'
+                        : ' <span class="tag capped">(cap)</span>';
+    }
+    m.cap.innerHTML = html;
+  }
+
+  function renderAll() {
+    METHODS.forEach(function (m) {
+      if (m.enabled) updatePanel(m, kCur);
+    });
+    frameVal.textContent = 'k = ' + kCur + ' / ' + KMAXG;
+    drawChart();
+  }
+
+  function setK(kNew) {
+    kNew = Math.max(0, Math.min(KMAXG, kNew));
+    if (kNew === kCur) return;
+    kCur = kNew;
+    frameEl.value = String(kCur);
+    renderAll();
+  }
+
+  /* --- log-scale error chart ---
+     Two layers: drawBase() renders the static content (gridlines, full error
+     curves, legend) ONCE into an offscreen canvas — at load and again only
+     when a checkbox changes the enabled set (which can change xmax).  Per
+     scrub/playback frame, drawChart() just blits that cache and draws the
+     marker overlay, so per-frame cost is O(#methods), not O(sum K_m). */
+  var YMAX = 2.0, YMIN = 1e-7;
+  var ML = 62, MR = 14, MT = 12, MB = 34;              // margins
+  var CW = chart.width, CH = chart.height;
+  var PW = CW - ML - MR, PH = CH - MT - MB;
+  var baseLayer = document.createElement('canvas');    // offscreen static cache
+  baseLayer.width = CW; baseLayer.height = CH;
+  var bctx = baseLayer.getContext('2d');
+  var xmax = 20;                                       // set by drawBase()
+
+  function X(it) { return ML + PW * it / xmax; }
+  function Y(e) {
+    var t = (Math.log10(YMAX) - Math.log10(Math.max(e, YMIN))) /
+            (Math.log10(YMAX) - Math.log10(YMIN));
+    return MT + Math.min(1, Math.max(0, t)) * PH;
+  }
+
+  function drawBase() {
+    bctx.clearRect(0, 0, CW, CH);
+    bctx.font = '12px sans-serif';
+
+    xmax = 20;
+    METHODS.forEach(function (m) {
+      if (m.enabled && m.K > xmax) xmax = m.K;
+    });
+
+    // frame + decade gridlines
+    bctx.strokeStyle = '#e3e5ea';
+    bctx.fillStyle = '#556';
+    bctx.textAlign = 'right';
+    bctx.textBaseline = 'middle';
+    for (var dec = 0; dec >= -7; dec--) {
+      var yv = Math.pow(10, dec), y = Y(yv);
+      bctx.beginPath(); bctx.moveTo(ML, y); bctx.lineTo(CW - MR, y); bctx.stroke();
+      bctx.fillText('1e' + dec, ML - 6, y);
+    }
+    // x ticks: ~6 round-numbered ticks
+    var rawStep = xmax / 6;
+    var mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    var xstep = Math.max(1, Math.ceil(rawStep / mag) * mag);
+    bctx.textAlign = 'center';
+    bctx.textBaseline = 'top';
+    for (var xt = 0; xt <= xmax; xt += xstep) {
+      var xx = X(xt);
+      bctx.strokeStyle = '#eff1f4';
+      bctx.beginPath(); bctx.moveTo(xx, MT); bctx.lineTo(xx, CH - MB); bctx.stroke();
+      bctx.fillText(String(xt), xx, CH - MB + 6);
+    }
+    bctx.fillText('iteration', ML + PW / 2, CH - 15);
+    bctx.strokeStyle = '#99a';
+    bctx.strokeRect(ML, MT, PW, PH);
+
+    // dashed target line at 1e-6
+    bctx.save();
+    bctx.strokeStyle = '#c33';
+    bctx.setLineDash([6, 4]);
+    bctx.beginPath();
+    bctx.moveTo(ML, Y(TOL)); bctx.lineTo(CW - MR, Y(TOL));
+    bctx.stroke();
+    bctx.restore();
+    bctx.fillStyle = '#c33';
+    bctx.textAlign = 'left';
+    bctx.textBaseline = 'bottom';
+    bctx.fillText('target 1e-6', ML + 6, Y(TOL) - 2);
+
+    // full curves — complete at load, histories are precomputed
+    METHODS.forEach(function (m) {
+      if (!m.enabled || !m.errs) return;
+      bctx.strokeStyle = m.color;
+      bctx.lineWidth = 1.8;
+      bctx.beginPath();
+      for (var it = 0; it < m.errs.length; it++) {
+        var px = X(it), py = Y(m.errs[it]);
+        if (it === 0) bctx.moveTo(px, py); else bctx.lineTo(px, py);
+      }
+      bctx.stroke();
+    });
+    bctx.lineWidth = 1;
+
+    // legend (top-right)
+    var lx = CW - MR - 250, ly = MT + 10;
+    METHODS.forEach(function (m) {
+      if (!m.enabled) return;
+      bctx.fillStyle = m.color;
+      bctx.fillRect(lx, ly - 5, 18, 4);
+      bctx.fillStyle = '#334';
+      bctx.textAlign = 'left';
+      bctx.textBaseline = 'middle';
+      bctx.fillText(m.name, lx + 24, ly - 3);
+      ly += 17;
+    });
+  }
+
+  /* per-frame: blit the cached static layer, then the marker overlay only */
+  function drawChart() {
+    cctx.clearRect(0, 0, CW, CH);
+    cctx.drawImage(baseLayer, 0, 0);
+
+    // scrub marker: vertical line at the current frame (clamped to the axis
+    // when a hidden method shrinks xmax) + a dot on each visible curve
+    var km = Math.min(kCur, xmax), mx = X(km);
+    cctx.save();
+    cctx.strokeStyle = '#D55E00';
+    cctx.lineWidth = 1.2;
+    cctx.beginPath();
+    cctx.moveTo(mx, MT); cctx.lineTo(mx, MT + PH);
+    cctx.stroke();
+    cctx.restore();
+    METHODS.forEach(function (m) {
+      if (!m.enabled) return;
+      var s = Math.min(kCur, m.K);          // s <= K_m <= xmax for enabled m
+      cctx.fillStyle = m.color;
+      cctx.beginPath();
+      cctx.arc(X(s), Y(m.errs[s]), 3.5, 0, 2 * Math.PI);
+      cctx.fill();
+    });
+  }
+
+  /* --- playback: advances the scrubber at the fps-select rate, stops at the
+     end (no loop).  Driven by setInterval + performance.now() accumulator
+     (not requestAnimationFrame, which stalls in hidden/background tabs)   */
+  var playing = false, acc = 0, lastT = 0, timerId = null;
+
+  function setPlaying(p) {
+    if (p === playing) return;
+    playing = p;
+    playBtn.innerHTML = p ? '&#10074;&#10074; Pause' : '&#9654; Play';
+    playBtn.classList.toggle('primary', !p);
+    if (p) {
+      lastT = performance.now(); acc = 0;
+      timerId = setInterval(tick, 16);
+    } else if (timerId !== null) {
+      clearInterval(timerId); timerId = null;
+    }
+  }
+
+  function tick() {
+    if (!playing) return;
+    var now = performance.now();
+    var dt = Math.min(0.25, (now - lastT) / 1000);
+    lastT = now;
+    acc += dt * Number(fpsEl.value);      // fps select = playback rate only
+    var adv = Math.floor(acc);
+    if (adv > 0) {
+      acc -= adv;
+      setK(kCur + adv);
+      if (kCur >= KMAXG) setPlaying(false);   // stop at the end, do not loop
+    }
+  }
+
+  playBtn.addEventListener('click', function () {
+    if (!playing && kCur >= KMAXG) setK(0);   // replay from the start
+    setPlaying(!playing);
+  });
+  resetBtn.addEventListener('click', function () { setPlaying(false); setK(0); });
+  minusBtn.addEventListener('click', function () { setPlaying(false); setK(kCur - 1); });
+  plusBtn.addEventListener('click', function () { setPlaying(false); setK(kCur + 1); });
+  frameEl.addEventListener('input', function () {
+    setPlaying(false);
+    kCur = Math.max(0, Math.min(KMAXG, Math.round(Number(frameEl.value) || 0)));
+    frameEl.value = String(kCur);
+    renderAll();
+  });
+
+  /* arrow keys +-1, PageUp/PageDown +-25, Home/End — handled here even when
+     the slider has focus (preventDefault suppresses the native range step,
+     so every key path uses the same increments) */
+  document.addEventListener('keydown', function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;  // keep Cmd+Arrow = browser nav etc.
+    var t = e.target;
+    if (t && (t.tagName === 'SELECT' ||
+              (t.tagName === 'INPUT' && t !== frameEl))) return;
+    var kNew;
+    switch (e.key) {
+      case 'ArrowRight': kNew = kCur + 1;  break;
+      case 'ArrowLeft':  kNew = kCur - 1;  break;
+      case 'PageUp':     kNew = kCur + 25; break;
+      case 'PageDown':   kNew = kCur - 25; break;
+      case 'Home':       kNew = 0;         break;
+      case 'End':        kNew = KMAXG;     break;
+      default: return;
+    }
+    e.preventDefault();
+    setPlaying(false);
+    setK(kNew);
+  });
+
+  drawBase();                           // static layer: curves drawn once
+  renderAll();                          // initial paint at k = 0
+}
+
+if (typeof document !== 'undefined') boot();
+</script>
+</body>
+</html>

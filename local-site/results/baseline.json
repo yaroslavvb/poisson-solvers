@@ -1,0 +1,15 @@
+{
+  "none": {
+    "iterations": 116,
+    "final_relres": 6.666547523655469e-11
+  },
+  "jacobi": {
+    "iterations": 116,
+    "final_relres": 6.666547523655465e-11
+  },
+  "note": "diag(A) = 4/h^2 is constant for the constant-coefficient Dirichlet Laplacian, so Jacobi is a positive scalar multiple of the identity; PCG is invariant to positive scaling of M, hence Jacobi-PCG matches plain CG iteration-for-iteration (max residual-history deviation 4.441e-16).",
+  "verification": {
+    "relerr_vs_spsolve_none": 5.399549032265174e-12,
+    "relerr_vs_spsolve_jacobi": 5.399538311733921e-12
+  }
+}

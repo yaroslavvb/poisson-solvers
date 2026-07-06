@@ -1,0 +1,610 @@
+{
+  "meta": {
+    "kBT": 1.0,
+    "seeds": {
+      "color_1d": 1,
+      "langevin": 2,
+      "gibbs": 3,
+      "holdout": 4,
+      "color_2d_16": 5,
+      "color_2d_32": 6,
+      "grf_rhs": 42
+    },
+    "n_1d": 32,
+    "h_1d": 0.030303030303030304,
+    "lam_min_1d": 9.86215263582154,
+    "lam_max_1d": 4346.137847364178,
+    "kappa_1d": 440.6885603836667,
+    "elapsed_sec": 6.1,
+    "checks_passed": "52/52"
+  },
+  "checks": [
+    {
+      "name": "1D: A^{-1} == h*(min(s,t)-st)  (Brownian bridge, n=32)",
+      "pass": true,
+      "detail": "relF=7.36e-16"
+    },
+    {
+      "name": "1D: conditional variance 1/A_ii == h^2/2",
+      "pass": true,
+      "detail": "h^2/2=4.5914e-04"
+    },
+    {
+      "name": "coloring: ||Sigma_hat-Sigma||_F/||Sigma||_F ~ N^{-1/2} (loglog slope)",
+      "pass": true,
+      "detail": "slope=-0.453"
+    },
+    {
+      "name": "coloring: error at N=1e5 within [0.4,2.5]x exact iid-Wishart prediction",
+      "pass": true,
+      "detail": "err=7.3934e-03, pred=5.9074e-03, ratio=1.25"
+    },
+    {
+      "name": "Langevin: rel Frobenius error of Sigma_hat (N=20224, thin=881 steps)",
+      "pass": true,
+      "detail": "err=1.6704e-02 < tol 6.5680e-02 (5x iid pred)"
+    },
+    {
+      "name": "Langevin: S_EM=(A-(dt/2)A^2)^{-1} solves EM Lyapunov fixed point",
+      "pass": true,
+      "detail": "relF=1.61e-16"
+    },
+    {
+      "name": "Langevin EM bias, stiffest mode: measured variance == EM prediction 1/(lam(1-dt*lam/2)) = (4/3)/lam_max  (tol 5%)",
+      "pass": true,
+      "detail": "measured=3.0744e-04, EM pred=3.0679e-04, exact 1/lam=2.3009e-04"
+    },
+    {
+      "name": "Langevin EM bias is real: stiffest-mode variance inflated >15% over 1/lam_max (theory: +33.3%)",
+      "pass": true,
+      "detail": "measured inflation = 33.6%"
+    },
+    {
+      "name": "Langevin: slowest-mode autocorrelation time == 1/(lam_min dt) = 2*kappa steps (tol 25%)",
+      "pass": true,
+      "detail": "measured=926 steps, predicted=881 steps (= 2*kappa = 881); in time units 0.1066 vs 1/lam_min=0.1014"
+    },
+    {
+      "name": "Gibbs: rel Frobenius error of Sigma_hat (N=19968, thin=111 sweeps)",
+      "pass": true,
+      "detail": "err=8.7976e-03 < tol 6.6099e-02 (5x iid pred)"
+    },
+    {
+      "name": "FDT 1D (coloring): A^{-1}e_j == Sigma_hat[:,j]/kBT, rel l2 err < 3x sampling pred",
+      "pass": true,
+      "detail": "err=6.9400e-03, tol=1.6422e-02"
+    },
+    {
+      "name": "FDT 1D (langevin): A^{-1}e_j == Sigma_hat[:,j]/kBT, rel l2 err < 5x sampling pred",
+      "pass": true,
+      "detail": "err=1.9201e-02, tol=6.0860e-02"
+    },
+    {
+      "name": "FDT 1D (gibbs): A^{-1}e_j == Sigma_hat[:,j]/kBT, rel l2 err < 5x sampling pred",
+      "pass": true,
+      "detail": "err=4.9127e-03, tol=6.1249e-02"
+    },
+    {
+      "name": "two-sided: B_hat rows -> 1/2 on neighbors (tol 0.02, N=1e5)",
+      "pass": true,
+      "detail": "max|B_hat[i,i+-1]-0.5|=0.0059"
+    },
+    {
+      "name": "two-sided: B_hat -> 0 off the stencil (tol 0.02)",
+      "pass": true,
+      "detail": "max non-neighbor |B_hat|=0.0093"
+    },
+    {
+      "name": "two-sided node 5: honest lstsq on samples == Sigma_hat normal equations",
+      "pass": true,
+      "detail": "max coeff rel diff=3.48e-13"
+    },
+    {
+      "name": "two-sided node 5: residual variance == 1/A_hat_ii",
+      "pass": true,
+      "detail": "rv=4.6032e-04, 1/A_hat_ii=4.6032e-04"
+    },
+    {
+      "name": "two-sided node 16: honest lstsq on samples == Sigma_hat normal equations",
+      "pass": true,
+      "detail": "max coeff rel diff=3.78e-13"
+    },
+    {
+      "name": "two-sided node 16: residual variance == 1/A_hat_ii",
+      "pass": true,
+      "detail": "rv=4.5899e-04, 1/A_hat_ii=4.5899e-04"
+    },
+    {
+      "name": "two-sided node 26: honest lstsq on samples == Sigma_hat normal equations",
+      "pass": true,
+      "detail": "max coeff rel diff=4.14e-13"
+    },
+    {
+      "name": "two-sided node 26: residual variance == 1/A_hat_ii",
+      "pass": true,
+      "detail": "rv=4.6347e-04, 1/A_hat_ii=4.6347e-04"
+    },
+    {
+      "name": "two-sided: A_rec = (I-B_hat) diag(1/resid var) recovers A (tol 3x first-order pred)",
+      "pass": true,
+      "detail": "relF=1.4657e-02, pred=1.5019e-02"
+    },
+    {
+      "name": "L2R closed form (exact Sigma): coeff(u_i ~ u_{i-1}) == (n+1-i)/(n+2-i)",
+      "pass": true,
+      "detail": "max dev=3.11e-15"
+    },
+    {
+      "name": "L2R Markov (exact Sigma): only the immediate predecessor matters",
+      "pass": true,
+      "detail": "max non-immediate coeff=5.39e-15"
+    },
+    {
+      "name": "L2R assembly identity on SAMPLES: (I-Phi)^T D^-2 (I-Phi) == inv(Sigma_hat)",
+      "pass": true,
+      "detail": "relF=4.62e-15"
+    },
+    {
+      "name": "L2R from samples (N=1e5): immediate-predecessor coeffs match closed form (tol 0.02)",
+      "pass": true,
+      "detail": "max dev=0.0068"
+    },
+    {
+      "name": "L2R: ||A_rec - A||/||A|| decreases with N_s and ends < 3x pred",
+      "pass": true,
+      "detail": "errs=100:8.819e-01, 1000:1.456e-01, 10000:4.530e-02, 100000:1.428e-02"
+    },
+    {
+      "name": "R2L closed form (exact chol(A)): -L[i+1,i]/L[i,i] == i/(i+1)",
+      "pass": true,
+      "detail": "max dev=5.55e-16"
+    },
+    {
+      "name": "R2L from SAMPLES: regressions assemble to chol(inv(Sigma_hat)) exactly",
+      "pass": true,
+      "detail": "relF=4.12e-15"
+    },
+    {
+      "name": "reversal identity on ESTIMATED quantities: chol(P Sigma_hat P) == P L_hat^{-T} P",
+      "pass": true,
+      "detail": "relF=1.89e-15"
+    },
+    {
+      "name": "R2L from samples (N=1e5): immediate-successor coeffs match i/(i+1) (tol 0.02)",
+      "pass": true,
+      "detail": "max dev=0.0063"
+    },
+    {
+      "name": "whitening: exact L^T decorrelates held-out samples (max off-diag < 0.05; noise floor ~0.025 at N=2e4)",
+      "pass": true,
+      "detail": "0.0245"
+    },
+    {
+      "name": "whitening: fitted L2R factor decorrelates held-out samples (tol 0.06)",
+      "pass": true,
+      "detail": "0.0240"
+    },
+    {
+      "name": "whitening: fitted R2L factor decorrelates held-out samples (tol 0.06)",
+      "pass": true,
+      "detail": "0.0267"
+    },
+    {
+      "name": "hidden heaters: u_i - (u_{i-1}+u_{i+1})/2 == (h^2/2)*(A u) per sample (deterministic)",
+      "pass": true,
+      "detail": "relF=1.95e-16"
+    },
+    {
+      "name": "hidden heaters: Var(residual_i) == kBT h^2/2 at every site (tol 6%)",
+      "pass": true,
+      "detail": "max site dev=2.4%, h^2/2=4.5914e-04"
+    },
+    {
+      "name": "hidden forcing f = A u: neighbor correlation == -1/2 (Cov(Au) = A; tol 0.03)",
+      "pass": true,
+      "detail": "mean neighbor corr=-0.5003"
+    },
+    {
+      "name": "hidden forcing: correlation beyond one lattice step == 0 (tol 0.05)",
+      "pass": true,
+      "detail": "max |corr| beyond neighbors=0.0259"
+    },
+    {
+      "name": "2D: conditional variance 1/A_ii == h^2/4 (n=16)",
+      "pass": true,
+      "detail": "h^2/4=8.6505e-04"
+    },
+    {
+      "name": "FDT 2D (n=16): center-node response == sampled covariance column (rel l2 err < 3x pred)",
+      "pass": true,
+      "detail": "err=1.3433e-02, tol=4.6019e-02"
+    },
+    {
+      "name": "2D n=32: Sigma_hat error falls ~sqrt(25)=5x from N_s=2k to 50k (ratio in [3,8])",
+      "pass": true,
+      "detail": "ratio=5.25"
+    },
+    {
+      "name": "Vecchia assembly sanity: full-predecessor fit on exact cov == A (4x4 grid)",
+      "pass": true,
+      "detail": "relF=1.56e-16"
+    },
+    {
+      "name": "Vecchia fit 'exact': all residual variances positive (M SPD)",
+      "pass": true,
+      "detail": "min d^2=2.296e-04"
+    },
+    {
+      "name": "Vecchia fit 'N2000': all residual variances positive (M SPD)",
+      "pass": true,
+      "detail": "min d^2=2.313e-04"
+    },
+    {
+      "name": "Vecchia fit 'N10000': all residual variances positive (M SPD)",
+      "pass": true,
+      "detail": "min d^2=2.292e-04"
+    },
+    {
+      "name": "Vecchia fit 'N50000': all residual variances positive (M SPD)",
+      "pass": true,
+      "detail": "min d^2=2.298e-04"
+    },
+    {
+      "name": "Vecchia: sampled coefficients (N_s=50k) -> exact-covariance coefficients (tol 0.05)",
+      "pass": true,
+      "detail": "max dev=0.0135; exact interior means W=0.3904, S=0.3904"
+    },
+    {
+      "name": "PCG: every preconditioner converged to 1e-10 (true residual < 1e-9)",
+      "pass": true,
+      "detail": "max true relres=8.80e-11"
+    },
+    {
+      "name": "PCG: Jacobi == plain CG iterations (constant diagonal -> scalar M)",
+      "pass": true,
+      "detail": "none=116, jacobi=116"
+    },
+    {
+      "name": "PCG: exact-covariance Vecchia beats plain CG",
+      "pass": true,
+      "detail": "29 vs 116"
+    },
+    {
+      "name": "PCG: sampled Vecchia improves with N_s and approaches the sample-free ceiling (iters_50k <= iters_2k+1 and <= ceiling+10)",
+      "pass": true,
+      "detail": "2k=31, 10k=30, 50k=30, exact=29"
+    },
+    {
+      "name": "kappa: exact-covariance Vecchia cuts kappa(A) by > 2x",
+      "pass": true,
+      "detail": "kappa(A)=440.7 -> 13.6"
+    }
+  ],
+  "figures": [
+    "figures/fdt_covariance_convergence.png",
+    "figures/fdt_response_vs_covariance.png",
+    "figures/fdt_regression_coeffs.png",
+    "figures/fdt_whitening_residuals.png",
+    "figures/fdt_response_vs_covariance_2d.png",
+    "figures/fdt_learned_preconditioner.png"
+  ],
+  "partA": {
+    "samplers": {
+      "coloring": {
+        "N_list": [
+          100,
+          1000,
+          10000,
+          100000
+        ],
+        "rel_frob_err": [
+          0.16955114562521345,
+          0.04757202980355401,
+          0.016945421197062584,
+          0.007393410312044916
+        ],
+        "wishart_pred": [
+          0.18680745480741587,
+          0.05907370410904053,
+          0.018680745480741587,
+          0.005907370410904053
+        ],
+        "loglog_slope": -0.45296670731170635
+      },
+      "langevin": {
+        "N": 20224,
+        "dt": 0.00011504467128285801,
+        "dt_x_lam_max": 0.5,
+        "chains": 256,
+        "thin_steps": 881,
+        "burn_steps": 8810,
+        "rel_frob_err": 0.016703712573306145,
+        "rel_frob_err_vs_S_EM": 0.01569983572271972,
+        "predicted_EM_bias_frob": 0.003578558772796816,
+        "stiff_mode_var_measured": 0.0003074353428011166,
+        "stiff_mode_var_EM_pred": 0.00030678579008762137,
+        "stiff_mode_var_exact": 0.00023008934256571603,
+        "tau_steps_measured": 926.4261060273753,
+        "tau_steps_predicted": 880.8770261646488,
+        "tau_time_measured": 0.10658038683577756,
+        "tau_time_predicted": 0.10139774113490972
+      },
+      "gibbs": {
+        "N": 19968,
+        "chains": 256,
+        "thin_sweeps": 111,
+        "burn_sweeps": 1665,
+        "rho_gauss_seidel": 0.9909643486313533,
+        "tau_sweeps": 110.17195099763622,
+        "rel_frob_err": 0.00879755044051708
+      }
+    },
+    "fdt_response": {
+      "j_center_0based": 16,
+      "x_j": 0.5151515151515151,
+      "columns": {
+        "coloring": {
+          "rel_l2_err": 0.006939968461071482,
+          "tol": 0.016421623694709432
+        },
+        "langevin": {
+          "rel_l2_err": 0.019200607404429266,
+          "tol": 0.0608599116086879
+        },
+        "gibbs": {
+          "rel_l2_err": 0.004912695984162438,
+          "tol": 0.06124879678989485
+        }
+      }
+    },
+    "regressions": {
+      "two_sided": {
+        "max_neighbor_coeff_dev_from_half": 0.005922926585874566,
+        "max_nonneighbor_coeff": 0.009294506829424929,
+        "A_rec_rel_err": 0.01465709765668467,
+        "first_order_pred": 0.015019285847483596,
+        "honest_nodes": [
+          5,
+          16,
+          26
+        ]
+      },
+      "l2r": {
+        "N_list": [
+          100,
+          1000,
+          10000,
+          100000
+        ],
+        "A_rec_rel_err": [
+          0.8819368400320791,
+          0.14561097173172563,
+          0.04530292519307743,
+          0.014280611837555628
+        ],
+        "closed_form_coeffs": [
+          0.96875,
+          0.967741935483871,
+          0.9666666666666667,
+          0.9655172413793104,
+          0.9642857142857143,
+          0.9629629629629629,
+          0.9615384615384616,
+          0.96,
+          0.9583333333333334,
+          0.9565217391304348,
+          0.9545454545454546,
+          0.9523809523809523,
+          0.95,
+          0.9473684210526315,
+          0.9444444444444444,
+          0.9411764705882353,
+          0.9375,
+          0.9333333333333333,
+          0.9285714285714286,
+          0.9230769230769231,
+          0.9166666666666666,
+          0.9090909090909091,
+          0.9,
+          0.8888888888888888,
+          0.875,
+          0.8571428571428571,
+          0.8333333333333334,
+          0.8,
+          0.75,
+          0.6666666666666666,
+          0.5
+        ],
+        "estimated_coeffs_1e5": [
+          0.9722431078902346,
+          0.9725452066851259,
+          0.972041372115843,
+          0.9587586244927697,
+          0.963928565250598,
+          0.9615923849415489,
+          0.9598033302002695,
+          0.9631882512098108,
+          0.9555754250120229,
+          0.9546107904382876,
+          0.9541849184589775,
+          0.9505555917167248,
+          0.9471278004886201,
+          0.9457289635732599,
+          0.946237914965609,
+          0.9461950444633801,
+          0.9338304394498557,
+          0.9367281092019363,
+          0.9255050494753635,
+          0.9249420188029814,
+          0.9134766833949787,
+          0.9086659084623424,
+          0.9056926768122755,
+          0.8907163143455105,
+          0.8781282881694814,
+          0.8576354848261772,
+          0.8290875818402549,
+          0.7993073455101949,
+          0.7462909674119755,
+          0.666326599247952,
+          0.49932906766983914
+        ],
+        "max_coeff_dev_1e5": 0.006758616886540669
+      },
+      "r2l": {
+        "closed_form_coeffs": [
+          0.5,
+          0.6666666666666666,
+          0.75,
+          0.8,
+          0.8333333333333334,
+          0.8571428571428571,
+          0.875,
+          0.8888888888888888,
+          0.9,
+          0.9090909090909091,
+          0.9166666666666666,
+          0.9230769230769231,
+          0.9285714285714286,
+          0.9333333333333333,
+          0.9375,
+          0.9411764705882353,
+          0.9444444444444444,
+          0.9473684210526315,
+          0.95,
+          0.9523809523809523,
+          0.9545454545454546,
+          0.9565217391304348,
+          0.9583333333333334,
+          0.96,
+          0.9615384615384616,
+          0.9629629629629629,
+          0.9642857142857143,
+          0.9655172413793104,
+          0.9666666666666667,
+          0.967741935483871,
+          0.96875
+        ],
+        "estimated_coeffs_1e5": [
+          0.5020376350219421,
+          0.6681067699998702,
+          0.7444818708666857,
+          0.7998975277814455,
+          0.8308150091731522,
+          0.8558043554117895,
+          0.8782955805379871,
+          0.8857740998236251,
+          0.8974587691880045,
+          0.9110522442813509,
+          0.9170762256589915,
+          0.9209126521878456,
+          0.927078051769618,
+          0.9348138655253515,
+          0.9407518101339432,
+          0.9355054336725143,
+          0.9467672486636743,
+          0.943814823271407,
+          0.9537480271412988,
+          0.949938289860237,
+          0.9535858661495622,
+          0.9628398701095715,
+          0.9609122000024188,
+          0.961913071416025,
+          0.9622195177364925,
+          0.9596793475236183,
+          0.9646187419169586,
+          0.9652108588911058,
+          0.9696228588752533,
+          0.9662580716406728,
+          0.9678344024514229
+        ],
+        "max_coeff_dev_1e5": 0.0063181309791366935,
+        "reversal_identity_relF": 1.8927904915724783e-15
+      }
+    },
+    "whitening": {
+      "N_holdout": 20000,
+      "max_offdiag_corr": {
+        "raw": 0.9409006164414183,
+        "exact_LT": 0.024455697620140403,
+        "fitted_L2R": 0.023954736656627555,
+        "fitted_R2L": 0.026710263218281304
+      },
+      "residual_var_max_site_dev": 0.024427675677832328,
+      "residual_var_target": 0.00045913682277318646,
+      "hidden_forcing_neighbor_corr": -0.5003315485528551,
+      "hidden_forcing_max_far_corr": 0.025903573365614597
+    }
+  },
+  "partB": {
+    "n16": {
+      "N_samples": 100000,
+      "center_node": 136,
+      "rel_l2_err": 0.01343286912349059,
+      "tol": 0.04601860657286966,
+      "sigma_rel_frob_err": 0.020165224916951885
+    },
+    "n32": {
+      "N_samples_list": [
+        2000,
+        10000,
+        50000
+      ],
+      "sigma_rel_frob_err": {
+        "2000": 0.19018683846492737,
+        "10000": 0.08243628084427487,
+        "50000": 0.036209468187622135
+      },
+      "sigma_wishart_pred": {
+        "2000": 0.18443517381282534,
+        "10000": 0.08248191721749332,
+        "50000": 0.03688703476256507
+      },
+      "err_ratio_2k_over_50k": 5.252406289964263,
+      "vecchia_interior_coeff_means_exact": {
+        "W": 0.3904152103036855,
+        "S": 0.3904152103036855
+      },
+      "vecchia_coeff_max_dev_50k_vs_exact": 0.013478098919772974,
+      "vecchia_min_d2": {
+        "exact": 0.0002295684113865932,
+        "N2000": 0.00023130759028830948,
+        "N10000": 0.00022919130579136392,
+        "N50000": 0.00022981293726970212
+      },
+      "pcg_iterations": {
+        "none": 116,
+        "jacobi": 116,
+        "vecchia_exact": 29,
+        "vecchia_N2000": 31,
+        "vecchia_N10000": 30,
+        "vecchia_N50000": 30
+      },
+      "pcg_final_relres": {
+        "none": 6.666547523655469e-11,
+        "jacobi": 6.666547523655465e-11,
+        "vecchia_exact": 8.801270332539461e-11,
+        "vecchia_N2000": 3.5297925224530766e-11,
+        "vecchia_N10000": 6.87973476695415e-11,
+        "vecchia_N50000": 5.0341440941043176e-11
+      },
+      "pcg_true_relres": {
+        "none": 6.666470817575141e-11,
+        "jacobi": 6.666483388614972e-11,
+        "vecchia_exact": 8.801294995731623e-11,
+        "vecchia_N2000": 3.529712284081792e-11,
+        "vecchia_N10000": 6.879717899481561e-11,
+        "vecchia_N50000": 5.0341547653998576e-11
+      },
+      "kappa": {
+        "none": 440.6885603835139,
+        "jacobi": 440.6885603835139,
+        "vecchia_exact": 13.62544195907335,
+        "vecchia_N2000": 13.986463091839509,
+        "vecchia_N10000": 13.736748114193217,
+        "vecchia_N50000": 13.662655336501365
+      },
+      "rhs": "grf_rhs(32), seed 42",
+      "tol": 1e-10
+    }
+  }
+}

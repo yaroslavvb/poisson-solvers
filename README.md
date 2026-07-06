@@ -12,6 +12,10 @@ Implementation and study of **preconditioned conjugate gradients for the 2-D Poi
 - **[Hierarchical solver race](https://yaroslavvb.github.io/poisson-solvers/interactive/hierarchical-solvers.html)** — five solvers (GD, CG, PCG with the *actual* HODLR rank-2/rank-8 compressed inverses, damped Richardson) racing live in the browser on the hot/cold-rod problem of [report 14](reports/14-hierarchical-inverse.md) §5; runs locally too ([interactive/hierarchical-solvers.html](interactive/hierarchical-solvers.html), serve the repo root over HTTP).
 - **[Rendered report suite](https://yaroslavvb.github.io/poisson-solvers/)** — the reports below as web pages (GitHub Pages).
 
+## Reading offline
+
+The whole suite (reports, figures, both interactive pages, vendored MathJax) is mirrored as a self-contained static site in `local-site/` — open `local-site/index.html` directly in a browser (`file://`, no server, no network needed). Regenerate it with `uv run python tools/build_local_site.py`.
+
 ## Quickstart
 
 Python env is managed by `uv` (Python 3.12; numpy, scipy, matplotlib, torch). Run from the repo root:

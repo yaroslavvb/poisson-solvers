@@ -1,0 +1,24 @@
+{
+  "cg_none": {
+    "iterations": 116,
+    "final_relres": 6.666547523655469e-11,
+    "relerr_vs_spsolve": 5.399549032265174e-12,
+    "converged": true
+  },
+  "npo_fcg": {
+    "iterations": 30,
+    "final_relres": 7.16211582652798e-11,
+    "relerr_vs_spsolve": 3.09601819787218e-11,
+    "converged": true
+  },
+  "npo_pcg": {
+    "iterations": 2000,
+    "final_relres": 9.653441796885143e-06,
+    "relerr_vs_spsolve": 6.651672248139702e-06,
+    "converged": false
+  },
+  "speedup_fcg_vs_cg": 3.8666666666666667,
+  "tol": 1e-10,
+  "maxiter": 2000,
+  "problem": "poisson_2d(32), b = grf_rhs(32, alpha=2, tau=3, seed=42)"
+}

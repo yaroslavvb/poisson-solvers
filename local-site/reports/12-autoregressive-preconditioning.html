@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Preconditioner Is an Autoregressive Predictor</title>
+<style>
+body { margin: 0; color: #1b1f23; background: #fff;
+       font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI",
+             Helvetica, Arial, sans-serif; }
+.page { max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+nav.site { font-size: .85rem; color: #57606a; margin-bottom: 1.5rem;
+           border-bottom: 1px solid #d8dee4; padding-bottom: .5rem; }
+nav.site a { color: #0969da; text-decoration: none; }
+nav.site a:hover { text-decoration: underline; }
+nav.site .sep { margin: 0 .45em; color: #8c959f; }
+h1, h2, h3, h4 { line-height: 1.25; margin: 1.6em 0 .6em; }
+h1 { font-size: 1.9rem; border-bottom: 1px solid #d8dee4;
+     padding-bottom: .3em; margin-top: .2em; }
+h2 { font-size: 1.45rem; border-bottom: 1px solid #eaecef;
+     padding-bottom: .25em; }
+a { color: #0969da; }
+img { max-width: 100%; height: auto; }
+pre { background: #f6f8fa; padding: .9em 1.1em; overflow-x: auto;
+      border-radius: 6px; font-size: .85em; line-height: 1.45; }
+code { font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo,
+       Consolas, monospace; background: #f6f8fa; padding: .1em .3em;
+       border-radius: 4px; font-size: .9em; }
+pre code { background: none; padding: 0; font-size: 1em; }
+table { border-collapse: collapse; margin: 1em 0; display: block;
+        overflow-x: auto; max-width: 100%; }
+th, td { border: 1px solid #d0d7de; padding: .35em .7em; }
+th { background: #f6f8fa; }
+blockquote { margin: 0 0 1em; padding: 0 1em; color: #57606a;
+             border-left: .25em solid #d0d7de; }
+hr { border: none; border-top: 1px solid #d8dee4; margin: 2em 0; }
+.citation { color: #57606a; word-break: break-all; }
+mjx-container[jax="SVG"][display="true"] { overflow-x: auto;
+                                           overflow-y: hidden; }
+</style>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  options: {
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  svg: { fontCache: 'local' }
+};
+</script>
+<script defer src="../vendor/mathjax-tex-svg.js"></script>
+</head>
+<body>
+<div class="page">
+<nav class="site"><a href="../index.html">index</a><span class="sep">&middot;</span><a href="11-regressions-and-multiscale.html">&larr; 11-regressions-and-multiscale</a><span class="sep">&middot;</span><a href="13-preconditioning-as-decoupling.html">13-preconditioning-as-decoupling &rarr;</a></nav>
+<h1 id="the-preconditioner-is-an-autoregressive-predictor">The Preconditioner Is an Autoregressive Predictor</h1>
+<h3 id="predict-and-correct-jacobi-gaussseidel-the-perfect-one-sided-regression-and-the-whole-truncation-ladder-run-as-one-stationary-richardson-iteration">Predict-and-correct: Jacobi, Gauss–Seidel, the perfect one-sided regression, and the whole truncation ladder, run as one stationary Richardson iteration</h3>
+<p><em>The synthesis report the suite has been building toward: <a href="09-stiffness-as-precision.html">09</a> established stiffness = precision and Cholesky = sequential regression on the 1-D chain; <a href="10-fluctuation-dissipation.html">10</a> measured the same objects in thermal noise; <a href="11-regressions-and-multiscale.html">11</a> walked them across the 2-D grid inside PCG. This report removes CG entirely and runs </em><em>every</em><em> preconditioner as the same stationary predict-and-correct iteration, so that each one's quality is exposed as a bare geometric rate — the spectral radius of its error-propagation matrix — with nothing clever in between. Notation is 09/10/11's throughout: $h = 1/(n+1)$, $A$ = Kronecker-sum Laplacian $/h^2$ (<code>poisson_2d</code>, $N = n^2$, lexicographic row-major $k = ni+j$; <a href="01-code-walkthrough.html">01</a>/<a href="02-eigenvalues.html">02</a>), $B = I - \mathrm{diag}(A)^{-1}A$ the two-sided regression matrix = Jacobi iteration matrix with $\rho(B) = \cos(\pi h)$ (2-D eigenvalues $(\cos(k\pi h)+\cos(l\pi h))/2$), conditional variance $1/A_{ii} = h^2/4$, <code>phiL2R</code>/<code>phiR2L</code> the sequential regressions, $A = (I-\Phi)^\top D_\sigma^{-2}(I-\Phi)$, reversal identity $\mathrm{chol}(A^{-1}) = PL^{-\top}P$, Vecchia = truncated regression — all per the companion notebook <code>whitening_inverse_transposed.nb</code> (<code>~/git0/newton/</code>). Canonical problem: $n = 32$, $\kappa(A) = 440.69$, $b = $ <code>grf_rhs(32)</code> (seed 42), the same right-hand side as <a href="05-classical-preconditioners.html">05</a>–<a href="08-results.html">08</a>. Every claim below is machine-checked by <a href="../python/experiments/richardson_ar.py">python/experiments/richardson_ar.py</a> (</em><em>53 checks, all PASS</em><em>, fully deterministic, ~6 s; numbers in <a href="../results/richardson_ar.json">results/richardson_ar.json</a>), which reuses <code>poisson.poisson_2d</code>/<code>grf_rhs</code>, <code>preconditioners.ic0</code>, and <code>preconditioners.block_average_matrix</code> — no CG anywhere. Compass convention is <a href="11-regressions-and-multiscale.html">11 §1.2</a>'s: grid row $i$ increases southward from the top, so $k{-}1$ is the W neighbor and $k{-}n$ the N (previous-row) neighbor.</em></p>
+<hr />
+<h2 id="1-the-frame-predict-correct-and-read-the-rate">1. The frame: predict, correct, and read the rate</h2>
+<p>Every method in this report is the <strong>stationary preconditioned Richardson iteration</strong></p>
+<p>$$x_{k+1} \;=\; x_k \;+\; C\,(b - Ax_k), \qquad C \text{ a fixed linear operator},$$</p>
+<p>started at $x_0 = 0$ and run to relative $\ell_2$ <em>error</em> $10^{-10}$ (cap 20 000 iterations). Read it as <strong>predict-and-correct</strong>: the residual $r_k = b - Ax_k$ is the visible symptom; $Cr_k$ is the model's <em>prediction of the error</em> from the symptom; the update applies the predicted correction. Since $r_k = Ae_k$ with $e_k = x^\star - x_k$, the error obeys</p>
+<p>$$e_{k+1} \;=\; (I - CA)\,e_k,$$</p>
+<p>and the asymptotic convergence factor is $\rho(I - CA)$ — literally <strong>the per-sweep fraction of structure the predictor fails to explain</strong>. A perfect model of $A$ ($C = A^{-1}$) predicts the error exactly and converges in one step; a vacuous model ($C = \alpha I$) leaves $1 - O(h^2)$ of the structure on the table every sweep. For each rung of the ladder the script computes $\rho$ exactly (dense eigenvalues of $I - CA$ at $N = 1024$) <em>and</em> measures the tail slope of $\Vert e_k\Vert $: they agree to six digits for the one-level methods and to 1% for the composite ones, with one honest exception — the bilinear two-grid hits $10^{-10}$ in 17 iterations, before the dominant mode separates, so its generic-start slope (0.3418) undershoots $\rho = 0.3571$ by 4.3%, and only the dominant-eigenvector-seeded slope (0.357104) recovers $\rho$ (§4).</p>
+<p>Two deliberate methodological choices, both load-bearing:</p>
+<p><strong>Richardson instead of CG.</strong> CG's min–max optimality (<a href="04-krylov-and-pcg.html">04</a>) adapts a fresh polynomial to the spectrum every iteration — it makes every $M$ look better than it is and entangles model quality with polynomial cleverness. A stationary iteration has no such adaptivity: what you see is $\rho(I - CA)$, the surrogate's honest per-sweep explanatory power. (§7 puts CG back.)</p>
+<p><strong>Error curves, not residual curves.</strong> $r = Ae$, so the residual weights each error mode by its eigenvalue — rough modes are overweighted by up to $\lambda_{\max}/\lambda_{\min} = 440.69$ in amplitude. In residual-think, a method that annihilates only the <em>smooth</em> error (§4's coarse-only projections: 98% of the $\ell_2$ error gone in one step) barely registers, and a method that leaves <em>only</em> smooth error (IC(0)'s tail) reads better than it is — measured: at iteration 20 the field is still 23% wrong in $\ell_2$ while the relative residual says 12%, and the under-report widens as the surviving error smooths (1.93× there, 2.79× by iteration 40, worst case $\lambda_{\max}/\lambda_{\min}$ in amplitude). The plateaus and phase transitions below are visible only in $\Vert e_k\Vert $ — which the experiment can afford because $x^\star$ is available from <code>spsolve</code>. Both norms are tracked (<a href="../figures/richardson_error_convergence.png">$\ell_2$ figure</a>, <a href="../figures/richardson_error_Anorm.png">$A$-norm figure</a>); complete per-iteration histories are in the JSON.</p>
+<hr />
+<h2 id="2-the-trichotomy-same-regressions-three-schedules">2. The trichotomy: same regressions, three schedules</h2>
+<p>Here is the report's conceptual core, stated as a theorem and verified line by line. Reports 09–11 established that $A$'s rows <em>are</em> the exact two-sided regressions ($B$, weights $1/4$ on stencil neighbors, conditional variance $h^2/4$) and that $\mathrm{chol}(A)$'s columns <em>are</em> the exact one-sided regressions ($\Phi$, $d^2$). Both encode <strong>perfect conditional models</strong> of the Gibbs field. The entire difference between a $\rho = 0.9955$ solver and a one-step solver is <em>scheduling</em> — what you condition on, and whether the values you condition on are fresh.</p>
+<p><strong>(i) Perfect two-sided predictor, applied synchronously = Jacobi, $\rho = \cos(\pi h)$.</strong> $C = D^{-1} = \mathrm{diag}(A)^{-1}$ replaces every node <em>simultaneously</em> by its conditional mean given its four neighbors — but the neighbors used are the <strong>stale</strong> values from the previous sweep. Verified: the error-propagation matrix $I - D^{-1}A$ equals $B$ bit-exactly (<code>np.array_equal</code>), and $\rho(B) = 0.99547192$. Physics: one pass of <strong>parallel (synchronous) heat-bath dynamics</strong> — every site equilibrates against a frozen snapshot of its neighborhood. Statistics: one synchronous scan of conditional-mean updates (<a href="09-stiffness-as-precision.html">09 §3</a>). Each regression is individually perfect; the schedule wastes it, because a smooth field almost equals the average of its neighbors and each sweep extracts an $O(h^2)$ sliver of news.</p>
+<p><strong>(ii) Same weights, applied sequentially with fresh values = Gauss–Seidel, $\rho = \cos^2(\pi h)$.</strong> $C = \mathrm{tril}(A)^{-1}$. Verified as an update schedule, not just algebra: one GS sweep coincides (to $10^{-12}$) with the explicit loop "visit nodes in lexicographic order; replace $u_k$ by its conditional mean given <strong>fresh</strong> W/N and <strong>stale</strong> E/S neighbors" — the <strong>systematic-scan Gibbs sampler with the noise deleted</strong> (<a href="09-stiffness-as-precision.html">09 §3</a>, <a href="10-fluctuation-dissipation.html">10 §2.3</a>, Goodman–Sokal / Fox–Parker). Measured $\rho_{\mathrm{GS}} = 0.99096435 = \cos^2(\pi h)$ (Young's theory for consistently ordered matrices; verified to $10^{-6}$), and $\log\rho_{\mathrm{GS}}/\log\rho_J = 2.0000$: merely <em>using what you just computed</em> doubles the rate exponent — 4777 iterations $\to$ 2355, exactly the sampler-community folklore that sequential scans mix twice as fast as parallel ones.</p>
+<p><strong>(iii) Perfect one-sided (causal, triangular) predictor = one step.</strong> Build the full autoregression: $\Phi$ = strictly-lower prediction weights of every node on <em>all</em> its predecessors, $d^2$ = innovation variances. The script constructs the pair <strong>two independent ways</strong> — (a) from $L = \mathrm{chol}(A)$ via the <code>phiR2L</code> successor weights and the reversal/automorphism machinery of <a href="11-regressions-and-multiscale.html">11 §3</a> ($PAP = A$ re-verified), (b) from the modified Cholesky of $\Sigma = A^{-1}$ (Pourahmadi, <code>phiL2R</code>) — agreeing to $7.4\times10^{-15}$ ($\Phi$) and $1.1\times10^{-14}$ ($d^2$), with explicit least-squares regressions on $\Sigma$ submatrices confirming individual rows at an interior node ($(16,16)$: max weight dev $2.4\times10^{-15}$), an edge node ($(0,16)$: $2.2\times10^{-16}$), and the last node ($(31,31)$: $8.3\times10^{-16}$). Then the normal equations of the perfect predictor <strong>are the operator</strong>:</p>
+<p>$$M \;=\; (I-\Phi)^\top\,\mathrm{diag}(1/d^2)\,(I-\Phi), \qquad \frac{\Vert M - A\Vert _F}{\Vert A\Vert _F} \;=\; 1.27\times10^{-16},$$</p>
+<p>and because $I - \Phi$ is unit-triangular, $C = M^{-1}$ is <strong>back-substitutable</strong> — two exact triangular solves, no iteration. Richardson with this $C$ converges in <strong>one step</strong>: $\Vert e_1\Vert /\Vert e_0\Vert  = 3.95\times10^{-15}$ ($\ell_2$), $4.01\times10^{-15}$ ($A$-norm), $\rho(I - M^{-1}A) = 5.5\times10^{-15}$. Triangularity is causality (<a href="10-fluctuation-dissipation.html">10 §4</a>): a causal model can be <em>unwound</em> — each node solved given already-solved nodes — which is exactly what the synchronous two-sided model, equally perfect regression-by-regression, cannot do.</p>
+<p>One closure identity stitches (i) and (iii) together: the <strong>last node</strong> $(31,31)$ has every other node as a predecessor, so its one-sided regression <em>is</em> its two-sided full conditional — weights verified exactly $1/4$ on its 2 in-grid stencil neighbors, all other weights $&lt; 10^{-10}$, $d^2 = h^2/4$ to $1.2\times10^{-16}$. The trichotomy is one family of regressions, indexed by how much of the conditioning set has already been resolved.</p>
+<p><strong>The pretty coincidence.</strong> For this operator, undamped Jacobi <em>is</em> optimally damped Richardson. The Kronecker-sum spectrum pairs up: $\lambda_{\min} + \lambda_{\max} = 8/h^2$ <strong>exactly</strong> (verified; $8\sin^2 + 8\cos^2$), so the optimal scalar step $\alpha^\star = 2/(\lambda_{\min}+\lambda_{\max}) = h^2/4 = 1/A_{ii} = 2.295684\times10^{-4}$ — the Jacobi step. The two iterations' error histories agree to rtol $10^{-10}$ (4777 = 4777 iterations), and three numbers coincide to eight digits:</p>
+<p>$$\rho(B) \;=\; \cos(\pi h) \;=\; \frac{\kappa - 1}{\kappa + 1} \;=\; 0.99547192.$$</p>
+<p>This is <a href="05-classical-preconditioners.html">05</a>'s "Jacobi is a scalar" story with its stationary punchline: on a constant diagonal, Jacobi-the-preconditioner is inert inside CG (116 = 116, <a href="05-classical-preconditioners.html">05</a>/<a href="09-stiffness-as-precision.html">09 §3</a>) precisely because the scalar it degenerates to is already the <em>best possible</em> scalar — Jacobi-the-iteration is the optimal no-predictor method, and no-predictor is exactly what CG doesn't need help with.</p>
+<hr />
+<h2 id="3-the-perfect-weights-in-detail">3. The perfect weights, in detail</h2>
+<p>What did the one-step predictor actually learn? Row $k = 528$ of $\Phi$ — node $(16,16)$, 528 predecessors — dissected in the <a href="../figures/richardson_ar_weights.png">weights-anatomy figure</a> (left: $\log_{10}\vert $weights$\vert $ on the grid; middle: wavefront profile with geometric fit; right: innovation-variance map):</p>
+<p><img alt="Perfect-AR weights of node (16,16), wavefront profile, and innovation variances" src="../figures/richardson_ar_weights.png" /></p>
+<p><strong>Exact wavefront support (global Markov property).</strong> The weights are supported <em>exactly</em> on the last $n = 32$ predecessors — indices 496–527: the trailing (eastern) segment of the previous row, $(15, 16..31)$, plus the leading (western) segment of the node's own row, $(16, 0..15)$ — i.e. <a href="11-regressions-and-multiscale.html">11 §3</a>'s elimination wavefront. Max $\vert $weight$\vert $ on the 496 pre-wavefront predecessors: <strong>$0.0$, exactly</strong> — not small, zero. The wavefront is a separating set between node $k$ and everything scanned earlier, so the GMRF global Markov property zeroes the regression on the far side; algebraically this <em>is</em> the bandwidth-$n$ of $\mathrm{chol}(A)$. The perfect predictor is not global — it is <strong>wavefront-wide</strong>, which in 2-D is $n$ regressors, which is exactly why exact factorization stops being cheap as $n$ grows.</p>
+<p><strong>Stencil dominance and the screening effect.</strong> Within the wavefront, the two stencil predecessors dominate: $w_W = 0.3624$ ($3.2\times$ the largest non-stencil weight) on the same-row neighbor $(16,15)$, and $0.3112$ ($2.8\times$) on the previous-row neighbor $(15,16)$ (N under 11's compass; stored as <code>w_S_prev_row</code> in the JSON). The tail decays <strong>geometrically along the previous row</strong>: fitted rate $0.6785$/step over lateral distances 2–12. Measured profile (|weight| by lateral distance from column 16):</p>
+<table>
+<thead>
+<tr>
+<th>lateral</th>
+<th style="text-align: right;">0</th>
+<th style="text-align: right;">1</th>
+<th style="text-align: right;">2</th>
+<th style="text-align: right;">3</th>
+<th style="text-align: right;">4</th>
+<th style="text-align: right;">5</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>same row (W branch)</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">0.3624</td>
+<td style="text-align: right;">0.0235</td>
+<td style="text-align: right;">0.0125</td>
+<td style="text-align: right;">0.0075</td>
+<td style="text-align: right;">0.0048</td>
+</tr>
+<tr>
+<td>previous row</td>
+<td style="text-align: right;">0.3112</td>
+<td style="text-align: right;">0.1128</td>
+<td style="text-align: right;">0.0482</td>
+<td style="text-align: right;">0.0240</td>
+<td style="text-align: right;">0.0135</td>
+<td style="text-align: right;">0.0084</td>
+</tr>
+</tbody>
+</table>
+<p>Statistics calls this the kriging <strong>screening effect</strong>: once the nearest observations are in the conditioning set, they screen the far ones, whose weights decay fast (note the same-row branch collapses faster — the just-observed W neighbor screens its own row hard). Physics calls the same numbers <strong>effective couplings from decimation</strong>: integrating out degrees of freedom renormalizes the couplings among the survivors, short-ranged but not strictly local. Two asymmetries worth reading off: $w_W &gt; w_{\text{prev-row}}$ — lexicographic scanning breaks the stencil tie in favor of the most recently observed neighbor — and the weights sum to $0.9597 &lt; 1$, unlike the two-sided interior rows, which sum to exactly 1.</p>
+<p><strong>The decimation claim, made literal (Schur / Dirichlet-to-Neumann).</strong> "Effective coupling" is verified as an identity, both ways:
+- <em>Eliminate the successors</em> $k{+}1..N{-}1$ of node $k$: row $k$ of the Schur complement $S$, rescaled to prediction form $-S_{k,j}/S_{k,k}$, reproduces the $\Phi$ row to $6.9\times10^{-17}$, and $1/S_{kk} = d^2_k$ to $1.9\times10^{-16}$.
+- <em>Eliminate the predecessors</em> $0..k{-}1$ (the literal decimation of everything already scanned): the leading row of the trailing Schur complement equals the $\mathrm{chol}(A)$ successor weights of node $k$ ($1.7\times10^{-16}$), which by the reversal identity are the reversed prediction weights of the <strong>mirror node</strong> $(15,15)$ ($1.7\times10^{-16}$; $1/S_{00} = d^2$ of the mirror). The Schur complement on the wavefront is the discrete <strong>Dirichlet-to-Neumann / transfer operator</strong>: the perfect AR row is one row of the renormalized Hamiltonian on the not-yet-eliminated boundary.</p>
+<p><strong>Innovation variances: one-sided conditions on less, so innovations are larger.</strong> $d^2(16,16) = 2.857837\times10^{-4}$ vs the two-sided conditional variance $h^2/4 = 2.295684\times10^{-4}$ — ratio <strong>1.2449</strong>. Conditioning on the past only (a half-plane of the lattice) leaves 24.5% more variance than conditioning on all four neighbors. Across the grid $d^2 \in [2.2957, 2.8593]\times10^{-4}$: largest in the first row (few predecessors), essentially constant in the deep interior, and touching the two-sided floor $h^2/4$ exactly once — at the last node, per §2's closure identity.</p>
+<p><strong>Honest note: no closed form.</strong> On the 1-D chain the one-sided coefficient was a single number with bridge lore behind it — $(n+1-i)/(n+2-i)$ for <code>phiL2R</code>, mirror $i/(i+1)$ for <code>phiR2L</code> (reports <a href="09-stiffness-as-precision.html">09 §4.2</a>, <a href="10-fluctuation-dissipation.html">10 §3.2</a>: linear interpolation toward the pinned wall). In 2-D there is no such closed form: the wavefront row is a row of a Schur complement of a 2-D Dirichlet Laplacian, dense within the wavefront, and the numbers above (0.3624, 0.3112, decay 0.6785) are <em>measured</em>, not derived. The 1-D chain is the special case where the wavefront has width one.</p>
+<hr />
+<h2 id="4-the-ladder-of-truncations">4. The ladder of truncations</h2>
+<p>Now truncate the perfect predictor progressively and watch the rate degrade — the headline figure, all ten methods as the <em>same</em> iteration:</p>
+<p><img alt="Error convergence of the full ladder under stationary Richardson" src="../figures/richardson_error_convergence.png" /></p>
+<p>(<a href="../figures/richardson_error_Anorm.png">$A$-norm version</a>.) The measured table ($n = 32$; every convergent slope matches its dense $\rho$, per-method PASS lines in the JSON):</p>
+<table>
+<thead>
+<tr>
+<th>method</th>
+<th>predictor it encodes</th>
+<th style="text-align: right;">$\rho$ exact</th>
+<th style="text-align: right;">slope measured</th>
+<th style="text-align: right;">iters to $10^{-10}$</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Richardson $\alpha^\star$</td>
+<td>none (optimal scalar)</td>
+<td style="text-align: right;">0.995472</td>
+<td style="text-align: right;">0.995472</td>
+<td style="text-align: right;">4777</td>
+</tr>
+<tr>
+<td>Jacobi</td>
+<td>two-sided, synchronous, stale</td>
+<td style="text-align: right;">0.995472</td>
+<td style="text-align: right;">0.995472</td>
+<td style="text-align: right;">4777 (= Richardson, identical histories)</td>
+</tr>
+<tr>
+<td>Gauss–Seidel</td>
+<td>two-sided weights, sequential, fresh</td>
+<td style="text-align: right;">0.990964</td>
+<td style="text-align: right;">0.990964</td>
+<td style="text-align: right;">2355</td>
+</tr>
+<tr>
+<td>perfect AR</td>
+<td>all predecessors (exact $\Phi, d^2$)</td>
+<td style="text-align: right;">$5.5\times10^{-15}$</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;"><strong>1</strong></td>
+</tr>
+<tr>
+<td>IC(0)</td>
+<td>stencil-only wavefront (truncated AR)</td>
+<td style="text-align: right;">0.969736</td>
+<td style="text-align: right;">0.969736</td>
+<td style="text-align: right;">706</td>
+</tr>
+<tr>
+<td>coarse-only, 4×4 blocks (64 dofs)</td>
+<td>block averages only</td>
+<td style="text-align: right;">1.0</td>
+<td style="text-align: right;">stall</td>
+<td style="text-align: right;">plateau $\ell_2$ 0.7230 / $A$ 0.8467 at $k{=}1$</td>
+</tr>
+<tr>
+<td>coarse-only, bilinear 16×16 (256 dofs)</td>
+<td>coarse field only</td>
+<td style="text-align: right;">1.0</td>
+<td style="text-align: right;">stall</td>
+<td style="text-align: right;">plateau $\ell_2$ 0.0203 / $A$ 0.1279 at $k{=}1$</td>
+</tr>
+<tr>
+<td>two-grid mult., blocks</td>
+<td>smoother + block-spin coarse</td>
+<td style="text-align: right;">0.8153</td>
+<td style="text-align: right;">0.8119 (seeded 0.815303)</td>
+<td style="text-align: right;">110</td>
+</tr>
+<tr>
+<td>two-grid mult., bilinear</td>
+<td>smoother + geometric coarse</td>
+<td style="text-align: right;"><strong>0.3571</strong></td>
+<td style="text-align: right;">0.3418 (seeded 0.357104)</td>
+<td style="text-align: right;"><strong>17</strong></td>
+</tr>
+<tr>
+<td>two-level additive, blocks</td>
+<td>neighbors + averages, one shot</td>
+<td style="text-align: right;">0.9024</td>
+<td style="text-align: right;">0.9002</td>
+<td style="text-align: right;">216</td>
+</tr>
+</tbody>
+</table>
+<p><strong>IC(0) = truncated AR, and its two-phase signature.</strong> Keep only the stencil entries of the wavefront — each node predicted from $\{k{-}1, k{-}n\}$ — i.e. <code>preconditioners.ic0</code> reused verbatim (<a href="05-classical-preconditioners.html">05</a>/<a href="09-stiffness-as-precision.html">09 §6</a>/<a href="11-regressions-and-multiscale.html">11 §4</a>; recall 11's measured boundary: IC(0) and covariance-side Vecchia share the pattern but differ by up to $8.32\times10^{-2}$ per coefficient). $\mathrm{spec}(M^{-1}A) = [0.0303, 1.2048]$, $\rho = 1 - \lambda_{\min} = 0.969736$, 706 iterations. The error history is visibly <strong>two-phase</strong>: over the first 10 iterations the slope is 0.9233 ($\ell_2$) / 0.9083 ($A$-norm) — $2.6\times$ faster in rate exponent than the terminal 0.9697 — then the iteration settles onto its geometric tail (within 99% of terminal by iteration 40). The truncated regressions capture the stencil physics, so rough error dies at the fast early rate; what survives is the smooth content the dropped fill was responsible for, and the terminal rate is exactly the smoothest mode's $1 - \lambda_{\min}(M^{-1}A)$ — <a href="11-regressions-and-multiscale.html">11 §6</a>'s smooth ghost, here as a measured slope transition rather than a picture.</p>
+<p><strong>Coarse-only Galerkin: one shot, then a wall.</strong> $C = Z A_c^{-1} Z^\top$ with Galerkin $A_c = Z^\top A Z$, two coarse spaces: $Z$ = 4×4 block-average indicators (64 dofs, <code>block_average_matrix</code>, reused from <a href="11-regressions-and-multiscale.html">11 §5</a>) and $Z$ = bilinear interpolation from the vertex-centered 16×16 coarse grid (256 dofs). Verified in full: $E = I - ZA_c^{-1}Z^\top A$ is an <strong>$A$-orthogonal projector</strong> (idempotency $2.3\times10^{-15}$, $Z^\top A e_1 = 0$ to $2.2\times10^{-15}$, $A$-Pythagoras to $6.2\times10^{-16}$), $\rho(E) = 1$, and the iteration is <em>exactly stationary</em> after one step (drift $4.6\times10^{-16}$ over 14 further sweeps). The plateau level <strong>is</strong> the fraction of the initial error outside the coarse space — by $A$-Pythagoras, plateau${}_A = \Vert (I-\Pi_A)e_0\Vert _A/\Vert e_0\Vert _A$: blocks retain 0.8467 of the initial $A$-norm error (the coarse space captures only $1 - 0.8467^2 = 28\%$ of the energy), bilinear retains 0.1279 (captures 98.4%). Statistically: regression on coarse covariates explains the smooth component in one shot and <em>can never explain the residual</em> — $\rho = 1$ is a model with no fine-scale term. And per §1, this drama is invisible in residual-think: the bilinear step kills 98% of the $\ell_2$ error while barely denting $\Vert r\Vert $, because what it kills is precisely the low-$\lambda$ content the residual discounts.</p>
+<p><strong>Two-level: the composite model.</strong> Multiplicative (a genuine two-grid cycle: one $\omega = 4/5$ damped-Jacobi pre-smooth, Galerkin coarse correction, one post-smooth; $\omega = 4/5$ is the classical high-frequency-optimal damping for the <strong>2-D</strong> 5-point Laplacian, smoothing factor $3/5$ — Trottenberg et al., <em>Multigrid</em>, §2.1; the 1-D model-problem analysis of Briggs–Henson–McCormick ch. 2 gives the analogous $\omega = 2/3$): the implemented cycle's error propagation is verified to <em>be</em> $S(I - ZA_c^{-1}Z^\top A)S$ on a random vector ($3.9\times10^{-16}$ blocks, $1.3\times10^{-15}$ bilinear). Rates: blocks $\rho = 0.8153$ (110 its), bilinear $\rho = 0.3571$ (<strong>17 its</strong> — the best stationary method on the board, verified $&lt; $ every other non-perfect $\rho$). The generic-start tail slopes (0.8119, 0.3418) sit slightly below $\rho$ because at $\rho \approx 0.36$ the iteration hits $10^{-10}$ in 17 steps, before the dominant mode separates from the cluster; seeding the iteration with the dominant eigenvector of $E$ recovers $\rho$ to six digits (0.815303, 0.357104) — the transient, not the theory, limits the measurement. Additive (Jacobi + coarse applied to the <em>same</em> residual, <a href="11-regressions-and-multiscale.html">11 §5.2</a>'s combination, here optimally damped: $\theta = 2/(\mu_{\min}+\mu_{\max}) = 1.0919$ on $\mathrm{spec}(C_0A) = [0.0894, 1.7423]$): $\rho = 0.9024$, 216 its — convergent but far behind multiplicative, which lets the smoother clean up exactly what the coarse correction just exposed instead of having the two terms talk past each other.</p>
+<p><strong>Block spins vs geometric interpolation.</strong> The gap between the two coarse spaces is the report's renormalization lesson. Block averaging is the <strong>Kadanoff block-spin</strong> map: crude piecewise-constant coarse fields whose jumps carry spurious energy, so the renormalized coarse Hamiltonian $A_c = Z^\top A Z$ misrepresents the smooth physics — plateau 0.8467, two-grid $\rho = 0.8153$. Bilinear interpolation is the proper geometric multiscale map — coarse fields that are themselves smooth — and everything improves at once: plateau 0.1279, $\rho = 0.3571$. Same Galerkin construction, same smoother; the choice of <em>what a coarse variable means</em> is worth a factor of 6.6 in plateau ($0.8467/0.1279$) and cuts the two-grid rate from 0.8153 to 0.3571 — 110 sweeps to 17.</p>
+<p><strong>Mesh (in)dependence and critical slowing down.</strong> The same four methods at $n \in \{16, 32, 64\}$ ($n = 64$ via sparse <code>eigsh</code>/<code>eigs</code>; measured slopes agree with $\rho$ to six digits for the one-level methods) — <a href="../figures/richardson_mesh_dependence.png">figure</a>:</p>
+<table>
+<thead>
+<tr>
+<th>$\rho$</th>
+<th style="text-align: right;">$n=16$</th>
+<th style="text-align: right;">$n=32$</th>
+<th style="text-align: right;">$n=64$</th>
+<th>$1-\rho$ ratios vs $h^2$ ratios (3.77, 3.88)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Jacobi</td>
+<td style="text-align: right;">0.98297</td>
+<td style="text-align: right;">0.99547</td>
+<td style="text-align: right;">0.99883</td>
+<td>3.76, 3.88 (within 5%)</td>
+</tr>
+<tr>
+<td>Gauss–Seidel</td>
+<td style="text-align: right;">0.96624</td>
+<td style="text-align: right;">0.99096</td>
+<td style="text-align: right;">0.99767</td>
+<td>3.74, 3.87 (within 5%)</td>
+</tr>
+<tr>
+<td>IC(0)</td>
+<td style="text-align: right;">0.89245</td>
+<td style="text-align: right;">0.96974</td>
+<td style="text-align: right;">0.99207</td>
+<td>3.55, 3.82 (within 30%, tightening)</td>
+</tr>
+<tr>
+<td>two-grid bilinear</td>
+<td style="text-align: right;">0.34913</td>
+<td style="text-align: right;">0.35710</td>
+<td style="text-align: right;">0.35925</td>
+<td>spread 0.0101 — flat</td>
+</tr>
+</tbody>
+</table>
+<p>Iteration counts tell the same story brutally: Jacobi 1312 → 4777 → 19153; two-grid 18 → 17 → 15. Every <em>local</em> predictor — and IC(0) is still local, just cleverer — has $1 - \rho = O(h^2)$: as the lattice refines, the field's smooth modes become arbitrarily well predicted by neighbors, each sweep extracts less news, $\rho \to 1$. This is <strong>critical slowing down</strong>, the same divergence <a href="10-fluctuation-dissipation.html">10 §6</a> measured as MCMC autocorrelation time ($\tau = -1/\ln\rho$: the solver's iteration count and the sampler's mixing time are one number). The two-level method is its <strong>multiscale cure</strong>: the coarse regression handles the correlation lengths the local predictor cannot reach, at every $h$ — the stationary-iteration face of the multigrid endpoint <a href="05-classical-preconditioners.html">05 §5</a> promised and <a href="11-regressions-and-multiscale.html">11 §5.3</a> recursed.</p>
+<hr />
+<h2 id="5-implementation-index-every-ar-predictor-in-the-suite">5. Implementation index: every AR predictor in the suite</h2>
+<table>
+<thead>
+<tr>
+<th>predictor variant</th>
+<th>implementation</th>
+<th>what it computes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1-D closed-form <code>phiL2R</code>/<code>phiR2L</code>, reversal identity, $A = (I-\Phi)^\top D^{-2}_\sigma(I-\Phi)$</td>
+<td><a href="../python/experiments/verify_statistical_identities.py">python/experiments/verify_statistical_identities.py</a></td>
+<td>chain regressions with closed forms $i/(i{+}1)$, $(n{+}1{-}i)/(n{+}2{-}i)$; QR/Cholesky/Gram–Schmidt duality; 19 checks (<a href="09-stiffness-as-precision.html">09</a>)</td>
+</tr>
+<tr>
+<td>fitted from fluctuations (thermal snapshots → $\hat B$, $\hat\Phi$, learned Vecchia)</td>
+<td><a href="../python/experiments/fdt_fluctuations.py">python/experiments/fdt_fluctuations.py</a></td>
+<td>FDT; regression coefficients estimated from noise; snapshot-fitted IC(0)-pattern preconditioner, PCG 116 → 30 (<a href="10-fluctuation-dissipation.html">10</a>)</td>
+</tr>
+<tr>
+<td>2-D truncated AR: IC(0) vs Vecchia, wavefront/fill anatomy, coarse + two-level PCG</td>
+<td><a href="../python/experiments/grid_regressions_multiscale.py">python/experiments/grid_regressions_multiscale.py</a></td>
+<td>the 8×8 dissection, IC(0)-vs-Vecchia dev $8.32\times10^{-2}$, block-average regressions, hot/cold-rod error fields (<a href="11-regressions-and-multiscale.html">11</a>)</td>
+</tr>
+<tr>
+<td>perfect AR ($\Phi$, $d^2$, $M = A$) + the full Richardson ladder of this report</td>
+<td><a href="../python/experiments/richardson_ar.py">python/experiments/richardson_ar.py</a></td>
+<td>§§2–4: trichotomy, weight anatomy, Schur/DtN identities, truncation ladder, mesh study; 53 checks</td>
+</tr>
+<tr>
+<td>Wolfram, independent: FDT + $B$-extraction; 8×8 ArrayPlots and exact-$1/4$ checks</td>
+<td><a href="../mathematica/fdt_fluctuations.wls">mathematica/fdt_fluctuations.wls</a>, <a href="../mathematica/grid8_regressions.wls">mathematica/grid8_regressions.wls</a></td>
+<td>cross-language verification of the regression matrices and factors</td>
+</tr>
+<tr>
+<td>notation source (Pourahmadi parameterization, <code>mchol</code>, <code>phiL2R</code>/<code>phiR2L</code>, reversal identity)</td>
+<td><code>whitening_inverse_transposed.nb</code> (<code>~/git0/newton/</code>, external companion)</td>
+<td>the notebook whose identities reports 09–12 machine-check</td>
+</tr>
+</tbody>
+</table>
+<p>Shared machinery, reused not re-derived: <a href="../python/poisson.py">python/poisson.py</a> (<code>poisson_2d</code>, <code>grf_rhs</code>), <a href="../python/preconditioners.py">python/preconditioners.py</a> (<code>ic0</code>, <code>block_average_matrix</code>), <a href="../python/pcg.py">python/pcg.py</a> (the CG harness this report deliberately does not use).</p>
+<hr />
+<h2 id="6-terminology-bridge">6. Terminology bridge</h2>
+<p>One table, three communities. Every row is machine-checked in the suite except the one marked †, which is a structural analogy:</p>
+<table>
+<thead>
+<tr>
+<th>statistics</th>
+<th>physics</th>
+<th>numerics</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>innovations / Wold decomposition</td>
+<td>thermal kicks</td>
+<td>residuals (whitened: $z = L^\top u$)</td>
+</tr>
+<tr>
+<td>synchronous scan of conditional means</td>
+<td>parallel heat-bath dynamics</td>
+<td>Jacobi, $\rho = \cos(\pi h)$</td>
+</tr>
+<tr>
+<td>systematic-scan Gibbs, noise deleted</td>
+<td>sequential relaxation</td>
+<td>Gauss–Seidel, $\rho = \cos^2(\pi h)$</td>
+</tr>
+<tr>
+<td>Vecchia (truncated conditioning sets)</td>
+<td>short-range effective model</td>
+<td>IC(0), $\rho = 0.9697$</td>
+</tr>
+<tr>
+<td>kriging screening effect</td>
+<td>decimation RG / Dirichlet-to-Neumann</td>
+<td>Schur-complement fill; wavefront weights, decay 0.6785/step</td>
+</tr>
+<tr>
+<td>regression on block averages</td>
+<td>Kadanoff block spins</td>
+<td>Galerkin coarse operator $A_c = Z^\top AZ$</td>
+</tr>
+<tr>
+<td>kriging the fine field from coarse†</td>
+<td>RG effective field†</td>
+<td>prolongation $Z$†</td>
+</tr>
+<tr>
+<td>perfect ordered AR (all predecessors)</td>
+<td>exact decimation, node by node</td>
+<td>Cholesky; back-substitution; one-step solve</td>
+</tr>
+<tr>
+<td>critical slowing down of local samplers</td>
+<td>diverging correlation/relaxation time</td>
+<td>$\rho \to 1$ like $1 - O(h^2)$; two-level stays flat</td>
+</tr>
+</tbody>
+</table>
+<p>† analogy, not a machine-checked identity: bilinear $Z$ interpolates geometrically — it is not literally the kriging map $\Sigma_{fc}\Sigma_{cc}^{-1}$.</p>
+<hr />
+<h2 id="7-where-cg-comes-back-and-where-the-learned-rung-sits">7. Where CG comes back, and where the learned rung sits</h2>
+<p>Richardson was this report's instrument, not its recommendation. A stationary iteration pays $\rho^k$ forever; CG wrapped around the <em>same fixed</em> $M$ replaces the geometric factor with the min–max polynomial rate on $\mathrm{spec}(M^{-1}A)$ — roughly $(\sqrt{\kappa'}-1)/(\sqrt{\kappa'}+1)$ per step, with clustering bonuses on top (<a href="04-krylov-and-pcg.html">04</a>). The comparison is now clean because both numbers are on the table: IC(0) costs 706 Richardson sweeps here and 39 PCG iterations in <a href="11-regressions-and-multiscale.html">11 §5.2</a> — CG's acceleration of the <em>same</em> statistical model, quantified. The division of labor of the whole suite, in one line: <strong>the predictor explains what it can; Richardson exposes how much that is; CG accelerates whatever is left.</strong> And the ladder keeps going up: the NPO of <a href="06-neural-preconditioner.html">06</a> is a <em>learned, nonlinear</em> predictor — the fitted rung of <a href="10-fluctuation-dissipation.html">10 §5</a> with the linear regression class swapped for a network — which no longer defines a fixed SPD $M$ at all, and therefore needs the flexible (iteration-tolerant) CG variant that <a href="06-neural-preconditioner.html">06</a> runs. Same frame, one more rung.</p>
+<hr />
+<p><strong>Coda.</strong> Reports <a href="09-stiffness-as-precision.html">09</a>–<a href="11-regressions-and-multiscale.html">11</a> kept saying "a preconditioner is a statistical model." This report removed the last hedge by removing CG: run the model bare, as predict-and-correct, and its quality is a single number, $\rho(I - CA)$ — the fraction of the field the model cannot explain per look. The perfect two-sided model, scheduled synchronously, explains 0.45% per sweep; scheduled sequentially, 0.90%; the perfect causal model, scheduled in elimination order, explains everything at once, because triangularity lets prediction become substitution. Everything between those poles — IC(0) at 3%, block coarse spaces that explain 28% once and nothing thereafter, a two-grid cycle at 64% per sweep at every mesh size — is a truncation policy for one object: the regression of each node on what the solver has already understood. <a href="13-preconditioning-as-decoupling.html">13</a> names the frame all these rungs are instances of: preconditioning is decoupling.</p>
+</div>
+</body>
+</html>
