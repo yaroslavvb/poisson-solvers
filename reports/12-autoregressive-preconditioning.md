@@ -48,6 +48,8 @@ $$\rho(B) \;=\; \cos(\pi h) \;=\; \frac{\kappa - 1}{\kappa + 1} \;=\; 0.99547192
 
 This is [05](05-classical-preconditioners.md)'s "Jacobi is a scalar" story with its stationary punchline: on a constant diagonal, Jacobi-the-preconditioner is inert inside CG (116 = 116, [05](05-classical-preconditioners.md)/[09 §3](09-stiffness-as-precision.md)) precisely because the scalar it degenerates to is already the *best possible* scalar — Jacobi-the-iteration is the optimal no-predictor method, and no-predictor is exactly what CG doesn't need help with.
 
+*The whole trichotomy is replayed in exact fractions on the $n = 5$ chain — the perfect two-sided $B$, the causal $\Phi, d^2$, and the one-step solve — as Steps 2–4 of the worked tutorial, [15](15-preconditioning-as-prediction.md).*
+
 ---
 
 ## 3. The perfect weights, in detail

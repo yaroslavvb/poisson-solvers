@@ -45,25 +45,25 @@
       "h": 0.015384615384615385,
       "N": 4096,
       "jacobi": {
-        "rho_exact": 0.998832226832328,
+        "rho_exact": 0.9988322268323268,
         "rho_source": "sparse eigsh(B, LA)",
         "slope_measured": 0.998832230393623,
         "iters_to_tol": 19153
       },
       "gauss_seidel": {
-        "rho_exact": 0.9976658173588208,
+        "rho_exact": 0.9976658173588319,
         "rho_source": "sparse eigs(E_GS, LM)",
         "slope_measured": 0.9976658198429488,
         "iters_to_tol": 9556
       },
       "ic0": {
-        "rho_exact": 0.9920704173167441,
+        "rho_exact": 0.992070417316744,
         "rho_source": "sparse eigsh(L^-1 A L^-T, SA/LA)",
         "slope_measured": 0.9920704299312281,
         "iters_to_tol": 2812
       },
       "twogrid_mult_bilinear": {
-        "rho_exact": 0.3592527353348717,
+        "rho_exact": 0.35925273533486923,
         "rho_source": "sparse eigs(E_TG, LM)",
         "slope_measured": 0.3448284320187469,
         "iters_to_tol": 15

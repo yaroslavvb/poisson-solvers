@@ -100,6 +100,8 @@ Sampling is **coloring** by $L^{-\top}$; solving/whitening is applying $L^\top$ 
 
 Because the graph is a chain, $L$ is lower **bidiagonal — Cholesky creates no fill-in on a tree**. Hold that thought; it is the entire story of why 1D is easy and 2D/3D is where preconditioning becomes real (§6).
 
+*Every object in §§3–4 — $B$, `D2`, `phiL2R`/`phiR2L`, `mchol`, the reversal identity — is worked entry-by-entry in exact fractions on the $n = 5$ chain in the suite's tutorial, [15 (Steps 1–4)](15-preconditioning-as-prediction.md).*
+
 ### 4.3 QR and the Shawe-Taylor duality, in whitening language
 
 Shawe-Taylor & Cristianini's §5.2 duality says: Gram–Schmidt on the feature vectors gives $X' = QR$, and the *same* $R$ appears as the Cholesky factor of the kernel matrix, $K = XX' = R'R$ — "Cholesky is the dual implementation of Gram–Schmidt." For our problem the "data matrix" is the difference operator: QR-factor $D = QR$ and (verified, after fixing signs) $R = L^\top = \mathrm{chol}(A)^\top$, with

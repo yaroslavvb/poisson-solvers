@@ -541,10 +541,10 @@ def main() -> int:
     ok = True
 
     n_pages = len(report_pages)
-    built_ok = n_pages == 15 and index_page.exists()
+    built_ok = n_pages == 16 and index_page.exists()
     ok &= built_ok
     print(f"{'PASS' if built_ok else 'FAIL'}: all report pages + index built "
-          f"({n_pages}/15 reports, index={'yes' if index_page.exists() else 'NO'})")
+          f"({n_pages}/16 reports, index={'yes' if index_page.exists() else 'NO'})")
 
     n_links, link_failures = check_internal_links()
     ok &= not link_failures

@@ -109,6 +109,7 @@ window.MathJax = {
 <p>$$u = L^{-\top}z, \qquad z\sim\mathcal N(0,I).$$</p>
 <p>Sampling is <strong>coloring</strong> by $L^{-\top}$; solving/whitening is applying $L^\top$ (or $A$). One triangular matrix, used in the two directions.</p>
 <p>Because the graph is a chain, $L$ is lower <strong>bidiagonal — Cholesky creates no fill-in on a tree</strong>. Hold that thought; it is the entire story of why 1D is easy and 2D/3D is where preconditioning becomes real (§6).</p>
+<p><em>Every object in §§3–4 — $B$, <code>D2</code>, <code>phiL2R</code>/<code>phiR2L</code>, <code>mchol</code>, the reversal identity — is worked entry-by-entry in exact fractions on the $n = 5$ chain in the suite's tutorial, <a href="15-preconditioning-as-prediction.html">15 (Steps 1–4)</a>.</em></p>
 <h3 id="43-qr-and-the-shawe-taylor-duality-in-whitening-language">4.3 QR and the Shawe-Taylor duality, in whitening language</h3>
 <p>Shawe-Taylor &amp; Cristianini's §5.2 duality says: Gram–Schmidt on the feature vectors gives $X' = QR$, and the <em>same</em> $R$ appears as the Cholesky factor of the kernel matrix, $K = XX' = R'R$ — "Cholesky is the dual implementation of Gram–Schmidt." For our problem the "data matrix" is the difference operator: QR-factor $D = QR$ and (verified, after fixing signs) $R = L^\top = \mathrm{chol}(A)^\top$, with</p>
 <p>$$Q = D R^{-1} = D L^{-\top}.$$</p>

@@ -16,7 +16,7 @@
   "n": 32,
   "kappa_A": 440.6885603836583,
   "sqrt_kappa_A": 20.992583461395558,
-  "runtime_seconds": 2.7,
+  "runtime_seconds": 2.5,
   "n_checks": 44,
   "n_fail": 0
  },

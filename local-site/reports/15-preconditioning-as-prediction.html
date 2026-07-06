@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preconditioning Is Approximate Prediction</title>
+<style>
+body { margin: 0; color: #1b1f23; background: #fff;
+       font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI",
+             Helvetica, Arial, sans-serif; }
+.page { max-width: 860px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+nav.site { font-size: .85rem; color: #57606a; margin-bottom: 1.5rem;
+           border-bottom: 1px solid #d8dee4; padding-bottom: .5rem; }
+nav.site a { color: #0969da; text-decoration: none; }
+nav.site a:hover { text-decoration: underline; }
+nav.site .sep { margin: 0 .45em; color: #8c959f; }
+h1, h2, h3, h4 { line-height: 1.25; margin: 1.6em 0 .6em; }
+h1 { font-size: 1.9rem; border-bottom: 1px solid #d8dee4;
+     padding-bottom: .3em; margin-top: .2em; }
+h2 { font-size: 1.45rem; border-bottom: 1px solid #eaecef;
+     padding-bottom: .25em; }
+a { color: #0969da; }
+img { max-width: 100%; height: auto; }
+pre { background: #f6f8fa; padding: .9em 1.1em; overflow-x: auto;
+      border-radius: 6px; font-size: .85em; line-height: 1.45; }
+code { font-family: "SF Mono", SFMono-Regular, ui-monospace, Menlo,
+       Consolas, monospace; background: #f6f8fa; padding: .1em .3em;
+       border-radius: 4px; font-size: .9em; }
+pre code { background: none; padding: 0; font-size: 1em; }
+table { border-collapse: collapse; margin: 1em 0; display: block;
+        overflow-x: auto; max-width: 100%; }
+th, td { border: 1px solid #d0d7de; padding: .35em .7em; }
+th { background: #f6f8fa; }
+blockquote { margin: 0 0 1em; padding: 0 1em; color: #57606a;
+             border-left: .25em solid #d0d7de; }
+hr { border: none; border-top: 1px solid #d8dee4; margin: 2em 0; }
+.citation { color: #57606a; word-break: break-all; }
+mjx-container[jax="SVG"][display="true"] { overflow-x: auto;
+                                           overflow-y: hidden; }
+</style>
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    processEscapes: true
+  },
+  options: {
+    skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  svg: { fontCache: 'local' }
+};
+</script>
+<script defer src="../vendor/mathjax-tex-svg.js"></script>
+</head>
+<body>
+<div class="page">
+<nav class="site"><a href="../index.html">index</a><span class="sep">&middot;</span><a href="14-hierarchical-inverse.html">&larr; 14-hierarchical-inverse</a><span class="sep">&middot;</span><span>(last report) &rarr;</span></nav>
+<h1 id="preconditioning-is-approximate-prediction">Preconditioning Is Approximate Prediction</h1>
+<h3 id="the-suites-capstone-run-as-a-tutorial-eight-steps-from-a-5-node-chain-in-exact-fractions-to-pcg-as-whitened-cg-every-displayed-number-machine-generated">The suite's capstone, run as a tutorial: eight steps from a 5-node chain in exact fractions to PCG-as-whitened-CG, every displayed number machine-generated</h3>
+<p><em>The tutorial distillation of the suite. Reports <a href="09-stiffness-as-precision.html">09</a>–<a href="14-hierarchical-inverse.html">14</a> built the statistical reading of the solver stack in full generality; this report walks the same road in strict step-by-step form on the smallest possible examples — the $n = 5$ Dirichlet chain in </em><em>exact rational arithmetic</em><em>, then the $4\times4$ grid ($N = 16$) where truncation first bites — so that every object can be printed whole and checked by eye. Notation follows the companion Mathematica notebook <code>whitening_inverse_transposed.nb</code> (<code>~/git0/newton/</code>, Pourahmadi's regression parameterization), the suite's notation source since <a href="09-stiffness-as-precision.html">09</a>: $B$ the hollow two-sided regression matrix, <code>D2</code> the diagonal of inverse residual variances, the identity <code>precisionMat == (I - B).D2</code>, <code>mchol</code> the modified Cholesky $\Sigma = C D^2 C^\top$, <code>phiL2R</code> (regress coordinate $i$ on its predecessors) and <code>phiR2L</code> (regress on its successors). Every displayed matrix and every claim below is machine-generated and machine-checked by </em><em>two independent companion scripts</em><em>: <a href="../python/experiments/prediction_tutorial.py">python/experiments/prediction_tutorial.py</a> (</em><em>43 PASS, 0 FAIL</em><em>, exact <code>Fraction</code> arithmetic for steps 1–4 and 6, floats only where the object is genuinely numeric; numbers in <a href="../results/prediction_tutorial.json">results/prediction_tutorial.json</a>) and <a href="../mathematica/prediction_tutorial.wls">mathematica/prediction_tutorial.wls</a> (</em><em>13 PASS, 0 FAIL</em><em>, exit 0, </em>all<em> arithmetic exact rational — no <code>N[]</code> anywhere — with function names <code>mchol</code>, <code>imchol</code>, <code>phiL2R</code>, <code>phiR2L</code>, <code>precisionMat</code>, <code>iiMat</code> mirroring the notebook and cited <code>(notebook: &lt;name&gt;)</code> in its comments). The displayed fractions are copied verbatim from the scripts' output. Each step states its goal in one sentence, shows the worked numbers, states the general fact they instantiate, and points to the suite report that develops it fully.</em></p>
+<hr />
+<p>The whole tutorial is one sentence, unpacked eight times:</p>
+<blockquote>
+<p><strong>A preconditioner is a prediction model for the unknown field; solving is subtracting predictions; the quality of a preconditioner is exactly the quality of its predictions.</strong> Perfect prediction is a direct solve (Step 4). Every practical preconditioner is a <em>truncated</em> prediction — fewer regressors (Step 5) or coarser ones (Step 6) — and the iteration pays the unexplained remainder per sweep (Step 7), unless CG is spending it smarter in the predictor's whitened coordinates (Step 8).</p>
+</blockquote>
+<hr />
+<h2 id="step-1--the-chain-exact-put-one-solvable-gaussian-on-the-table">Step 1 — the chain, exact: put one solvable Gaussian on the table</h2>
+<p><strong>Goal:</strong> write down the smallest nontrivial Poisson system and its inverse so explicitly that nothing later can hide. Take $n = 5$ interior nodes on $(0,1)$, $h = 1/6$, $x_i = i/6$, and $A = \mathrm{tridiag}(-1, 2, -1)/h^2$ — so $2/h^2 = 72$ and $-1/h^2 = -36$:</p>
+<pre><code>A =
+    [  72   -36     0     0     0 ]
+    [ -36    72   -36     0     0 ]
+    [   0   -36    72   -36     0 ]
+    [   0     0   -36    72   -36 ]
+    [   0     0     0   -36    72 ]
+Sigma = A^{-1}  (bridge formula Sigma_ij = h x_i (1-x_j), i&lt;=j) =
+    [ 5/216    1/54   1/72   1/108   1/216 ]
+    [  1/54    1/27   1/36    1/54   1/108 ]
+    [  1/72    1/36   1/24    1/36    1/72 ]
+    [ 1/108    1/54   1/36    1/27    1/54 ]
+    [ 1/216   1/108   1/72    1/54   5/216 ]
+</code></pre>
+<p>The upper triangle of $\Sigma$ is the closed form $\Sigma_{ij} = h\,x_i(1 - x_j)$ for $i \le j$ — checked against an independent exact Gauss–Jordan inverse <strong>entry-by-entry in <code>Fraction</code> arithmetic, zero tolerance</strong>, and $A\Sigma = I$ is verified as a matrix of exact rational identities (the Wolfram script re-proves both in rationals, writing the same formula as $h\min(x_i,x_j)(1-\max(x_i,x_j))$).</p>
+<p><strong>The general fact:</strong> $A$ is the precision matrix of the Gibbs field $u \sim \mathcal N(A^{-1}b, A^{-1})$, and its inverse is the Brownian-bridge covariance $h(\min(s,t) - st)$ sampled on the grid — sparse conditional structure, dense marginal structure. Developed in <a href="09-stiffness-as-precision.html">09 §1–2</a>; the rank-1-triangle reading of the same formula is <a href="13-preconditioning-as-decoupling.html">13 §3</a>, and its separator explanation <a href="14-hierarchical-inverse.html">14 §2.2</a>.</p>
+<hr />
+<h2 id="step-2--two-sided-prediction-every-row-of-xmathphx22xendx-predicts-one-node-from-all-the-others">Step 2 — two-sided prediction: every row of $A$ predicts one node from all the others</h2>
+<p><strong>Goal:</strong> extract from $A$ the regression each node runs on the rest of the field — the notebook's $B$ and <code>D2</code>. Compute $B = I - \mathrm{diag}(A)^{-1}A$ and $D2 = \mathrm{diag}(A)$, both exact:</p>
+<pre><code>B  (row i = regression coefficients of u_i on all the others) =
+    [   0   1/2     0     0     0 ]
+    [ 1/2     0   1/2     0     0 ]
+    [   0   1/2     0   1/2     0 ]
+    [   0     0   1/2     0   1/2 ]
+    [   0     0     0   1/2     0 ]
+D2 (inverse residual variances = diag(A)) = diag(72, 72, 72, 72, 72)
+</code></pre>
+<p>$B$ is verified hollow (zero diagonal) with <strong>exactly $1/2$ on both neighbors</strong>, and the notebook's central identity holds as an exact rational identity: <code>precisionMat == (I - B).D2 == A</code>. One convention note, per <a href="10-fluctuation-dissipation.html">10 §3.1</a>: we write $B$ in the row (PDE/Jacobi) convention — row $i$ predicts $u_i$ — while the notebook's <code>getB</code> stacks the per-coordinate coefficient vectors as <em>columns</em> (the transpose, matching its data rule <code>x - x.B</code>); for a row-convention $B$ the identity in general form is $A = D2\,(I - B)$, and the notebook's order <code>(I - B).D2</code> matches here only because the constant diagonal $\mathrm{diag}(A) = 72\,I$ makes $B$ symmetric (both facts checked exactly). The worked row: $\mathbb E[u_3 \mid \mathrm{rest}] = (u_2 + u_4)/2$ with $\mathrm{Var}(u_3 \mid \mathrm{rest}) = 1/A_{33} = h^2/2 = 1/72$ exactly — and an <strong>independent Schur-complement route</strong> (regress $u_3$ on the other four via exact $\Sigma$ submatrices) reproduces the coefficients $(1/2, 1/2)$ on the neighbors and the conditional variance $1/72$, all in exact fractions. Two roads, one regression: read it off the precision row, or run the regression on the covariance.</p>
+<p><strong>The general fact:</strong> the precision matrix <em>is</em> a stack of full-conditional regressions — $\mathbb E[u_i \mid u_{-i}]$ averages the neighbors (the discrete mean-value property), $\mathrm{Var}(u_i \mid u_{-i}) = 1/A_{ii}$. And $B$ is <em>also</em> the Jacobi iteration matrix: Jacobi is this perfect two-sided predictor applied <strong>synchronously</strong> to stale values, which is why its regressions are individually exact yet its rate is $\cos(\pi h)$ — the schedule, not the model, is the failure. Developed in <a href="09-stiffness-as-precision.html">09 §3</a> and priced as a bare rate in <a href="12-autoregressive-preconditioning.html">12 §2</a> (trichotomy branch (i)).</p>
+<hr />
+<h2 id="step-3--one-sided-prediction-order-the-nodes-and-regress-each-on-its-past-or-its-future">Step 3 — one-sided prediction: order the nodes and regress each on its past (or its future)</h2>
+<p><strong>Goal:</strong> replace "predict from everyone else" by "predict from those already visited" — the causal model that can be <em>unwound</em>. Running the exact sequential regressions on $\Sigma$ submatrices (the notebook's <code>phiL2R</code>) gives, in exact fractions:</p>
+<pre><code>Phi_L2R (row i = exact regression of u_i on u_1..u_{i-1}) =
+    [   0     0     0     0   0 ]
+    [ 4/5     0     0     0   0 ]
+    [   0   3/4     0     0   0 ]
+    [   0     0   2/3     0   0 ]
+    [   0     0     0   1/2   0 ]
+d^2 (innovation variances, exact) = [ 5/216   1/45   1/48   1/54   1/72 ]
+</code></pre>
+<p>Four checked facts, each exact:</p>
+<ul>
+<li><strong>Markov:</strong> only the immediate predecessor enters, with coefficient $(n+1-i)/(n+2-i)$: $4/5, 3/4, 2/3, 1/2$ for $i = 2..5$ — linear interpolation toward the pinned right wall (<a href="09-stiffness-as-precision.html">09 §4.2</a>, <a href="10-fluctuation-dissipation.html">10 §3.2</a>).</li>
+<li><strong>Innovations:</strong> $d_i^2 = h^2\,(n+1-i)/(n+2-i)$ exactly: $5/216, 1/45, 1/48, 1/54, 1/72$. The same ratio appears twice — for $i \ge 2$, $d_i^2 = h^2\varphi_i$: the innovation variance carries the regression coefficient.</li>
+<li><strong>Normal equations:</strong> $A = (I - \Phi_{\mathrm{L2R}})^\top \mathrm{diag}(1/d^2)\,(I - \Phi_{\mathrm{L2R}})$ exactly in fractions.</li>
+<li><strong>Whitening:</strong> $z = (I - \Phi_{\mathrm{L2R}})\,u$ has covariance $(I-\Phi)\Sigma(I-\Phi)^\top = \mathrm{diag}(d^2)$ — <em>exactly</em> diagonal, printed as exact fractions by the Wolfram script.</li>
+</ul>
+<p>The mirror model regresses on successors (<code>phiR2L</code>):</p>
+<pre><code>Phi_R2L (row i = exact regression of u_i on u_{i+1}..u_n) =
+    [ 0   1/2     0     0     0 ]
+    [ 0     0   2/3     0     0 ]
+    [ 0     0     0   3/4     0 ]
+    [ 0     0     0     0   4/5 ]
+    [ 0     0     0     0     0 ]
+dR^2 (innovation variances, exact) = [ 1/72   1/54   1/48   1/45   5/216 ]
+</code></pre>
+<p>with coefficient $i/(i+1)$ on the immediate successor ($1/2, 2/3, 3/4, 4/5$) and its own exact normal equations $A = (I - \Phi_{\mathrm{R2L}})^\top \mathrm{diag}(1/d_R^2)(I - \Phi_{\mathrm{R2L}})$. The two directions are one story read both ways: the reversal identity $\mathrm{chol}(\Sigma) = P L^{-\top} P$ with $L = \mathrm{chol}(A)$ holds to max dev $2.8\times10^{-17}$, $L$'s columns encode <code>phiR2L</code> ($-L_{i+1,i}/L_{ii} = i/(i+1)$, checked), and <code>mchol</code>$(\Sigma) = C D^2 C^\top$ matches $C = (I - \Phi_{\mathrm{L2R}})^{-1}$, $D^2 = \mathrm{diag}(d^2)$ to max devs $2.2\times10^{-16}$ and $6.9\times10^{-18}$ (the Wolfram script proves the <code>mchol</code> identity in exact rationals, printing the unit-lower $C$ with rows like $\{1/5, 1/4, 1/3, 1/2, 1\}$).</p>
+<p><img alt="Steps 1–3 in exact fractions: A, B, Phi_L2R, Sigma on the n = 5 chain" src="../figures/tutorial15_matrices.png" /></p>
+<p><em>Steps 1–3 as annotated heatmaps, every entry printed as its exact fraction: $A$ (tridiagonal, $72/-36$), the hollow two-sided predictor $B$ (all $1/2$'s), the one-sided predictor $\Phi_{\mathrm{L2R}}$ (single subdiagonal $4/5, 3/4, 2/3, 1/2$ — Markov), and the dense bridge covariance $\Sigma$ (peak $1/24$ at the center).</em></p>
+<p><strong>The general fact:</strong> Cholesky <em>is</em> sequential regression — fix an ordering, regress each variable on its predecessors (or successors), and the triangular factor stores coefficients while the diagonal stores innovation standard deviations; the covariance-side and precision-side factorizations are the same regressions read in opposite scan directions. Developed in <a href="09-stiffness-as-precision.html">09 §4.2</a>, measured in thermal noise in <a href="10-fluctuation-dissipation.html">10 §3</a>, and upgraded to the grid's 180°-rotation mirror in <a href="11-regressions-and-multiscale.html">11 §3</a>.</p>
+<hr />
+<h2 id="step-4--perfect-prediction-is-the-direct-solve">Step 4 — perfect prediction <em>is</em> the direct solve</h2>
+<p><strong>Goal:</strong> show that assembling the Step-3 regressions — never inverting $A$ — yields an operator that solves the system in one application. Build</p>
+<p>$$M^{-1} \;=\; (I - \Phi)^{-1}\,\mathrm{diag}(d^2)\,(I - \Phi)^{-\top}$$</p>
+<p>from the regression coefficients alone ($(I-\Phi)^{-1}$ is the exact inverse of a unit lower bidiagonal — back-substitution). Checked: $M^{-1} = \Sigma$ <strong>exactly in fractions</strong>. Now take $b = e_3$ (unit heat source at the center) and run one Richardson correction from $x_0 = 0$:</p>
+<pre><code>x* = M^{-1} e_3 (one Richardson step from x0 = 0) =
+    [ 1/72   1/36   1/24   1/36   1/72 ]
+</code></pre>
+<p>Checked exactly: $x_1$ equals column 3 of $\Sigma$, i.e. $(1/72, 1/36, 1/24, 1/36, 1/72)$, and $A x_1 = e_3$ — one predict-and-correct pass <em>is</em> the solve (the Wolfram script reproduces the identical exact vector). The "iteration" converged because there was nothing left to iterate on: the model's unexplained fraction is zero.</p>
+<p><strong>The general fact:</strong> this is <a href="12-autoregressive-preconditioning.html">12 §2</a>'s trichotomy branch (iii) — the perfect one-sided (causal, triangular) predictor converges in one step, because triangularity lets prediction become substitution: each node is solved given already-solved nodes. On the chain that unwinding is exactly the $O(n)$ Thomas algorithm = Kalman filter + RTS smoother = Gaussian belief propagation of <a href="09-stiffness-as-precision.html">09 §5</a>. The same perfect two-sided regressions of Step 2, scheduled synchronously, take 4777 sweeps at $n = 32$ (<a href="12-autoregressive-preconditioning.html">12 §2</a>); the difference between one step and thousands is <em>scheduling, not model quality</em>.</p>
+<hr />
+<h2 id="step-5--approximate-prediction-by-truncation-drop-regressors-ic0--truncated-vecchia">Step 5 — approximate prediction by truncation: drop regressors (IC(0) = truncated Vecchia)</h2>
+<p><strong>Goal:</strong> move to 2-D — <code>poisson_2d(4)</code>, $N = 16$, $h = 1/5$, where $\kappa(A_2) = 9.4721 = \cot^2(\pi h/2)$ (checked) — and watch what happens when the one-sided predictor is <em>truncated to the stencil</em>. First the exact one-sided row of node $k = 10$ = grid $(2,2)$ (0-based), regressed on its ten predecessors:</p>
+<pre><code>    k= 6 (i,j)=(1,2):   0.2937  &lt;- prev-row neighbor (1,2), KEPT by IC(0)
+    k= 7 (i,j)=(1,3):   0.0843
+    k= 8 (i,j)=(2,0):   0.0060
+    k= 9 (i,j)=(2,1):   0.3178  &lt;- W neighbor (2,1), KEPT by IC(0)
+    innovation variance d^2 = 0.011747  (h^2/4 = 0.010000)
+</code></pre>
+<p>The row is supported <strong>exactly on the last-$n$ wavefront</strong>: max $\vert\text{weight}\vert$ on the six pre-wavefront predecessors is $7.2\times10^{-17}$ (the GMRF global Markov property — the wavefront separates node 10 from everything scanned earlier), and the exact predecessor row of node 10 equals the reversed exact successor row of the mirror node 5 via $PAP = A$ (max dev $1.7\times10^{-16}$). Conditioning on a half-plane instead of all four neighbors leaves $d^2 = 0.011747 &gt; h^2/4 = 0.01$ — the one-sided innovation premium of <a href="12-autoregressive-preconditioning.html">12 §3</a>.</p>
+<p>Now the three predictors on this row, measured:</p>
+<table>
+<thead>
+<tr>
+<th>predictor</th>
+<th style="text-align: right;">coefficient on W $(2,1)$</th>
+<th style="text-align: right;">coefficient on prev-row $(1,2)$</th>
+<th>source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>exact one-sided regression</td>
+<td style="text-align: right;">0.3178</td>
+<td style="text-align: right;">0.2937</td>
+<td>full wavefront</td>
+</tr>
+<tr>
+<td>IC(0) (via the <code>ic0</code> factor, mirror column 5)</td>
+<td style="text-align: right;">0.2885</td>
+<td style="text-align: right;">0.2885</td>
+<td>algebraic: match $A$ on its pattern</td>
+</tr>
+<tr>
+<td>Vecchia (exact $\Sigma_2$ submatrices, same pattern)</td>
+<td style="text-align: right;">0.3224</td>
+<td style="text-align: right;">0.3224</td>
+<td>statistical: KL-optimal on the pattern</td>
+</tr>
+</tbody>
+</table>
+<p>The truncation drops $\ell_2$ mass $0.0846$ = <strong>19.2% of the full row's norm 0.4409</strong> — real but subdominant to the kept W coefficient (checked). The assembled surrogate $M_{\mathrm{ic}} = (I - \tilde\Phi)^\top \mathrm{diag}(1/\tilde d^2)(I - \tilde\Phi)$ equals $L_{\mathrm{ic}}L_{\mathrm{ic}}^\top$ to $1.4\times10^{-14}$ — IC(0) <em>is</em> a truncated autoregression — but note the checked asymmetry: $P M_{\mathrm{ic}} P \ne M_{\mathrm{ic}}$ (max dev $1.06$) even though $PAP = A$. <strong>Exact regression is reversal-equivariant; IC(0) is not</strong> — a truncated recurrence remembers its elimination direction. And IC(0) vs Vecchia differ measurably: max coefficient deviation $4.99\times10^{-2}$ here (the same phenomenon <a href="11-regressions-and-multiscale.html">11 §4</a> measured as $8.32\times10^{-2}$ at $n = 8$). Both still precondition:</p>
+<table>
+<thead>
+<tr>
+<th>surrogate</th>
+<th>$\mathrm{spec}(M^{-1}A_2)$</th>
+<th style="text-align: right;">$\rho(I - M^{-1}A_2)$</th>
+<th style="text-align: right;">$\kappa(M^{-1}A_2)$</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IC(0)</td>
+<td>$[0.6714,\ 1.1295]$</td>
+<td style="text-align: right;">0.3286</td>
+<td style="text-align: right;">1.6824</td>
+</tr>
+<tr>
+<td>Vecchia</td>
+<td>$[0.8178,\ 1.1971]$</td>
+<td style="text-align: right;"><strong>0.1971</strong></td>
+<td style="text-align: right;"><strong>1.4639</strong></td>
+</tr>
+</tbody>
+</table>
+<p>against $\kappa(A_2) = 9.472$ — and the KL-optimal Vecchia coefficients win on both metrics (checked), the tutorial-sized confirmation of Schäfer–Katzfuss–Owhadi.</p>
+<p><img alt="Truncating the one-sided predictor at node (2,2) of the 4x4 grid" src="../figures/tutorial15_truncation.png" /></p>
+<p><em>The exact wavefront row of node 10 = $(2,2)$ (blue: weights 0.3178, 0.2937 on the stencil pair, 0.0843 and 0.0060 on the rest of the wavefront, exact zeros before it), the IC(0) kept pattern (red: 0.2885 on both), and the Vecchia coefficients on the same pattern (black dashes: 0.3224) — dropped $\ell_2$ mass 0.085 = 19% of the row.</em></p>
+<p><strong>The general fact:</strong> IC(0) keeps only the stencil slots of the exact wavefront regression — the truncated one-sided regression = Vecchia approximation of <a href="09-stiffness-as-precision.html">09 §6</a> and <a href="11-regressions-and-multiscale.html">11 §4</a>, with the measured IC-vs-Vecchia gap the boundary of that identification. What the dropped weights <em>are</em> is fill-in — marginalization-induced regressions on the elimination wavefront (<a href="11-regressions-and-multiscale.html">11 §3</a>, <a href="13-preconditioning-as-decoupling.html">13 §3</a>) — and why they are small-but-nonzero is the separator-rank story of <a href="14-hierarchical-inverse.html">14 §2</a>: all dependence between a node and the far side of its wavefront is squeezed through the wavefront itself.</p>
+<hr />
+<h2 id="step-6--approximate-prediction-by-scale-fewer-coarser-regressors">Step 6 — approximate prediction by scale: fewer, coarser regressors</h2>
+<p><strong>Goal:</strong> truncate along the other axis — predict each node not from <em>nearby</em> values but from <em>aggregate</em> ones. On the chain, regress the field on one scalar, its own mean $\bar u$; everything stays exact:</p>
+<pre><code>beta_i = Cov(u_i, ubar)/Var(ubar) (exact) = [ 5/7   8/7   9/7   8/7   5/7 ]
+</code></pre>
+<p>Checked exactly: $\mathrm{Var}(\bar u) = 7/360$, $\mathrm{Cov}(u_i, \bar u) = i(6-i)/360$, so the loadings $\beta_i = i(6-i)/7$ are <strong>bridge-shaped</strong> (max at the center, symmetric) and $\sum_i \beta_i = n = 5$. Subtracting the shaped prediction $\beta\,\bar u$ leaves the exact residual covariance</p>
+<pre><code>residual covariance Sigma - beta Cov(u, ubar)^T (exact) =
+    [  5/378      1/378    -1/252     -5/756   -1/189 ]
+    [  1/378     11/945   -1/1260   -13/1890   -5/756 ]
+    [ -1/252    -1/1260     1/105    -1/1260   -1/252 ]
+    [ -5/756   -13/1890   -1/1260     11/945    1/378 ]
+    [ -1/189     -5/756    -1/252      1/378    5/378 ]
+</code></pre>
+<p>whose rows sum to zero exactly (the mean is fully predicted — the residual field is singular in the $\bar u$ direction), and the variance explained is <strong>$111/175 = 0.6343$ exactly</strong> — one scalar regressor carries 63% of the chain's variance. On the $4\times4$ grid the same ladder is measured in floats: global mean explains $0.2321$, the four $2\times2$ block averages $0.4958$ (the small-grid rerun of <a href="11-regressions-and-multiscale.html">11 §5.1</a>'s $0.152 \to 0.567$ at $n = 8$, where the refined set is the sixteen $2\times2$-block averages). Assembling the coarse regression into the additive two-level preconditioner $M^{-1} = D^{-1} + Z A_c^{-1} Z^\top$ (Galerkin $A_c = Z^\top A Z$, <code>block_average_matrix</code> reused): $\mathrm{spec}(C_0 A) = [0.5000,\ 1.9082]$, $\kappa = 3.8165$ vs $9.4721$ plain, and with optimal damping $\theta = 0.8305$ the Richardson factor is $\rho = 0.5848$ (checked).</p>
+<p><strong>The general fact:</strong> coarse averages are <em>regressors chosen for reach rather than resolution</em> — they absorb exactly the long-range dependence that no stencil-width predictor can model, leaving a short-range residual for the local model; recursing the idea is multigrid. Developed in <a href="11-regressions-and-multiscale.html">11 §5</a>; the learned version — NAMG's attention weights as <em>learned coarse regressors</em> — is <a href="06-neural-preconditioner.html">06</a> via <a href="11-regressions-and-multiscale.html">11 §5.3</a>.</p>
+<hr />
+<h2 id="step-7--residual-correction-iterate-the-imperfect-prediction-pay-xmathphx147xendx-per-sweep">Step 7 — residual correction: iterate the imperfect prediction, pay $\rho$ per sweep</h2>
+<p><strong>Goal:</strong> run all three imperfect predictors of Steps 5–6 as the bare predict-and-correct iteration $x \leftarrow x + M^{-1}(b - Ax)$ and confirm <a href="12-autoregressive-preconditioning.html">12</a>'s pricing: the tail rate <em>is</em> $\rho(I - M^{-1}A)$, the per-sweep unexplained fraction. Problem: $b = +1$ at grid node $(1,1)$ and $-1$ at $(2,2)$ (1-based; flat indices 0 and 5) — a hot/cold source pair on the $4\times4$ grid. First eight iterations, relative $\ell_2$ error, from the script:</p>
+<pre><code>    iter   jacobi      ic0         two-level
+      1   5.3025e-01  2.3003e-01  5.6769e-01
+      2   4.1438e-01  7.5059e-02  2.9871e-01
+      3   3.3399e-01  2.4394e-02  1.8110e-01
+      4   2.7010e-01  8.0303e-03  1.0423e-01
+      5   2.1850e-01  2.6358e-03  6.1351e-02
+      6   1.7677e-01  8.6645e-04  3.5776e-02
+      7   1.4301e-01  2.8469e-04  2.0945e-02
+      8   1.1570e-01  9.3560e-05  1.2242e-02
+</code></pre>
+<p>Measured tail rate vs. exact $\rho(I - M^{-1}A)$, all agreeing within 1% relative (in fact to $\sim10^{-5}$):</p>
+<table>
+<thead>
+<tr>
+<th>$M^{-1}$</th>
+<th style="text-align: right;">measured tail rate</th>
+<th style="text-align: right;">$\rho(I - M^{-1}A)$</th>
+<th style="text-align: right;">iterations to $10^{-10}$</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Jacobi</td>
+<td style="text-align: right;">0.809025</td>
+<td style="text-align: right;">$0.809017 = \cos(\pi/5)$</td>
+<td style="text-align: right;">107</td>
+</tr>
+<tr>
+<td>IC(0)</td>
+<td style="text-align: right;">0.328630</td>
+<td style="text-align: right;">0.328625</td>
+<td style="text-align: right;">21</td>
+</tr>
+<tr>
+<td>two-level</td>
+<td style="text-align: right;">0.584761</td>
+<td style="text-align: right;">0.584760</td>
+<td style="text-align: right;">43</td>
+</tr>
+</tbody>
+</table>
+<p>and the rate ladder matches prediction quality (checked): $\rho_{\mathrm{ic0}} &lt; \rho_{\text{two-level}} &lt; \rho_{\mathrm{jacobi}}$ ($0.329 &lt; 0.585 &lt; 0.809$). On a 16-node problem the stencil regressions of IC(0) are close to the whole story, so IC(0) leads; at $n = 32$ the composite of both axes wins (<a href="11-regressions-and-multiscale.html">11 §5.2</a>).</p>
+<p><img alt="Residual-correction convergence with rho^k references" src="../figures/tutorial15_residual_correction.png" /></p>
+<p><em>Each solid error curve rides its dashed $\rho^k$ reference: Jacobi at $\rho = 0.809$, two-level at $0.585$, IC(0) at $0.329$ — the measured slopes match the spectral radii to five decimals, <a href="12-autoregressive-preconditioning.html">12 §1</a>'s "$\rho$ = per-sweep unexplained fraction" verified on the tutorial grid.</em></p>
+<p><strong>The general fact:</strong> for any fixed $C$, the error obeys $e_{k+1} = (I - CA)e_k$, so a stationary iteration converges at exactly the fraction of structure its predictor fails to explain per look — <a href="12-autoregressive-preconditioning.html">12</a>'s frame, of which this step is the $N = 16$ miniature (Jacobi's $\cos(\pi h)$, IC(0)'s truncation gap, the additive two-level's $0.9024$ all live in <a href="12-autoregressive-preconditioning.html">12 §4</a>'s ladder at $n = 32$).</p>
+<hr />
+<h2 id="step-8--the-cg-interaction-pcg-is-cg-in-the-predictors-whitened-coordinates-executable">Step 8 — the CG interaction: PCG <em>is</em> CG in the predictor's whitened coordinates (executable)</h2>
+<p><strong>Goal:</strong> put CG back and make the suite's oldest asserted identity — "PCG = CG run in the surrogate's whitened coordinates" (<a href="09-stiffness-as-precision.html">09 §6</a>, <a href="13-preconditioning-as-decoupling.html">13 §5.4</a>) — <strong>executable, iterate by iterate</strong>, rather than an algebra fact quoted from textbooks. This is the step's (and the report's) novel demonstration.</p>
+<p>Counts first, same hot/cold problem, relative residual $10^{-10}$: <strong>CG 7, PCG(IC0) 8, PCG(two-level) 5.</strong> (PCG(IC0) $8 &gt; $ CG $7$ is a finite-termination artifact, flagged in the script's info line: at $N = 16$ plain CG already finite-terminates on the few distinct eigenvalues of $A_2$; IC(0)'s $\kappa$ payoff is at scale — <a href="08-results.html">08</a>/<a href="11-regressions-and-multiscale.html">11</a>.)</p>
+<p>Now the identity. For each preconditioner, factor the surrogate and run <em>plain</em> CG on the split-preconditioned system, then map every iterate back:</p>
+<ul>
+<li><strong>IC(0):</strong> $M = L_{\mathrm{ic}}L_{\mathrm{ic}}^\top$; run CG on $L_{\mathrm{ic}}^{-1} A\, L_{\mathrm{ic}}^{-\top}$ with right-hand side $L_{\mathrm{ic}}^{-1}b$, map back $x = L_{\mathrm{ic}}^{-\top}\hat x$. Result: the mapped-back trajectory equals the <code>pcg()</code> trajectory at <strong>every</strong> iterate — max relative deviation $3.9\times10^{-16}$ over all 9 iterates, identical iteration count ($8 = 8$).</li>
+<li><strong>two-level:</strong> here the <em>inverse</em> is what is in hand, $M^{-1} = C_0 = RR^\top$ (Cholesky of $C_0$); run CG on $R^\top A R$ with $R^\top b$, map back $x = R\hat x$. Same verdict: max relative deviation $5.2\times10^{-16}$, identical count ($5 = 5$).</li>
+</ul>
+<p>Eight orders of magnitude below the $10^{-10}$ claim threshold, at every single iterate, for two structurally different predictors: PCG is not "like" CG on the whitened problem — it <strong>is</strong> CG on the whitened problem, executed in the original coordinates. The preconditioner's entire role is to hand CG the coordinates its prediction model believes are white; CG then does its own, adaptive part: the increments $x_{k+1} - x_k$ of the plain-CG run are verified $A$-orthogonal to max normalized off-diagonal $3.8\times10^{-14}$ over 7 directions — <a href="13-preconditioning-as-decoupling.html">13 §5.4</a>'s on-the-fly sequential decoupler, <a href="09-stiffness-as-precision.html">09 §5</a>'s regression on measurements uncorrelated under the field, building at run time the same kind of uncorrelated basis that Cholesky builds ahead of time (Step 3).</p>
+<p><img alt="PCG vs whitened CG mapped back: trajectories coincide to roundoff" src="../figures/tutorial15_whitened_cg.png" /></p>
+<p><em>Left: <code>pcg()</code> iterates (open circles) sit exactly on the whitened-CG-mapped-back curves for both PCG(IC0) (red, 8 iterations) and PCG(two-level) (green, 5). Right: the per-iterate deviation never leaves the $10^{-16}$ floor — $3.9\times10^{-16}$ (IC0) and $5.2\times10^{-16}$ (two-level) at worst, eight orders below the $10^{-10}$ claim threshold (dotted): the identity holds to roundoff, iterate by iterate.</em></p>
+<p><strong>The general fact:</strong> with $M = L_M L_M^\top$, split-preconditioned CG solves $(L_M^{-1}AL_M^{-\top})\hat u = L_M^{-1}b$, and $\kappa(M^{-1}A)$ — tempered by clustering — prices the surrogate's model mismatch. Developed in <a href="09-stiffness-as-precision.html">09 §6</a>, <a href="04-krylov-and-pcg.html">04</a> (why clustering beats $\kappa$), and <a href="13-preconditioning-as-decoupling.html">13 §5</a> (pre-decoupling and on-the-fly decoupling compose).</p>
+<hr />
+<h2 id="synthesis-the-eight-steps-three-vocabularies-one-suite">Synthesis: the eight steps, three vocabularies, one suite</h2>
+<p>Extending <a href="09-stiffness-as-precision.html">09 §8</a>'s dictionary, one row per step — the statistics name, the physics name, and where the suite develops it at full scale:</p>
+<table>
+<thead>
+<tr>
+<th>step</th>
+<th>numerics object</th>
+<th>statistics name</th>
+<th>physics name</th>
+<th>developed in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>$A$ and $\Sigma = A^{-1}$, exact</td>
+<td>precision matrix; Brownian-bridge covariance</td>
+<td>Dirichlet energy; Gibbs measure; Green's function of the pinned rod</td>
+<td><a href="09-stiffness-as-precision.html">09 §1–2</a>, <a href="13-preconditioning-as-decoupling.html">13 §3</a>, <a href="14-hierarchical-inverse.html">14 §2.2</a></td>
+</tr>
+<tr>
+<td>2</td>
+<td>$B = I - \mathrm{diag}(A)^{-1}A$, <code>D2</code>; <code>precisionMat == (I-B).D2</code> (row/column convention note in Step 2)</td>
+<td>full-conditional regressions; $\mathrm{Var} = 1/A_{ii}$</td>
+<td>mean-value property; synchronous heat-bath sweep (Jacobi)</td>
+<td><a href="09-stiffness-as-precision.html">09 §3</a>, <a href="12-autoregressive-preconditioning.html">12 §2</a></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>phiL2R</code>/<code>phiR2L</code>, <code>mchol</code>, $\mathrm{chol}(\Sigma) = PL^{-\top}P$</td>
+<td>sequential (Pourahmadi) regression; innovations $d^2$; whitening</td>
+<td>node-by-node decimation; transfer along the chain, both directions</td>
+<td><a href="09-stiffness-as-precision.html">09 §4</a>, <a href="10-fluctuation-dissipation.html">10 §3</a>, <a href="11-regressions-and-multiscale.html">11 §3</a></td>
+</tr>
+<tr>
+<td>4</td>
+<td>$M^{-1} = (I-\Phi)^{-1}\mathrm{diag}(d^2)(I-\Phi)^{-\top} = \Sigma$; one-step Richardson</td>
+<td>perfect causal AR: zero unexplained fraction</td>
+<td>exact decimation = direct solve; Thomas/Kalman pass</td>
+<td><a href="12-autoregressive-preconditioning.html">12 §2</a> (iii), <a href="09-stiffness-as-precision.html">09 §5</a></td>
+</tr>
+<tr>
+<td>5</td>
+<td>IC(0) as truncated wavefront regression; Vecchia on the same pattern</td>
+<td>truncated conditioning sets (Vecchia); KL-optimal sparse factor</td>
+<td>short-range effective Hamiltonian; dropped fill = screened couplings</td>
+<td><a href="11-regressions-and-multiscale.html">11 §3–4</a>, <a href="13-preconditioning-as-decoupling.html">13 §3</a>, <a href="14-hierarchical-inverse.html">14 §2</a></td>
+</tr>
+<tr>
+<td>6</td>
+<td>coarse loadings $\beta$; $M^{-1} = D^{-1} + ZA_c^{-1}Z^\top$</td>
+<td>regression on aggregates; variance explained $111/175$, $0.232 \to 0.496$</td>
+<td>block spins; coarse-grained field; multigrid's coarse level</td>
+<td><a href="11-regressions-and-multiscale.html">11 §5</a>, <a href="06-neural-preconditioner.html">06</a></td>
+</tr>
+<tr>
+<td>7</td>
+<td>stationary Richardson; measured tail = $\rho(I - M^{-1}A)$</td>
+<td>per-sweep unexplained fraction of the predictor</td>
+<td>relaxation rate; critical slowing down as $h \to 0$</td>
+<td><a href="12-autoregressive-preconditioning.html">12 §1, §4</a></td>
+</tr>
+<tr>
+<td>8</td>
+<td>PCG $\equiv$ CG on $L_M^{-1}AL_M^{-\top}$, verified to $3.9\times10^{-16}$/iterate</td>
+<td>CG = sequential regression on uncorrelated measurements, run in the surrogate's whitened coordinates</td>
+<td>on-the-fly decoupling; one whitened scale per (cluster of) eigenvalue</td>
+<td><a href="09-stiffness-as-precision.html">09 §5–6</a>, <a href="04-krylov-and-pcg.html">04</a>, <a href="13-preconditioning-as-decoupling.html">13 §5.4</a></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><strong>Coda: the ladder.</strong> Read bottom-up, the eight steps are one ascending ladder of prediction models, and the suite has now measured every rung. <strong>Exact prediction</strong> — all predecessors, coefficients from the true covariance — is a direct solve: one pass, nothing unexplained (Step 4; <a href="12-autoregressive-preconditioning.html">12</a>). <strong>Truncated prediction</strong> — keep the stencil slots of the wavefront — is IC(0)/Vecchia: 19% of this row's mass dropped, $\rho = 0.33$ per sweep here, the fill you refused to compute returning as a smooth ghost at scale (Step 5; <a href="11-regressions-and-multiscale.html">11</a>). <strong>Multiscale prediction</strong> — spend the regressor budget on averages at every reach — is the two-level method and, recursed, multigrid: the one rung whose rate survives $h \to 0$ (Step 6; <a href="11-regressions-and-multiscale.html">11 §5.3</a>, <a href="12-autoregressive-preconditioning.html">12 §4</a>). <strong>Learned prediction</strong> — let training data choose the conditioning sets and coefficients — is the fitted Vecchia of <a href="10-fluctuation-dissipation.html">10 §5</a> and the NPO/NAMG of <a href="06-neural-preconditioner.html">06</a>, whose learned restriction is Step 6's coarse regressors chosen by gradient descent instead of geometry. Each rung is the same object — a regression of every node on what the model can afford to condition on — and the two numbers this tutorial taught you to read, $\rho(I - M^{-1}A)$ per sweep and the whitened spectrum CG sees, are the exchange rate between statistical modeling and iteration count. Preconditioning is approximate prediction; the only question a preconditioner ever answers is <em>who predicts me, and how well</em>.</p>
+</div>
+</body>
+</html>
