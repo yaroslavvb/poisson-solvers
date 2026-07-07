@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One Update, Four Languages — seven classical solvers, one line of code</title>
+<script>
+window.MathJax = {tex:{inlineMath:[['$','$']]}, chtml:{scale:0.96}};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+<style>
+:root{
+  --paper:#F2F4F6; --ink:#1B2733; --phy:#1F4E79; --prb:#B5443C;
+  --gold:#C9A227; --graphite:#5A6773; --card:#FFFFFF;
+}
+*{box-sizing:border-box}
+html{background:var(--paper)}
+body{margin:0;color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,"URW Palladio L",Georgia,serif;
+  font-size:17px;line-height:1.62;-webkit-font-smoothing:antialiased}
+main{max-width:1000px;margin:0 auto;padding:0 20px 90px}
+.prose{max-width:700px;margin:0 auto}
+h1{font-size:clamp(30px,5vw,46px);line-height:1.12;font-weight:600;letter-spacing:-0.01em;margin:.2em 0 .25em}
+h2{font-size:24px;font-weight:600;margin:2.6em 0 .5em;letter-spacing:-0.005em}
+.eyebrow{font-size:12px;letter-spacing:.22em;text-transform:uppercase;
+  font-family:ui-sans-serif,system-ui,sans-serif;font-weight:600;margin:3.4em 0 -0.2em}
+.eyebrow.phy{color:var(--phy)} .eyebrow.prb{color:var(--prb)} .eyebrow.syn{color:var(--gold)}
+.eyebrow.ink{color:var(--graphite)}
+p{margin:.85em 0}
+figure{margin:2em auto;max-width:1000px;text-align:center}
+figcaption{font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;color:var(--graphite);
+  max-width:760px;margin:.6em auto 0;line-height:1.5}
+.hero{padding:76px 0 8px;text-align:center}
+.hero .sub{color:var(--graphite);font-size:18px;max-width:640px;margin:0 auto}
+.identity{display:flex;align-items:stretch;max-width:860px;margin:38px auto 8px;
+  border:1px solid #DDE3E8;border-radius:10px;overflow:hidden;background:var(--card)}
+.identity>div{flex:1;padding:22px 10px 18px;text-align:center}
+.identity .left{background:linear-gradient(90deg,rgba(31,78,121,.10),rgba(31,78,121,.02))}
+.identity .right{background:linear-gradient(90deg,rgba(181,68,60,.02),rgba(181,68,60,.10))}
+.identity .lab{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;
+  letter-spacing:.16em;text-transform:uppercase;font-weight:600;margin-bottom:8px}
+.identity .left .lab{color:var(--phy)} .identity .right .lab{color:var(--prb)}
+.identity .formula{font-size:22px}
+.note{background:var(--card);border-left:3px solid var(--gold);padding:12px 18px;border-radius:0 8px 8px 0;
+  font-size:15.5px;max-width:700px;margin:1.4em auto}
+.check{font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;color:var(--graphite);
+  border-top:1px solid #DDE3E8;margin-top:70px;padding-top:18px;max-width:700px;margin-left:auto;margin-right:auto}
+.kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em;
+  background:#EAEEF2;padding:1px 5px;border-radius:4px}
+.fig-svg{width:100%;height:auto;border:1px solid #E2E6EA;border-radius:6px;background:#fff}
+.widget{background:var(--card);border:1px solid #E2E6EA;border-radius:8px;padding:16px 16px 12px;
+  max-width:1000px;margin:1.6em auto}
+.widget .fig-svg{border:none}
+.widget .ctrl{display:flex;align-items:center;gap:14px;margin:8px 6px 2px;
+  font-family:ui-sans-serif,system-ui,sans-serif;font-size:13.5px;color:var(--graphite)}
+.widget input[type=range]{flex:1;accent-color:var(--phy)}
+.readouts{display:flex;flex-wrap:wrap;gap:8px 26px;justify-content:center;margin-top:10px;
+  font-family:ui-sans-serif,system-ui,sans-serif;font-size:13.5px;color:var(--graphite)}
+.readouts b{font-variant-numeric:tabular-nums;color:var(--ink)}
+.readouts .phy b{color:var(--phy)} .readouts .gld b{color:#A88A1F} .readouts .prb b{color:var(--prb)}
+table.pins{border-collapse:collapse;margin:1.6em auto;font-size:15px;max-width:100%}
+table.pins th{font-family:ui-sans-serif,system-ui,sans-serif;font-size:11.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--graphite);font-weight:600}
+table.pins th,table.pins td{border:1px solid #E2E6EA;padding:7px 14px;text-align:left;background:var(--card)}
+table.pins td{font-variant-numeric:tabular-nums}
+.tablewrap{overflow-x:auto;margin:0 -20px;padding:0 20px}
+a{color:var(--phy)}
+mjx-container{max-width:100%}
+mjx-container[display="true"]{display:block;overflow-x:auto;overflow-y:hidden;padding:2px 0}
+/* ---------- update-views additions ---------- */
+.viewchips{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;max-width:1000px;margin:1.6em auto}
+.vchip{background:var(--card);border:1px solid #E2E6EA;border-radius:8px;padding:13px 15px 9px;min-width:0}
+.vchip h3{margin:0 0 4px;font-size:13px;font-family:ui-sans-serif,system-ui,sans-serif;
+  letter-spacing:.12em;text-transform:uppercase;font-weight:700}
+.vchip p{font-size:13.5px;line-height:1.45;margin:.4em 0;color:var(--graphite);font-family:ui-sans-serif,system-ui,sans-serif}
+.vchip.v1{border-top:3px solid var(--graphite)} .vchip.v1 h3{color:var(--graphite)}
+.vchip.v2{border-top:3px solid var(--phy)} .vchip.v2 h3{color:var(--phy)}
+.vchip.v3{border-top:3px solid var(--prb)} .vchip.v3 h3{color:var(--prb)}
+.vchip.v4{border-top:3px solid var(--gold)} .vchip.v4 h3{color:var(--gold)}
+.mcard{background:var(--card);border:1px solid #E2E6EA;border-radius:10px;max-width:1000px;
+  margin:1.7em auto;overflow:hidden}
+.mcard>header{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 22px;
+  padding:14px 20px 12px;background:linear-gradient(90deg,rgba(31,78,121,.06),rgba(201,162,39,.05))}
+.mcard .mname{font-size:19px;font-weight:700;letter-spacing:-0.005em}
+.mcard .mhead{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12.5px;color:var(--graphite);
+  display:flex;flex-wrap:wrap;gap:4px 18px}
+.mcard .mhead b{font-variant-numeric:tabular-nums;color:var(--ink)}
+.panes{display:grid;grid-template-columns:1fr 1fr}
+.pane{padding:12px 20px 10px;border-top:1px solid #EDF0F3;min-width:0}
+.pane:nth-child(odd){border-right:1px solid #EDF0F3}
+.pane .vlab{font-family:ui-sans-serif,system-ui,sans-serif;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;font-weight:700;margin-bottom:2px}
+.pane.v1 .vlab{color:var(--graphite)} .pane.v2 .vlab{color:var(--phy)}
+.pane.v3 .vlab{color:var(--prb)} .pane.v4 .vlab{color:var(--gold)}
+.pane p{font-size:14px;line-height:1.5;margin:.5em 0}
+.pformula{overflow-x:auto;overflow-y:hidden}
+.pane .pformula{font-size:15px;margin:.45em 0;text-align:center}
+.pane b{font-variant-numeric:tabular-nums}
+.mcheck{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;color:var(--graphite);
+  padding:8px 20px;border-top:1px solid #EDF0F3;background:#FAFBFC}
+.mcheck b{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600}
+svg.spec{width:100%;height:auto;display:block;margin:6px 0 2px}
+.controls{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;
+  font-family:ui-sans-serif,system-ui,sans-serif;font-size:13.5px;margin:10px 0 4px;color:var(--graphite)}
+.controls label{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.controls input[type=range]{width:170px;accent-color:var(--phy)}
+.seg{display:inline-flex;border:1px solid #C9D2DA;border-radius:6px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:5px 12px;font:600 13px ui-sans-serif,system-ui,sans-serif;
+  color:var(--graphite);cursor:pointer;border-left:1px solid #E2E6EA}
+.seg button:first-child{border-left:0}
+.seg button.active{background:var(--phy);color:#fff}
+.btn{border:1px solid #C9D2DA;border-radius:6px;background:#fff;padding:5px 14px;
+  font:600 13px ui-sans-serif,system-ui,sans-serif;color:var(--phy);cursor:pointer}
+.btn:hover{background:#F2F6FA}
+.btn:disabled{opacity:.35;cursor:default}
+.btn:disabled:hover{background:#fff}
+.btn.toggled{background:var(--prb);border-color:var(--prb);color:#fff}
+.stbadge{display:inline-block;font:600 12px ui-sans-serif,system-ui,sans-serif;
+  border-radius:12px;padding:3px 11px;margin-left:auto;line-height:1.45;
+  background:#E7F0E7;color:#2F6B3A;border:1px solid #CBDECB}
+.stbadge.fail{background:#F6E4E2;color:#9C332B;border-color:#E5C4C0}
+.wtitle{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;font-family:ui-sans-serif,system-ui,sans-serif;
+  font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:var(--graphite);margin:0 0 8px}
+.wtitle .dot{display:inline-block;width:9px;height:9px;border-radius:50%}
+.dictwrap{overflow-x:auto;max-width:1000px;margin:1.4em auto}
+table.dict{border-collapse:collapse;font-size:13px;font-family:ui-sans-serif,system-ui,sans-serif;
+  background:var(--card);border:1px solid #E2E6EA;min-width:760px;margin:0 auto}
+.dict th,.dict td{padding:8px 12px;border-top:1px solid #EDF0F3;text-align:left;vertical-align:top;line-height:1.45}
+.dict thead th{border-top:0;font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--graphite)}
+.dict td:first-child{font-weight:700;white-space:nowrap}
+.dict thead th:nth-child(2){color:var(--graphite)} .dict thead th:nth-child(3){color:var(--phy)}
+.dict thead th:nth-child(4){color:var(--prb)} .dict thead th:nth-child(5){color:var(--gold)}
+.dict td b{font-variant-numeric:tabular-nums}
+@media(max-width:760px){.viewchips{grid-template-columns:1fr}.identity{flex-direction:column}
+  .panes{grid-template-columns:1fr}.pane:nth-child(odd){border-right:0}
+  .seg{flex-wrap:wrap}.seg button{padding:5px 8px;font-size:12px}
+  .widget .ctrl{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<main>
+
+<div class="hero prose" style="max-width:880px">
+  <div class="eyebrow ink" style="margin-top:0">n = 32 &nbsp;·&nbsp; h = 1/33 &nbsp;·&nbsp; seven methods &nbsp;·&nbsp; four languages &nbsp;·&nbsp; 65 machine checks, all PASS</div>
+  <h1>One Update, Four Languages</h1>
+  <p class="sub">Richardson, Jacobi, Gauss&ndash;Seidel, SOR, SSOR, incomplete (pivoted) Cholesky, two-level
+  &mdash; on the grounded Dirichlet chain every one of them is the <i>same line of code</i>,
+  $x \leftarrow x + M^{-1}(b - Ax)$, heard in four languages: a per-node formula, an operator with a
+  spectral radius, gradient descent in transformed coordinates, and a lineman resetting voltages.</p>
+  <div class="identity">
+    <div class="left"><div class="lab">Numerics · splitting · Trefethen · Greenbaum</div>
+      <div class="formula">$x_{k+1} = M^{-1}(N x_k + b)$</div></div>
+    <div class="right"><div class="lab">Physics · statistics · relaxation</div>
+      <div class="formula">reset voltages&ensp;=&ensp;take conditional expectations</div></div>
+  </div>
+</div>
+
+<div class="prose">
+<div class="eyebrow ink">§1 · The stage</div>
+<h2>One rod, one matrix, one right-hand side</h2>
+<p>The system is the suite's Dirichlet chain: $n=32$ interior nodes at spacing $h=\tfrac1{33}$, stiffness
+$A=\mathrm{tridiag}(-1,2,-1)/h^2$. The diagonal is a <i>constant</i> $2/h^2 = 2178$, end rows included,
+because the walls are grounded — the free-vs-grounded story is
+<a href="green_tents_explainer.html">the green tents'</a> §4, and it is why "divide by the diagonal" will
+keep collapsing to "multiply by a scalar" below. Underneath sits the difference operator: $A = B^\top B$
+with $B$ the <b>grounded</b> $33\times32$ incidence matrix — one row per edge, walls included as grounded
+rails, entries $\pm1/h = \pm33$ (report <a href="09-stiffness-as-precision.html">09</a>'s $D$, Vishnoi's
+electrical network). Verified entrywise to <b>2.1×10<sup>−16</sup></b>.</p>
+<p>Every experiment on this page drives one fixed right-hand side, the green-tents convention: one unit of
+heat in at node 8, one out at node 24 ($b_8 = +1/h$, $b_{24} = -1/h$), true solution $x^\star = A^{-1}b$.
+The spectrum runs from $\lambda_1 = 9.8622$ to $\lambda_{32} = 4346.14$, so $\kappa(A) = 440.69$.</p>
+<p>Now the claim in the title. Take any of the seven methods below. It ships with a per-node loop (how you
+would code it), a splitting $A = M - N$ (how Trefethen and Greenbaum write it), a residual correction
+(how a preconditioner person writes it). These are <b>the same iteration</b> — for all ten $(M,\text{loop})$
+pairs the three forms track each other to at worst <b>2.3×10<sup>−14</sup></b> over five sweeps from a
+random start. What differs between methods is only <i>which</i> $M$ you can afford to invert. And each $M$
+can be heard in four languages:</p>
+</div>
+
+<div class="viewchips">
+  <div class="vchip v1"><h3>V1 · weight update</h3>
+    <p>The per-node formula. Jacobi: $x_i \leftarrow (x_{i-1}+x_{i+1}+h^2b_i)/2$, stale neighbors. The
+    splitting $A = M-N$, iteration matrix $T = M^{-1}N = I - M^{-1}A$, error $e_k = T^k e_0$.</p></div>
+  <div class="vchip v2"><h3>V2 · operator</h3>
+    <p>Residual correction $x \leftarrow x + M^{-1}(b-Ax)$: $M$ is a preconditioner, and
+    $\rho(T) = \rho(I - M^{-1}A)$ is report <a href="12-autoregressive-preconditioning.html">12</a>'s
+    per-sweep <i>unexplained fraction</i> — exact closed forms on this chain.</p></div>
+  <div class="vchip v3"><h3>V3 · coordinates</h3>
+    <p>For symmetric $M = C^\top C$: one step <i>is</i> plain gradient descent in whitened coordinates
+    $z = Cx$. For the sweeps (GS, SOR) no such $C$ exists — they are exact cyclic <i>coordinate</i>
+    descent instead.</p></div>
+  <div class="vchip v4"><h3>V4 · electrical</h3>
+    <p>$A = B^\top B$: nodes carry voltages, edges carry currents. Jacobi resets every voltage to the
+    neighbors' average at once; Gauss&ndash;Seidel sends a lineman down the rod; SOR tells him to
+    overshoot.</p></div>
+</div>
+
+<div class="prose">
+<p>Here is the whole scoreboard, exact against measured. Rates are spectral radii; "sweeps" counts
+iterations to relative error $10^{-8}$ on the fixed right-hand side from $x_0 = 0$; "predicted" is
+$\lceil \ln 10^{-8} / \ln\rho \rceil$.</p>
+</div>
+
+<div class="tablewrap"><table class="pins">
+<tr><th>method</th><th>M (the splitting)</th><th>ρ, closed form</th><th>ρ, exact</th><th>ρ, measured</th><th>sweeps</th><th>predicted</th></tr>
+<tr><td>Richardson, α = h²/2</td><td>$I/\alpha$</td><td>$\cos\pi h$</td><td>0.995472</td><td>0.995472</td><td><b>3609</b></td><td>4059</td></tr>
+<tr><td>Jacobi</td><td>$D$</td><td>$\cos\pi h$</td><td>0.995472</td><td>0.995472</td><td><b>3609</b></td><td>4059</td></tr>
+<tr><td>Gauss–Seidel</td><td>$D+L$</td><td>$\cos^2\pi h$</td><td>0.990964</td><td>0.990964</td><td><b>1870</b></td><td>2030</td></tr>
+<tr><td>SOR, ω* = 1.826391</td><td>$D/\omega+L$</td><td>$\omega^*-1$</td><td>0.826391</td><td>0.826578&thinsp;†</td><td><b>120</b></td><td>97&thinsp;†</td></tr>
+<tr><td>SSOR, same ω*</td><td>$\tfrac{\omega}{2-\omega}(D/\omega+L)D^{-1}(D/\omega+U)$</td><td>—</td><td>0.907816</td><td>0.907816</td><td><b>174</b></td><td>191</td></tr>
+<tr><td>IC, rank T = 4</td><td>$R_4^\top R_4 + \mathrm{diag}\,d$</td><td>$\tfrac{\kappa-1}{\kappa+1}$, κ = 415.62</td><td>0.995200</td><td>0.995200</td><td><b>3555</b></td><td>3829</td></tr>
+<tr><td>IC, rank T = 8</td><td>$R_8^\top R_8 + \mathrm{diag}\,d$</td><td>κ = 306.61</td><td>0.993498</td><td>0.993498</td><td><b>2758</b></td><td>2825</td></tr>
+<tr><td>IC, rank T = 16</td><td>$R_{16}^\top R_{16} + \mathrm{diag}\,d$</td><td>κ = 109.73</td><td>0.981939</td><td>0.981939</td><td><b>899</b></td><td>1011</td></tr>
+<tr><td>IC, rank T = 31</td><td>$= A$ exactly</td><td>κ = 1</td><td>0</td><td>0</td><td><b>1</b></td><td>1</td></tr>
+<tr><td>two-level, ω = 0.769949</td><td>$\big(\omega(ZA_c^{-1}Z^\top + D^{-1})\big)^{-1}$</td><td>$\tfrac{\kappa-1}{\kappa+1}$, κ = 15.60</td><td>0.879537</td><td>0.879537</td><td><b>133</b></td><td>144</td></tr>
+</table></div>
+
+<div class="prose">
+<p style="font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;color:var(--graphite)">
+† SOR at exactly $\omega^*$ has a <i>defective</i> eigenvalue pair (two Jordan-chained eigenvalues at the
+kink), so the error carries a polynomial factor $k\rho^k$: the measured asymptotic slope is off by
+2.3×10<sup>−4</sup> (every other method matches its $\rho$ to ≤ 6.7×10<sup>−15</sup> relative), and it
+lands at 120 sweeps rather than the eigenvalue-only prediction 97. Measured slopes are renormalized power
+iterations on $T$; both columns come straight from <span class="kbd">results/update_views.json</span>.</p>
+</div>
+
+<div class="prose">
+<div class="eyebrow syn">§2 · Interactive</div>
+<h2>The sweep theater</h2>
+<p>Before dissecting the languages, watch the methods run. Pick one; play, scrub, or walk a single sweep
+node-by-node. Gauss&ndash;Seidel and SOR update <i>serially</i> — the lineman walks left to right, each
+node reset against the already-fresh voltage of its left neighbor (SSOR walks there and back) — while
+Jacobi and Richardson update every node <i>simultaneously</i> from stale values. The trajectories here are
+recomputed live from the five-line component loops and verified at load against reference values baked in
+from <span class="kbd">results/update_views.json</span>.</p>
+</div>
+
+<figure class="widget" id="theater">
+<div class="wtitle"><span class="dot" style="background:var(--phy)"></span>sweep theater · x<sub>k</sub> vs x* on the 32-node chain
+  <span class="stbadge" id="th-badge">self-test …</span></div>
+<div class="controls">
+  <span class="seg" id="th-seg">
+    <button data-m="richardson">Richardson</button>
+    <button data-m="jacobi" class="active">Jacobi</button>
+    <button data-m="gs">Gauss–Seidel</button>
+    <button data-m="sor">SOR</button>
+    <button data-m="ssor">SSOR</button>
+  </span>
+  <label id="th-wlab" style="opacity:.35">ω <input type="range" id="th-omega" min="0.05" max="1.95" step="0.0025" value="1.8264" disabled>
+    <b id="th-wval" style="min-width:52px;font-variant-numeric:tabular-nums">1.8264</b></label>
+  <button class="btn" id="th-snap" title="snap to ω* = 1.826391 (exact — the drag grid does not contain it)" disabled>snap ω*</button>
+  <button class="btn" id="th-play">▶ play</button>
+  <button class="btn" id="th-walk">walk one sweep</button>
+  <button class="btn" id="th-reset">reset</button>
+</div>
+<svg id="th-svg" viewBox="0 0 760 330" xmlns="http://www.w3.org/2000/svg" class="fig-svg" role="img" aria-label="Current iterate versus true solution"></svg>
+<div class="ctrl"><span>iteration</span>
+  <input id="th-scrub" type="range" min="0" max="3609" step="1" value="0" aria-label="iteration">
+  <span id="th-k" style="min-width:120px;text-align:right;font-variant-numeric:tabular-nums">k = 0</span></div>
+<svg id="th-err" viewBox="0 0 760 180" xmlns="http://www.w3.org/2000/svg" class="fig-svg" role="img" aria-label="Relative error versus iteration"></svg>
+<div class="readouts">
+  <span>rel. error &nbsp;<b id="th-e">1.0</b></span>
+  <span class="phy">sweeps to 10⁻⁸ (this run) &nbsp;<b id="th-it">3609</b></span>
+  <span class="gld">reference (JSON) &nbsp;<b id="th-ref">3609</b></span>
+</div>
+<figcaption>Gold dashed: $x^\star$. Blue: the current iterate $x_k$, from $x_0=0$. Arrows mark the fixed
+source ($+1/h$ at node 8) and sink ($-1/h$ at node 24). During "walk one sweep" the node being rewritten
+flares red — serially for the sweeps, all at once for Jacobi/Richardson. The ω slider re-derives the
+whole SOR/SSOR trajectory live; at ω = 1 SOR <i>is</i> Gauss–Seidel. The slider's drag grid does not
+contain ω* exactly — <i>snap ω*</i> sets it to full precision and restores the JSON reference readout.
+Self-test at load: 15 reference
+numbers (two profile entries and the sweep count for each method) reproduced by the in-page loops.</figcaption>
+</figure>
+
+<div class="prose">
+<div class="eyebrow phy">§3 · Method card</div>
+<h2>Richardson</h2>
+<p>The bluntest instrument: step down the residual with one fixed scalar. Everything below is a
+dressed-up Richardson — the whole subject is the question "what may I multiply the residual by?"</p>
+</div>
+
+<div class="mcard" id="card-richardson">
+<header><span class="mname">Richardson</span>
+<span class="mhead"><span>α = h²/2 = <b>4.591×10⁻⁴</b></span><span>ρ = <b>0.995472</b> = cos πh</span><span>sweeps <b>3609</b></span><span>M symmetric</span></span></header>
+<div class="panes">
+<div class="pane v1"><div class="vlab">V1 · weight update</div>
+<div class="pformula">$x_i \leftarrow x_i + \alpha\big(b_i - (2x_i - x_{i-1} - x_{i+1})/h^2\big)$</div>
+<p>Splitting: $M = I/\alpha$, $N = I/\alpha - A$. The optimal step is
+$\alpha = 2/(\lambda_1+\lambda_{32}) = h^2/2$, and the error obeys $e_k = (I-\alpha A)^k e_0$.</p></div>
+<div class="pane v2"><div class="vlab">V2 · operator</div>
+<p>$T = I - \alpha A$ has eigenvalues $1 - \alpha\lambda_k = \cos k\pi h$ — Jacobi's spectrum exactly
+(see the interlude). $\rho = \cos\pi h = $ <b>0.995472</b>, measured slope matches to
+1.1×10<sup>−16</sup> relative; per report <a href="12-autoregressive-preconditioning.html">12</a>, each
+sweep leaves that fraction of the worst-mode error unexplained.</p>
+<svg class="spec" data-spec="richardson" viewBox="0 0 320 62" xmlns="http://www.w3.org/2000/svg"></svg></div>
+<div class="pane v3"><div class="vlab">V3 · transformed coordinates</div>
+<p><b>Raw coordinates.</b> The update <i>is</i> plain gradient descent on
+$J(x) = \tfrac12 x^\top A x - b^\top x$ with fixed step $\alpha$ — the whitening map is the scalar
+$C = \alpha^{-1/2} I$, which changes nothing directional. Every other card is this card after a change
+of variables.</p></div>
+<div class="pane v4"><div class="vlab">V4 · electrical</div>
+<p>Every node bleeds current down its own residual through one fixed conductance $\alpha$ — pure Ohm's
+law against the imbalance, no averaging. Equivalently (§12): plain gradient descent on the edge energy
+$\tfrac12\Vert Bx - y\Vert^2$ of the grounded network.</p></div>
+</div>
+<div class="mcheck">machine check — component loop == $M^{-1}(Nx+b)$ == $x + M^{-1}(b-Ax)$, 5 sweeps: max dev <b>5.7×10⁻¹⁶</b> · measured slope vs cos πh: <b>1.1×10⁻¹⁶</b> rel</div>
+</div>
+
+<div class="prose">
+<div class="eyebrow phy">§4 · Method card</div>
+<h2>Jacobi</h2>
+<p>Divide the residual by the diagonal: each node takes the conditional expectation of itself given its
+neighbors — all at once, from the stale board.</p>
+</div>
+
+<div class="mcard" id="card-jacobi">
+<header><span class="mname">Jacobi</span>
+<span class="mhead"><span>M = <b>D</b></span><span>ρ = <b>0.995472</b> = cos πh</span><span>sweeps <b>3609</b></span><span>M symmetric</span></span></header>
+<div class="panes">
+<div class="pane v1"><div class="vlab">V1 · weight update</div>
+<div class="pformula">$x_i \leftarrow \big(x_{i-1} + x_{i+1} + h^2 b_i\big)/2$</div>
+<p>Both neighbors read from the <i>old</i> sweep. Splitting: $M = D$, $N = -(L+U)$, so
+$T_J = -D^{-1}(L+U) = I - D^{-1}A$.</p></div>
+<div class="pane v2"><div class="vlab">V2 · operator</div>
+<p>Eigenvalues $\cos k\pi h$, $k = 1..32$ — symmetric about zero, so the smoothest and roughest modes
+tie for slowest at $|\cos\pi h|$. $\rho = \mu = $ <b>0.995472</b> (eigencheck dev 1.6×10<sup>−15</sup>);
+<b>3609</b> sweeps to $10^{-8}$.</p>
+<svg class="spec" data-spec="jacobi" viewBox="0 0 320 62" xmlns="http://www.w3.org/2000/svg"></svg></div>
+<div class="pane v3"><div class="vlab">V3 · transformed coordinates</div>
+<p>$M = D = C^\top C$ with $C = D^{1/2} = (\sqrt2/h)\,I = $ <b>46.669</b>$\,I$ — a <b>global rescale</b>.
+The constant diagonal means every conditional variance is already equal, so "whiten by the diagonal" turns
+no direction: the suite's <i>Jacobi no-op</i>. The theorem still holds — one plain-GD step on the whitened
+energy in $z = Cx$, mapped back by $C^{-1}$, equals one Jacobi sweep at every iterate: 60 sweeps, max dev
+<b>1.0×10⁻¹⁴</b>.</p></div>
+<div class="pane v4"><div class="vlab">V4 · electrical</div>
+<p>Every node <i>simultaneously</i> resets its voltage to the average of its neighbors' stale voltages,
+plus the $h^2\!/2$ source lift. Checked against $D^{-1}(b - (L+U)x)$ and against the padded-average
+formula to <b>5.6×10⁻¹⁷</b>.</p></div>
+</div>
+<div class="mcheck">machine check — splitting equivalence: <b>3.4×10⁻¹⁶</b> · ρ(T_J) = cos πh: <b>1.6×10⁻¹⁵</b> · voltage-average identity: <b>5.6×10⁻¹⁷</b> · whitened-GD equivalence: <b>1.0×10⁻¹⁴</b></div>
+</div>
+
+<div class="note"><b>Interlude — the Jacobi no-op, finally cashed out.</b> On this chain $D = (2/h^2)I = 2178\,I$,
+so Richardson at $\alpha_{\rm opt} = h^2/2$ has $M = I/\alpha = D$ <i>exactly</i> (dev 2.1×10<sup>−16</sup>):
+optimally-tuned Richardson and Jacobi are the <b>same iteration</b> here, and both take exactly
+<b>3609</b> sweeps. "Divide by the diagonal" only becomes a real preconditioner when the diagonal varies;
+on a constant-diagonal chain it is the global rescale every other report in the suite has been calling the
+Jacobi no-op.</div>
+
+<div class="prose">
+<div class="eyebrow prb">§5 · Method card</div>
+<h2>Gauss–Seidel</h2>
+<p>One word changes: <i>fresh</i>. Update in place, left to right, and each node's left neighbor has
+already moved. That word breaks the symmetry of $M$ — and switches the method's V3 language entirely.</p>
+</div>
+
+<div class="mcard" id="card-gs">
+<header><span class="mname">Gauss–Seidel</span>
+<span class="mhead"><span>M = <b>D + L</b></span><span>ρ = <b>0.990964</b> = cos² πh</span><span>sweeps <b>1870</b></span><span>M nonsymmetric</span></span></header>
+<div class="panes">
+<div class="pane v1"><div class="vlab">V1 · weight update</div>
+<div class="pformula">$x_i \leftarrow \big(x_{i-1}^{\rm new} + x_{i+1}^{\rm old} + h^2 b_i\big)/2$</div>
+<p>Same average, but the left neighbor is already fresh. Splitting: $M = D + L$ (lower triangular),
+$N = -U$; the in-place loop <i>is</i> the triangular solve $M x_{k+1} = b - U x_k$.</p></div>
+<div class="pane v2"><div class="vlab">V2 · operator</div>
+<p>$\rho(T_{GS}) = \cos^2\pi h = \mu^2 = $ <b>0.990964</b> (dev 1.1×10<sup>−16</sup>): squaring. One GS
+sweep does two Jacobi sweeps' worth of damage — <b>1870</b> vs <b>3609</b> sweeps, the ratio checked
+directly. Spectrum: sixteen values $\mu_k^2$ plus zero with multiplicity 16.</p>
+<svg class="spec" data-spec="gs" viewBox="0 0 320 62" xmlns="http://www.w3.org/2000/svg"></svg></div>
+<div class="pane v3"><div class="vlab">V3 · transformed coordinates</div>
+<p><b>No whitening exists.</b> $M = D+L$ is nonsymmetric — $\max|M - M^\top| = 1/h^2 = $ <b>1089</b> — so
+there is no $C$ with $M = C^\top C$. The honest reading: <b>exact cyclic coordinate descent</b>. Each
+micro-step is the exact line minimum of $J$ along $e_i$ ($x_i \leftarrow x_i + r_i/A_{ii}$, dev
+<b>2.2×10⁻¹⁶</b>), leaving $\partial J/\partial x_i = 0$ at that instant (<b>9.3×10⁻¹⁷</b>); the 32
+micro-steps compose to one GS sweep exactly. A Gibbs sweep with the noise turned off
+(report <a href="09-stiffness-as-precision.html">09</a> §3).</p></div>
+<div class="pane v4"><div class="vlab">V4 · electrical</div>
+<p>A lineman walks the rod left to right, resetting each node's voltage against <i>fresh upstream</i>
+voltages — by the time he reaches node $i$, node $i{-}1$ already holds its new value. Serial relaxation:
+the original 1823 Gauss move, done by hand.</p></div>
+</div>
+<div class="mcheck">machine check — splitting equivalence: <b>3.3×10⁻¹⁶</b> · ρ = cos² πh: <b>1.1×10⁻¹⁶</b> · micro-step = coordinate minimum: <b>2.2×10⁻¹⁶</b> · gradient zero after each micro-step: <b>9.3×10⁻¹⁷</b> · micro-steps compose to the sweep: dev <b>0</b></div>
+</div>
+
+<div class="prose">
+<div class="eyebrow prb">§6 · Method card</div>
+<h2>SOR — successive over-relaxation</h2>
+<p>Gauss–Seidel's exact line minimizations are, on this problem, always too timid: the corrections of
+neighboring nodes are positively correlated, so when the dust of the sweep settles each node wishes it had
+moved further. SOR moves further on purpose.</p>
+</div>
+
+<div class="mcard" id="card-sor">
+<header><span class="mname">SOR</span>
+<span class="mhead"><span>M = <b>D/ω + L</b>, ω* = <b>1.826391</b></span><span>ρ = ω* − 1 = <b>0.826391</b></span><span>sweeps <b>120</b></span><span>M nonsymmetric</span></span></header>
+<div class="panes">
+<div class="pane v1"><div class="vlab">V1 · weight update</div>
+<div class="pformula">$x_i \leftarrow (1-\omega)\,x_i + \omega\,\big(x_{i-1} + x_{i+1} + h^2 b_i\big)/2$</div>
+<p>Move to the GS target, then keep going: the new value is $\omega$ of the way there and beyond.
+Splitting: $M = D/\omega + L$, $N = D(1/\omega - 1) - U$.</p></div>
+<div class="pane v2"><div class="vlab">V2 · operator</div>
+<p>At $\omega^*$ <i>every</i> eigenvalue of $T$ sits on the circle $|z| = \omega^* - 1 = $ <b>0.826391</b>
+in the complex plane — no single slow mode survives. Measured slope <b>0.826578</b>: the eigenpair at the
+kink is defective (a Jordan block), so a polynomial factor $k\rho^k$ rides on top. <b>120</b> sweeps vs
+GS's 1870.</p>
+<svg class="spec" data-spec="sor" viewBox="0 0 320 62" xmlns="http://www.w3.org/2000/svg"></svg></div>
+<div class="pane v3"><div class="vlab">V3 · transformed coordinates</div>
+<p><b>No whitening</b> — $M$ nonsymmetric again ($\max|M-M^\top| = 1089$). The reading is
+<b>over-relaxed coordinate descent</b>: each micro-step is $x_i \leftarrow x_i + \omega\, r_i/A_{ii}$ —
+deliberately $\omega = 1.8264$ times <i>past</i> the exact coordinate minimum (dev <b>4.4×10⁻¹⁶</b>).
+An intentionally sloppy line search that beats the exact one, because it anticipates the correlated
+corrections still coming down the rod.</p></div>
+<div class="pane v4"><div class="vlab">V4 · electrical</div>
+<p>The same lineman, but he has learned the pattern: his resets are systematically too timid, every
+neighbor will keep drifting the same way after he leaves. So he overshoots every reset by the factor
+$\omega^* = 1.8264$ — and finishes the rod's paperwork fifteen times faster.</p></div>
+</div>
+<div class="mcheck">machine check — splitting equivalence: <b>1.1×10⁻¹⁵</b> · ρ(T(ω*)) = ω* − 1: <b>2.1×10⁻¹⁵</b> (defective pair; eig tol 10⁻⁶) · micro-step = ω × CD step: <b>4.4×10⁻¹⁶</b></div>
+</div>
+
+<div class="identity" style="max-width:1000px">
+  <div class="left"><div class="lab" style="color:var(--phy)">M symmetric positive definite</div>
+    <div class="formula" style="font-size:17px">Richardson · Jacobi · SSOR · IC · two-level<br>
+    <span style="font-size:15px;color:var(--graphite)">= plain GD on the whitened energy, $z = Cx$, $M = C^\top C$</span></div></div>
+  <div class="right"><div class="lab" style="color:var(--prb)">M triangular (a sweep)</div>
+    <div class="formula" style="font-size:17px">Gauss–Seidel · SOR<br>
+    <span style="font-size:15px;color:var(--graphite)">= exact cyclic coordinate descent — Gibbs without noise</span></div></div>
+</div>
+
+<div class="prose">
+<p><b>This dichotomy is the page's second headline.</b> "Preconditioning = change of coordinates" is only
+half the world. If $M$ is SPD it factors as $C^\top C$ and one preconditioned sweep <i>is</i> one plain
+gradient-descent step on the whitened problem. Eight of this page's $M$'s are symmetric; the equivalence
+is verified iterate-for-iterate for the seven nontrivial ones — Jacobi, SSOR, the four IC ranks,
+two-level (max dev 5.3×10<sup>−14</sup> over 60 sweeps) — and Richardson's $M = I/\alpha$ is the trivial
+eighth, its whitener the scalar $\alpha^{-1/2}I$ of §3. But a sweep's $M$ is <i>triangular</i>:
+$M - M^\top$ has a full strict triangle of size $1/h^2 = 1089$, no $C$ exists, and no rotation of
+coordinates makes GS a gradient flow. Its true transformed-coordinates identity runs through
+<i>coordinate</i>, not gradient, descent: axis by axis, each update an exact conditional expectation —
+which is why the same loop with noise injected is precisely the Gibbs sampler
+(report <a href="09-stiffness-as-precision.html">09</a> §3), and why symmetrizing the sweep (next card
+but one) buys the whitening reading back.</p>
+</div>
+
+<div class="prose">
+<div class="eyebrow syn">§7 · Interactive</div>
+<h2>The ω story</h2>
+<p>Why 1.8264 and not 1.5 or 1.9? The answer is <b>Young's theory</b> of consistently-ordered matrices
+(David Young's 1950 thesis — which also delivers §5's $\rho(T_{GS}) = \mu^2$ as its $\omega = 1$ case):
+the SOR eigenvalues $z$ solve the
+quadratic $(z + \omega - 1)^2 = z\,\omega^2\mu_k^2$ against each Jacobi eigenvalue $\mu_k = \cos k\pi h$.
+Below the optimum the largest root is real and $\mu$-limited; past it, all roots go complex with modulus
+exactly $\omega - 1$. The two branches cross at a <i>kink</i> — not a smooth minimum — at</p>
+<div class="pformula" style="text-align:center;font-size:18px">
+$\omega^* \;=\; \dfrac{2}{1+\sin\pi h} \;=\; \dfrac{2}{1+\sqrt{1-\mu^2}} \;=\; 1.8263905415884214,$</div>
+<p>the second form being the one in the user's Trefethen-notes margin — identical because
+$\sqrt{1-\cos^2\pi h} = \sin\pi h$ (the two evaluate within 4.4×10<sup>−16</sup>; $\sin\pi h = 0.095056$).
+At the kink $\rho = \omega^* - 1 = (1-\sin\pi h)/(1+\sin\pi h) = $ <b>0.826391</b>, and 1870 GS sweeps
+collapse to 120. Note what $\omega^*$ depends on: only $\mu$. Tune Jacobi's rate and SOR's dial comes
+free.</p>
+</div>
+
+<figure class="widget" id="omegaw">
+<div class="wtitle"><span class="dot" style="background:var(--prb)"></span>ω explorer · ρ(T<sub>SOR</sub>(ω)) on (0, 2)
+  <span class="stbadge" id="om-badge">self-test …</span></div>
+<svg id="om-svg" viewBox="0 0 760 370" xmlns="http://www.w3.org/2000/svg" class="fig-svg" role="img" aria-label="Spectral radius of SOR versus omega"></svg>
+<div class="ctrl"><span>ω</span>
+  <input id="om-slider" type="range" min="0.05" max="1.95" step="0.0025" value="1.4" aria-label="relaxation factor omega">
+  <span id="om-wval" style="min-width:56px;text-align:right;font-variant-numeric:tabular-nums">1.4000</span>
+  <button class="btn" id="om-snap" title="snap to ω* = 1.826391 (exact — the drag grid does not contain it)" style="white-space:nowrap">snap ω*</button></div>
+<div class="readouts">
+  <span>ρ(ω) &nbsp;<b id="om-rho">0.98…</b></span>
+  <span class="phy">predicted sweeps ⌈ln 10⁻⁸ / ln ρ⌉ &nbsp;<b id="om-pred">—</b></span>
+  <span class="prb">measured sweeps (live run) &nbsp;<b id="om-meas">—</b></span>
+  <span class="gld">at ω*: measured <b>120</b> (JSON)</span>
+</div>
+<figcaption>Blue: the quadratic-root formula, evaluated live. Gold dots: the 192-point eigenvalue grid
+baked in from <span class="kbd">results/update_views.json</span> (the two agree to 5.1×10<sup>−15</sup>;
+self-test at load re-verifies all 192 points and re-finds the kink within 5×10<sup>−5</sup>). Red: the
+law $\rho = \omega - 1$, exact for every $\omega \ge \omega^*$. The "measured sweeps" readout actually
+runs the SOR loop to $10^{-8}$ at your ω — drag toward 0 and watch the price of timidity; drag past the
+kink and watch $\omega - 1$ take over. The drag grid does not contain ω* exactly (nearest stops land at
+125 and 113 sweeps — the defective-pair footnote of §1 explains why a hair past the kink can beat 120);
+<i>snap ω*</i> lands on it to full precision. The asymmetry is the practical moral: overshooting the
+optimal ω is cheap, undershooting is ruinous.</figcaption>
+</figure>
+
+<div class="prose">
+<div class="eyebrow phy">§8 · Method card</div>
+<h2>SSOR — the sweep, symmetrized</h2>
+<p>Walk the rod, then walk back. The composition of a forward and a backward SOR sweep has a symmetric
+$M$ — and with symmetry, the whitening language switches back on.</p>
+</div>
+
+<div class="mcard" id="card-ssor">
+<header><span class="mname">SSOR</span>
+<span class="mhead"><span>M = <b>$\tfrac{\omega}{2-\omega}$(D/ω+L)D⁻¹(D/ω+U)</b>, ω = 1.826391</span><span>ρ = <b>0.907816</b></span><span>sweeps <b>174</b></span><span>M symmetric</span></span></header>
+<div class="panes">
+<div class="pane v1"><div class="vlab">V1 · weight update</div>
+<div class="pformula">forward SOR sweep, then backward SOR sweep</div>
+<p>Two triangular solves per iteration. The product $M = \tfrac{\omega}{2-\omega}(D/\omega+L)\,D^{-1}(D/\omega+U)$
+is symmetric positive definite — the sweeps' triangles cancel each other's skew.</p></div>
+<div class="pane v2"><div class="vlab">V2 · operator</div>
+<p>Real spectrum ($M$ SPD). $\rho = $ <b>0.907816</b> at the same $\omega^*$, measured to
+6.7×10<sup>−15</sup> relative; <b>174</b> sweeps. Slower per sweep than raw SOR's 0.826391 — each
+iteration is two sweeps, and symmetry costs rate. What it buys: admissibility as a CG preconditioner,
+and the next pane.</p>
+<svg class="spec" data-spec="interval" data-rho="0.907816118889" data-lab="ρ = 0.907816" viewBox="0 0 320 62" xmlns="http://www.w3.org/2000/svg"></svg></div>
+<div class="pane v3"><div class="vlab">V3 · transformed coordinates</div>
+<p>Whitening returns, <b>in closed form</b>: $C = K = \sqrt{\tfrac{\omega}{2-\omega}}\;D^{-1/2}\big(D/\omega + U\big)$.
+Then $K^\top K = M_{\rm SSOR}$ and $K^\top = \mathrm{chol}(M_{\rm SSOR})$ — the Cholesky factor is the
+sweep itself (dev <b>3.4×10⁻¹⁶</b>). In the sweep-whitened variables $z = Kx$, one plain-GD step equals
+one SSOR double-sweep at every iterate: 60 sweeps, dev <b>9.8×10⁻¹⁵</b>.</p></div>
+<div class="pane v4"><div class="vlab">V4 · electrical</div>
+<p>The lineman walks the rod and then walks it back. Each direction alone keeps crooked books — upstream
+always fresher than downstream — but the round trip's ledger is symmetric, so the double pass acts like a
+single well-defined network operator rather than a moving wavefront.</p></div>
+</div>
+<div class="mcheck">machine check — splitting equivalence: <b>1.2×10⁻¹⁴</b> · K<sup>T</sup>K = M and K<sup>T</sup> = chol(M): <b>3.4×10⁻¹⁶</b> · whitened-GD equivalence: <b>9.8×10⁻¹⁵</b> · measured slope: <b>6.7×10⁻¹⁵</b> rel</div>
+</div>
+
+<div class="prose">
+<div class="eyebrow syn">§9 · Method card</div>
+<h2>Incomplete (pivoted) Cholesky — partial Gram–Schmidt</h2>
+<p>All methods so far invert something cheap and <i>fixed</i>. The factor-analysis preconditioner of
+report <a href="09-stiffness-as-precision.html">09</a> §6 instead <i>buys</i> structure rank by rank:
+keep $T$ greedily-chosen pivot columns of the Cholesky factorization exactly, replace everything else by
+its diagonal Schur complement. At $T = n{-}1$ it silently becomes the exact solver.</p>
+</div>
+
+<div class="mcard" id="card-ic">
+<header><span class="mname">IC — rank-T pivoted Cholesky</span>
+<span class="mhead"><span>M₀ = <b>R<sub>T</sub><sup>T</sup>R<sub>T</sub> + diag d</b></span><span>κ_eff: <b>415.62 → 306.61 → 109.73 → 1</b></span><span>sweeps <b>3555 / 2758 / 899 / 1</b></span><span>M symmetric</span></span></header>
+<div class="panes">
+<div class="pane v1"><div class="vlab">V1 · weight update</div>
+<div class="pformula">$x \leftarrow x + \omega\,M_0^{-1}(b - Ax),\qquad \omega = 1.000$ for $T<31$</div>
+<p>Pick $T$ pivots greedily (on $A$ they come out odd-first: 1, 3, 5, 7, …). Apply $M_0^{-1}$ by the
+innovations recipe of report <a href="15-preconditioning-as-prediction.html">15</a>: regress the pivot
+residuals out of the rest, divide by the conditional variances, back-substitute — the
+$\hat L\,\mathrm{blkdiag}(A_{PP}, \mathrm{diag}\,s)\,\hat L^\top$ form, checked to <b>4.2×10⁻¹⁶</b>.</p></div>
+<div class="pane v2"><div class="vlab">V2 · operator</div>
+<p>$\kappa(M^{-1}A)$ falls monotonically with rank: <b>415.62</b> (T=4) → <b>306.61</b> (T=8) →
+<b>109.73</b> (T=16) → <b>1</b> (T=31). With optimal damping, $\rho = \tfrac{\kappa-1}{\kappa+1}$:
+0.995200, 0.993498, 0.981939, 0 — sweeps <b>3555, 2758, 899, 1</b>. At $T=31$ the "preconditioner"
+reconstructs $A$ exactly (dev 2.1×10<sup>−16</sup>) and the error is dead after <b>one</b> sweep.</p>
+<svg class="spec" data-spec="ic" viewBox="0 0 320 62" xmlns="http://www.w3.org/2000/svg"></svg></div>
+<div class="pane v3"><div class="vlab">V3 · transformed coordinates</div>
+<p>$z = $ the <b>innovations coordinates</b> of report 15's truncated regression: pivot variables kept
+whole, every other variable replaced by its residual after regressing on the pivots. Whitened-GD
+equivalence at every iterate: <b>1.1×10⁻¹⁴</b> (T=4), 4.7×10<sup>−15</sup> (T=8), 2.7×10<sup>−15</sup>
+(T=16), 5.3×10<sup>−14</sup> (T=31). On a chain the truncated regression is <i>exact</i> at full rank —
+whence the one-step finish.</p></div>
+<div class="pane v4"><div class="vlab">V4 · electrical</div>
+<p>Gram–Schmidt on $B$'s edge columns <i>is</i> Cholesky on $A = B^\top B$
+(Shawe–Taylor §5.2 duality: dev <b>3.0×10⁻¹⁶</b>). Stop after $T$ columns and you have <b>partial
+Gram–Schmidt in edge space = incomplete Cholesky on
+$A$</b>: the first 8 GS rows equal the first 8 rows of $\mathrm{chol}(A)^\top$ to <b>1.5×10⁻¹⁶</b>, and the
+<i>pivoted</i> variant picks the same 16 pivots with the same rows, dev <b>0</b> (§10).</p></div>
+</div>
+<div class="mcheck">machine check — splitting equivalence, all four T: ≤ <b>2.3×10⁻¹⁴</b> · innovations/LDL form: <b>4.2×10⁻¹⁶</b> · κ falls monotonically, T=31 exact: <b>2.1×10⁻¹⁶</b> · IC(0) = chol(A) on the chain: <b>1.5×10⁻¹⁶</b></div>
+</div>
+
+<div class="prose">
+<div class="eyebrow prb">§10 · The recursion behind the card</div>
+<h2>Shawe–Taylor's Algorithm 5.12, run twice</h2>
+<p>The kernel-methods textbook (Shawe-Taylor &amp; Cristianini, §5.2) writes pivoted partial Cholesky as a
+regression bookkeeping loop. Verbatim, in its notation, with $K$ the matrix being factored:</p>
+<div class="pformula" style="font-size:16.5px;text-align:center">
+$R_{ji} = \dfrac{1}{\nu_j}\Big(K_{ji} - \textstyle\sum_{t&lt;j} R_{tj}R_{ti}\Big),
+\qquad d_i \leftarrow d_i - R_{ji}^2,\qquad \nu_j = \sqrt{d_{i_j}},\qquad i_j = \arg\max_i d_i$</div>
+<p>with $d_i = K_{ii}$ initially and $K = R^\top R$ when run to completion. The $d$ array is the whole
+story: after $j$ pivots, $d_i$ is <i>exactly</i> the diagonal of the Schur complement — the variance of
+variable $i$ still unexplained by regression on the pivots chosen so far (checked at every one of the 32
+steps: 3.7×10<sup>−16</sup> on $\Sigma$, 7.3×10<sup>−16</sup> on $A$). Pivoting on $\max d$ is therefore
+<b>forward-selection regression</b>: always recruit the variable you currently understand least. Stopping
+after $T$ pivots is the incomplete factorization of the card above; $K = R^\top R$ holds to
+2.3×10<sup>−16</sup> at full rank, $R[:,\mathrm{pivots}]$ is upper triangular, and $PKP^\top$ reproduces
+pivoted Cholesky exactly.</p>
+<p>Run it on the two natural $K$'s of this suite and it tells two different stories:</p>
+<p><b>On $K = \Sigma = A^{-1}$</b> — the Brownian-bridge covariance
+$\Sigma_{ij} = h\,x_{\min}(1-x_{\max})$ of the <a href="bridge_explainer.html">bridge explainer</a>
+(closed form checked to 1.4×10<sup>−15</sup>) — greedy variance <b>bisects</b>: it picks the midpoint
+node 17 first ($d = 0.007569$, $\nu_1 = 0.08700$; its mirror twin 16 ties to the last bit, so the recorded
+tape's coin-flips are float noise), then 8 and 25, then 12, 21, 4, 29 … Each pick pins the
+bridge where it wobbles most, and the unexplained trace collapses from <b>0.1665</b> to <b>0.0831</b>
+after a single pivot — half the field's variance explained by one well-chosen node. This is the
+<a href="eigenmodes_explainer.html">eigenmodes explainer's</a> leave-wrong ledger discovered by greed:
+coarse structure first, and the pivot order <i>is</i> a multiscale hierarchy.</p>
+<p><b>On $K = A$</b> — the precision matrix — the same rule sweeps the <b>odd nodes first</b>:
+1, 3, 5, …, 31, then the evens. Greedy variance on the stiffness side discovers <b>red–black ordering</b>,
+the classic parallel sweep schedule, with no one telling it about graph coloring. Precision pivots buy
+conditional independence; covariance pivots buy variance — same algorithm, opposite hierarchies.</p>
+<p>And the edge-space dual, which makes "incomplete Cholesky" and "partial Gram–Schmidt" one algorithm:
+orthogonalizing $B$'s columns in their natural order gives $R = \mathrm{chol}(A)^\top$ (dev
+3.0×10<sup>−16</sup>); orthogonalizing with pivot-on-largest-residual-column matches Algorithm 5.12 on
+$A$ pivot for pivot and row for row (dev <b>0</b>, all 16 checked). IC(0) on a path graph has no fill-in
+to drop, so it equals exact Cholesky here (1.5×10<sup>−16</sup>) — report 15's truncated regression run
+with nothing truncated.</p>
+</div>
+
+<figure class="widget" id="pivotw">
+<div class="wtitle"><span class="dot" style="background:var(--gold)"></span>pivot theater · Algorithm 5.12 on the bridge covariance
+  <span class="stbadge" id="pv-badge">self-test …</span></div>
+<div class="controls">
+  <button class="btn" id="pv-reset">reset</button>
+  <button class="btn" id="pv-back">◀ back</button>
+  <button class="btn" id="pv-step">pivot ▶</button>
+  <button class="btn" id="pv-auto">▶ auto</button>
+  <span>rank T = <b id="pv-T" style="font-variant-numeric:tabular-nums;color:var(--ink)">0</b></span>
+</div>
+<svg id="pv-chain" viewBox="0 0 760 96" xmlns="http://www.w3.org/2000/svg" class="fig-svg" role="img" aria-label="Chain with pivoted nodes"></svg>
+<svg id="pv-bars" viewBox="0 0 760 240" xmlns="http://www.w3.org/2000/svg" class="fig-svg" role="img" aria-label="Unexplained variance bars"></svg>
+<div class="readouts">
+  <span>next pivot &nbsp;<b id="pv-next">node 17</b></span>
+  <span>ν at pick &nbsp;<b id="pv-nu">—</b></span>
+  <span>unexplained trace Σdᵢ &nbsp;<b id="pv-tr">0.166514</b></span>
+  <span class="gld">as preconditioner at this T &nbsp;<b id="pv-prec">—</b></span>
+</div>
+<figcaption>Bars: the $d$ array — per-node variance still unexplained after regressing on the gold
+pivots; the outlined bar is the next $\arg\max d$. Watch it take the midpoint, then the quarters, then
+the eighths: forward-selection regression (report
+<a href="09-stiffness-as-precision.html">09</a> §6) rediscovering bisection. The trace readout matches
+<span class="kbd">unexplained_trace_sigma</span> in the JSON at every step; at $T \in \{4, 8, 16, 31\}$
+the readout shows the resulting preconditioner's $\kappa(M^{-1}A)$ and sweep count — <b>415.62 / 3555</b>,
+<b>306.61 / 2758</b>, <b>109.73 / 899</b>, <b>1 / 1</b>. The bridge is mirror-symmetric, so twins
+(16/17, 8/25, …) tie in $d$ to the last bit and the recorded tape's tie-breaks are float noise; the
+theater replays the recorded sequence. Self-test at load: the in-page recursion confirms every recorded
+pivot attains the maximal $d$ (within 10⁻¹²) and reproduces the initial diagonal, every $\nu_j$, and the
+full 33-entry trace sequence.</figcaption>
+</figure>
+
+<div class="prose">
+<div class="eyebrow syn">§11 · Method card</div>
+<h2>Two-level — solve the coarse network exactly</h2>
+<p>The endgame of the pivot theater's hierarchy: don't just damp the smooth error, <i>solve</i> it. Eight
+block-average columns $Z$ make an $8\times8$ coarse stiffness $A_c = Z^\top A Z$; invert that exactly and
+let Jacobi handle what remains.</p>
+</div>
+
+<div class="mcard" id="card-2l">
+<header><span class="mname">Two-level (additive)</span>
+<span class="mhead"><span>M₀⁻¹ = <b>Z A_c⁻¹ Z<sup>T</sup> + D⁻¹</b>, ω = 0.769949</span><span>ρ = <b>0.879537</b>, κ_eff = <b>15.60</b></span><span>sweeps <b>133</b></span><span>M symmetric</span></span></header>
+<div class="panes">
+<div class="pane v1"><div class="vlab">V1 · weight update</div>
+<div class="pformula">$r = b - Ax;\quad$ solve $A_c\,y_c = Z^\top r;\quad x \leftarrow x + \omega\,(Z y_c + D^{-1} r)$</div>
+<p>One $8\times8$ solve plus one Jacobi reset, added, then damped by $\omega = 0.7699$. Blocks of four
+nodes share one coarse unknown ($Z$ columns $= \tfrac14$ on their block).</p></div>
+<div class="pane v2"><div class="vlab">V2 · operator</div>
+<p>Spectrum of $M_0^{-1}A$ squeezed into $[\,0.1565,\ 2.4411\,]$: $\kappa_{\rm eff} = $ <b>15.60</b>
+against 440.69 plain — <b>28×</b>. Damped, $\rho = $ <b>0.879537</b> (measured to 2.5×10<sup>−16</sup>
+rel): <b>133</b> sweeps where Jacobi needs 3609.</p>
+<svg class="spec" data-spec="twolevel" viewBox="0 0 320 62" xmlns="http://www.w3.org/2000/svg"></svg></div>
+<div class="pane v3"><div class="vlab">V3 · transformed coordinates</div>
+<p>Coarse modes <b>solved exactly</b>: $\Pi = Z A_c^{-1} Z^\top A$ is the $A$-orthogonal projector onto
+$\mathrm{range}(Z)$ ($\Pi^2 = \Pi$, $A\Pi = \Pi^\top A$, $\Pi Z = Z$: 1.1×10<sup>−15</sup>) — the
+<a href="eigenmodes_explainer.html">eigenmodes explainer's</a> deflation view — plus a Jacobi-whitened
+fine residual. Whitened-GD equivalence <b>1.6×10⁻¹⁴</b>. The honest ledger: Euclidean overlap with mode 1
+is <b>0.989</b> (largest principal angle 38.29°), yet $A$-energy overlap only <b>0.296</b> — block
+averages are energy-rough, and the win is spectral, not modal.</p></div>
+<div class="pane v4"><div class="vlab">V4 · electrical</div>
+<p>Bundle the rod into 8 supernodes and solve that little grounded network <i>exactly</i> — its 8
+voltages are set in one shot, no relaxation — while every fine node also takes one ordinary Jacobi reset
+against its neighbors. Long-range current bookkeeping done wholesale, retail smoothing on top.</p></div>
+</div>
+<div class="mcheck">machine check — splitting equivalence: <b>1.2×10⁻¹⁴</b> · A-orthogonal projector identities: <b>1.1×10⁻¹⁵</b> · whitened-GD equivalence: <b>1.6×10⁻¹⁴</b> · measured slope: <b>2.5×10⁻¹⁶</b> rel</div>
+</div>
+
+<div class="prose">
+<div class="eyebrow ink">§12 · The margin notes, formalized</div>
+<h2>Two lines from the Trefethen notes, made theorems on the chain</h2>
+<p><b>"Richardson on $X^\top X w = X^\top b$ is gradient descent on the least-squares problem for
+$Xw = b$."</b> True, and nothing about it is special to this page: the gradient of
+$\tfrac12\Vert Xw - b\Vert^2$ is $X^\top(Xw - b)$ — <i>exactly</i> the normal-equations residual — so a
+fixed-step move down the gradient and a Richardson sweep on the normal equations are the same assignment.
+With $X = B$ (the grounded difference operator) and $y = Bx^\star$ the edge currents of the true solution
+($B^\top y = b$ to 1.7×10<sup>−15</sup>), plain GD on $\tfrac12\Vert Bx - y\Vert^2$ tracks Richardson on
+$Ax = b$ for 60 iterates to <b>6.6×10⁻¹⁵</b>. This is the V4 = V3 bridge: the electrical network's edge
+energy <i>is</i> the least-squares objective.</p>
+<p><b>"Jacobi for $X^\top X w = X^\top b$ is diagonal Newton."</b> Also true, stated carefully: Newton's
+method on the least-squares objective would divide the gradient by the full Hessian $X^\top X$; keep only
+the Hessian's <i>diagonal</i> and you get $w \leftarrow w - \mathrm{diag}(X^\top X)^{-1}X^\top(Xw-b)$,
+which is precisely Jacobi's $M = D$ sweep. With $X = B$: $\mathrm{diag}(B^\top B) = 2/h^2 = D$ to
+2.1×10<sup>−16</sup>, and the two loops agree over 20 iterates to <b>4.4×10⁻¹⁶</b>. On this chain the
+diagonal is constant, so "diagonal Newton" quietly degrades into optimally-scaled gradient descent — the
+Jacobi no-op of §4, seen through a third window.</p>
+</div>
+
+<div class="prose">
+<div class="eyebrow syn">§13 · Synthesis</div>
+<h2>The matrix of methods and languages</h2>
+<p>One row per method, one column per language. Every cell is a checked identity, not an analogy.</p>
+</div>
+
+<div class="dictwrap"><table class="dict">
+<thead><tr><th>method</th><th>V1 · weight update</th><th>V2 · operator</th><th>V3 · coordinates</th><th>V4 · electrical</th></tr></thead>
+<tbody>
+<tr><td>Richardson</td><td>$x_i \mathrel{+}= \alpha r_i$; $M = I/\alpha$</td><td>ρ = cos πh = <b>0.995472</b>; <b>3609</b> sweeps</td><td>plain GD, raw coordinates</td><td>leak current down the residual, fixed conductance</td></tr>
+<tr><td>Jacobi</td><td>average stale neighbors + lift; $M = D$</td><td>ρ = cos πh = <b>0.995472</b>; <b>3609</b></td><td>GD in $z = (\sqrt2/h)x$ — global rescale, the no-op</td><td>all voltages reset at once from the stale board</td></tr>
+<tr><td>Gauss–Seidel</td><td>same, fresh left neighbor; $M = D{+}L$</td><td>ρ = cos² πh = <b>0.990964</b>; <b>1870</b></td><td>exact cyclic coordinate descent — no whitening exists</td><td>lineman walks left→right on fresh upstream volts</td></tr>
+<tr><td>SOR</td><td>overshoot the GS target by ω; $M = D/\omega{+}L$</td><td>ρ = ω*−1 = <b>0.826391</b>; <b>120</b></td><td>coordinate descent, each step ω past the minimum</td><td>lineman overshoots every reset by <b>1.8264</b></td></tr>
+<tr><td>SSOR</td><td>forward sweep, then backward; $M$ SPD</td><td>ρ = <b>0.907816</b>; <b>174</b></td><td>GD in $z = Kx$, the closed-form sweep-whitener</td><td>there-and-back walk; the round trip keeps symmetric books</td></tr>
+<tr><td>IC rank T</td><td>keep T pivots exactly + diagonal Schur</td><td>κ_eff <b>415.62</b>→<b>306.61</b>→<b>109.73</b>→<b>1</b>; sweeps <b>3555/2758/899/1</b></td><td>GD in report 15's innovations coordinates</td><td>partial Gram–Schmidt on edge columns = partial Cholesky on A</td></tr>
+<tr><td>two-level</td><td>8×8 coarse solve + Jacobi reset, damped</td><td>ρ = <b>0.879537</b>, κ_eff = <b>15.60</b>; <b>133</b></td><td>coarse modes deflated exactly + whitened fine residual</td><td>solve the supernode network wholesale, smooth retail</td></tr>
+</tbody>
+</table></div>
+
+<div class="prose">
+<p>Read the columns downward and the page compresses to one sentence per language. V1: everyone updates a
+node from its neighbors and a lift. V2: everyone is $I - M^{-1}A$ racing its spectral radius. V3: the
+symmetric ones are gradient descent in the right coordinates, the sweeps are coordinate descent, and the
+better the coordinates, the fewer the sweeps — from 3609 to 1. V4: everyone is a maintenance policy for
+the same grounded network, from "nudge every voltage" to "solve the substation exactly." One update,
+four languages — and 65 checks saying none of the translations leak.</p>
+</div>
+
+<div class="check">
+<b>Everything above is machine-verified</b> (<span class="kbd">python/experiments/update_views_checks.py</span>,
+<b>65 checks, all PASS</b>, deterministic, 0.4&#8201;s; every quoted number and curve exported to
+<span class="kbd">results/update_views.json</span>): the ten splitting equivalences component-loop ==
+$M^{-1}(Nx{+}b)$ == $x + M^{-1}(b{-}Ax)$ (≤ 2.3×10<sup>−14</sup>); the exact rates
+$\rho(T_J) = \cos\pi h$ (1.6×10<sup>−15</sup>), $\rho(T_{GS}) = \cos^2\pi h$ (1.1×10<sup>−16</sup>),
+$\omega^* = 2/(1{+}\sin\pi h) = 2/(1{+}\sqrt{1-\mu^2})$ (4.4×10<sup>−16</sup>),
+$\rho(T_{SOR}(\omega^*)) = \omega^*{-}1$, the 192-point ω-grid vs the quadratic-root formula
+(5.1×10<sup>−15</sup>) with $\rho = \omega{-}1$ above the kink and the argmin at $\omega^*$
+(5×10<sup>−5</sup>); measured asymptotic slopes vs every $\rho$ (&lt; 1% rel; SOR's defective pair the
+only case above 10<sup>−14</sup>); iterations to $10^{-8}$ with Richardson == Jacobi sweep-for-sweep and
+GS half of Jacobi; whitened-GD == $M$-preconditioned Richardson for the seven nontrivial SPD $M$'s
+(Jacobi, SSOR, IC×4, two-level; Richardson's scalar $M$ is the trivial eighth;
+≤ 5.3×10<sup>−14</sup>, 60 iterates) with the closed-form Jacobi scalar $\sqrt2/h$ and SSOR whitener;
+GS/SOR nonsymmetry ($1/h^2 = 1089$) and the exact-coordinate-descent micro-step identities
+(≤ 4.4×10<sup>−16</sup>); Shawe–Taylor Algorithm 5.12 on $\Sigma$ and on $A$ — $K = R^\top R$, triangular
+$R[:,\mathrm{pivots}]$, pivoted-Cholesky agreement, Schur-diagonal $d$ bookkeeping at every step, recorded
+pivot sequences (bisection on $\Sigma$, red–black on $A$); the Gram–Schmidt/Cholesky duality on the
+grounded $B$ — unpivoted, partial (T=8), and pivoted (dev 0) — with IC(0) = chol($A$); the electrical
+checks $A = B^\top B$ (±33 entries), the voltage-average identity, edge currents $B^\top y = b$,
+GD-on-least-squares == Richardson and Jacobi == diagonal Newton; the two-level spectrum
+$[0.1565, 2.4411]$, projector identities, and deflation ledger; and the $n=8$ exact small matrices.
+Reuses <span class="kbd">poisson.laplacian_1d</span> and <span class="kbd">preconditioners.ic0</span>.
+Companion pages:
+<a href="05-classical-preconditioners.html">05 · classical preconditioners</a> ·
+<a href="09-stiffness-as-precision.html">09 · stiffness as precision</a> ·
+<a href="12-autoregressive-preconditioning.html">12 · autoregressive preconditioning</a> ·
+<a href="15-preconditioning-as-prediction.html">15 · preconditioning as prediction</a> ·
+<a href="bridge_explainer.html">the bridge explainer</a> ·
+<a href="green_tents_explainer.html">the green tents</a> ·
+<a href="eigenmodes_explainer.html">the eigenmodes explainer</a>.
+</div>
+
+</main>
+<script>
+/*__UVDATA__*/
+const UV={"n":32,"h":0.030303030303030304,"alpha":0.00045913682277318646,"omegaOpt":1.8263905415884214,"omegaTre":1.826390541588421,"mu":0.9954719225730846,"sinPiH":0.09505604330418266,"rhoGS":0.9909643486313533,"rhoSOR":0.8263905415884214,"rhoSSOR":0.907816118889,"b":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"xStar":[0.014692378328741987,0.02938475665748398,0.044077134986225966,0.05876951331496795,0.07346189164370992,0.0881542699724519,0.10284664830119387,0.11753902662993583,0.10192837465564748,0.08631772268135914,0.07070707070707079,0.05509641873278244,0.03948576675849408,0.023875114784205724,0.008264462809917373,-0.007346189164370976,-0.022956841138659326,-0.03856749311294767,-0.05417814508723602,-0.06978879706152437,-0.08539944903581272,-0.10101010101010105,-0.1166207529843894,-0.13223140495867775,-0.11753902662993576,-0.10284664830119378,-0.08815426997245181,-0.07346189164370982,-0.058769513314967846,-0.04407713498622588,-0.02938475665748392,-0.014692378328741958],"refs":{"richardson":{"p20":0.053390502929687514,"p60":-0.0909686401219746,"it":3609},"jacobi":{"p20":0.053390502929687514,"p60":-0.0909686401219746,"it":3609},"gs":{"p20":0.07568289861956147,"p60":-0.11218330748123133,"it":1870},"sor":{"p20":0.1477328253647132,"p60":-0.13221884624245386,"it":120},"ssor":{"p20":0.11431809195827908,"p60":-0.13217408338133443,"it":174}},"sorCurve":[[0.05,0.9997678175145825],[0.060000000000000005,0.9997199513517743],[0.07,0.9996715913861295],[0.08,0.9996227299177312],[0.09,0.9995733590853424],[0.1,0.9995234708621351],[0.11,0.9994730570513165],[0.12000000000000001,0.9994221092815754],[0.13,0.999370619002415],[0.14,0.9993185774793043],[0.15000000000000002,0.9992659757887096],[0.16,0.9992128048129234],[0.16999999999999998,0.9991590552347405],[0.18,0.9991047175319605],[0.19,0.999049781971714],[0.2,0.998994238604564],[0.21000000000000002,0.9989380772584481],[0.22000000000000003,0.9988812875324085],[0.22999999999999998,0.9988238587900634],[0.24,0.9987657801529273],[0.25,0.9987070404934476],[0.26,0.9986476284277926],[0.27,0.9985875323084573],[0.28,0.9985267402165126],[0.29,0.9984652399536523],[0.3,0.9984030190339394],[0.31,0.9983400646752275],[0.32,0.9982763637903239],[0.33,0.9982119029777782],[0.33999999999999997,0.9981466685123912],[0.35,0.9980806463353167],[0.36,0.9980138220438501],[0.37,0.9979461808808026],[0.38,0.997877707723499],[0.39,0.9978083870723412],[0.4,0.9977382030389588],[0.41,0.997667139333895],[0.42,0.997595179253836],[0.43,0.9975223056683179],[0.44,0.9974485010059365],[0.45,0.9973737472400296],[0.46,0.9972980258737658],[0.47,0.9972213179246581],[0.48,0.9971436039084706],[0.49,0.9970648638224439],[0.5,0.9969850771278749],[0.51,0.9969042227319724],[0.52,0.9968222789689578],[0.53,0.9967392235804149],[0.54,0.9966550336947695],[0.55,0.9965696858059752],[0.56,0.9964831557512347],[0.5700000000000001,0.9963954186878154],[0.5800000000000001,0.9963064490688512],[0.5900000000000001,0.9962162206181072],[0.6000000000000001,0.996124706303644],[0.6100000000000001,0.9960318783103108],[0.6200000000000001,0.9959377080110697],[0.63,0.9958421659369898],[0.64,0.9957452217459172],[0.65,0.9956468441897447],[0.66,0.9955470010801664],[0.67,0.9954456592528755],[0.68,0.9953427845300798],[0.6900000000000001,0.9952383416813099],[0.7000000000000001,0.9951322943823501],[0.7100000000000001,0.9950246051722286],[0.7200000000000001,0.9949152354081576],[0.7300000000000001,0.994804145218308],[0.7400000000000001,0.9946912934522719],[0.7500000000000001,0.9945766376290908],[0.76,0.9944601338827411],[0.77,0.9943417369048944],[0.78,0.9942213998847653],[0.79,0.9940990744459468],[0.8,0.9939747105800104],[0.81,0.9938482565766282],[0.8200000000000001,0.9937196589501125],[0.8300000000000001,0.9935888623620609],[0.8400000000000001,0.9934558095398988],[0.8500000000000001,0.9933204411910617],[0.8600000000000001,0.9931826959125248],[0.8700000000000001,0.9930425100954229],[0.8800000000000001,0.9928998178243645],[0.89,0.992754550771202],[0.9,0.992606638082774],[0.91,0.9924560062623219],[0.92,0.9923025790440904],[0.93,0.9921462772606536],[0.9400000000000001,0.9919870187025128],[0.9500000000000001,0.9918247179693789],[0.9600000000000001,0.9916592863125486],[0.9700000000000001,0.9914906314678411],[0.9800000000000001,0.9913186574782582],[0.9900000000000001,0.9911432645057673],[1.0,0.9909643486313534],[1.01,0.9907818016424259],[1.02,0.9905955108067482],[1.03,0.9904053586317114],[1.04,0.9902112226080075],[1.05,0.9900129749363296],[1.06,0.9898104822358671],[1.07,0.9896036052331121],[1.08,0.9893921984294026],[1.09,0.9891761097454619],[1.1,0.9889551801410572],[1.11,0.9887292432076663],[1.12,0.9884981247319005],[1.1300000000000001,0.9882616422271646],[1.1400000000000001,0.9880196044307933],[1.1500000000000001,0.9877718107636313],[1.1600000000000001,0.9875180507486961],[1.1700000000000002,0.9872581033852371],[1.1800000000000002,0.9869917364740605],[1.1900000000000002,0.986718705889665],[1.2000000000000002,0.986438754794053],[1.21,0.986151612786725],[1.22,0.9858569949845819],[1.23,0.9855546010248697],[1.24,0.9852441139833655],[1.25,0.9849251991992755],[1.26,0.9845975029970576],[1.27,0.9842606512944274],[1.28,0.9839142480842823],[1.29,0.9835578737768609],[1.3,0.983191083386652],[1.31,0.9828134045465102],[1.32,0.9824243353292009],[1.33,0.9820233418538128],[1.34,0.9816098556514078],[1.35,0.9811832707607339],[1.36,0.9807429405204874],[1.37,0.980288174019857],[1.3800000000000001,0.9798182321632879],[1.3900000000000001,0.9793323232986174],[1.4000000000000001,0.9788295983499655],[1.4100000000000001,0.9783091453871825],[1.4200000000000002,0.9777699835527165],[1.4300000000000002,0.9772110562534262],[1.4400000000000002,0.9766312235090413],[1.4500000000000002,0.9760292533300168],[1.46,0.9754038119745403],[1.47,0.9747534529068181],[1.48,0.9740766042448264],[1.49,0.9733715544446383],[1.5,0.9726364359174197],[1.51,0.9718692062126338],[1.52,0.971067626322649],[1.53,0.9702292355664826],[1.54,0.9693513223869457],[1.55,0.9684308902394009],[1.56,0.9674646175503391],[1.57,0.9664488104664248],[1.58,0.9653793467796793],[1.59,0.9642516089748786],[1.6,0.9630604037627128],[1.61,0.9617998646812724],[1.62,0.9604633332905317],[1.6300000000000001,0.9590432130314563],[1.6400000000000001,0.9575307877991437],[1.6500000000000001,0.9559159944222568],[1.6600000000000001,0.9541871341355966],[1.6700000000000002,0.9523305021261432],[1.6800000000000002,0.9503299052636636],[1.6900000000000002,0.9481660244267855],[1.7000000000000002,0.9458155563688425],[1.7100000000000002,0.9432500354468426],[1.72,0.9404341778284986],[1.73,0.937323490868042],[1.74,0.9338607094487087],[1.75,0.9299702758930893],[1.76,0.9255493780450709],[1.77,0.9204525159919668],[1.78,0.9144628153065213],[1.79,0.9072328996360532],[1.8,0.8981434137858757],[1.81,0.8858727152921302],[1.82,0.8662593532436689],[1.8263905415884214,0.8263905415884235],[1.83,0.8300000000000013],[1.84,0.8400000000000011],[1.85,0.8500000000000023],[1.86,0.8600000000000021],[1.87,0.8700000000000023],[1.8800000000000001,0.8800000000000016],[1.8900000000000001,0.8900000000000026],[1.9000000000000001,0.9000000000000026],[1.9100000000000001,0.9100000000000024],[1.9200000000000002,0.9200000000000005],[1.9300000000000002,0.930000000000003],[1.9400000000000002,0.9400000000000017],[1.95,0.9500000000000011]],"st":{"pivots":[17,8,25,12,21,4,29,15,6,2,31,19,27,10,23,13,9,30,24,3,32,1,16,11,14,20,26,18,22,28,5,7],"nu":[0.08699885606851797,0.06236312187000326,0.06060606060606063,0.0451730904545412,0.042854956435548354,0.04285495643554835,0.04285495643554834,0.03319530651546463,0.030303030303030314,0.030303030303030307,0.030303030303030307,0.0303030303030303,0.030303030303030293,0.030303030303030287,0.030303030303030276,0.02474232063417354,0.021427478217774198,0.02142747821777418,0.021427478217774173,0.02142747821777417,0.02142747821777417,0.02142747821777417,0.021427478217774163,0.021427478217774163,0.021427478217774163,0.021427478217774163,0.021427478217774163,0.02142747821777416,0.021427478217774156,0.021427478217774156,0.021427478217774153,0.021427478217774146],"trace":[0.16651362105907558,0.0831037649219468,0.060912151821242745,0.04116926844199572,0.03489439853076217,0.029843893480257122,0.024793388429752063,0.01974288337924701,0.017753290480563205,0.016375880012243646,0.014998469543924083,0.013621059075604524,0.012243648607284965,0.010866238138965405,0.00948882767064585,0.008111417202326292,0.007346189164370981,0.006887052341597793,0.006427915518824606,0.005968778696051421,0.005509641873278234,0.0050505050505050475,0.0045913682277318605,0.004132231404958674,0.003673094582185488,0.003213957759412302,0.0027548209366391164,0.0022956841138659302,0.001836547291092744,0.0013774104683195593,0.0009182736455463729,0.0004591368227731864,0.0],"diag":[0.0008904471714389074,0.0017252413946628837,0.0025043826696719293,0.003227870996466042,0.003895706375045222,0.004507888805409473,0.0050644182875587895,0.005565294821493174,0.006010518407212625,0.0064000890447171435,0.006734006734006734,0.00701227147508139,0.007234883267941113,0.007401842112585906,0.007513148009015768,0.007568800957230702,0.007568800957230706,0.007513148009015775,0.007401842112585911,0.007234883267941121,0.007012271475081394,0.006734006734006735,0.006400089044717146,0.006010518407212623,0.00556529482149317,0.005064418287558783,0.004507888805409467,0.0038957063750452168,0.003227870996466037,0.0025043826696719254,0.001725241394662882,0.000890447171438907],"prec":{"4":{"k":415.62403082388414,"it":3555},"8":{"k":306.61302815264156,"it":2758},"16":{"k":109.733840334793,"it":899},"31":{"k":1.0000000000000315,"it":1}}},"tl":{"muMin":0.15645600130944584,"muMax":2.441117740586441,"omega":0.769949267557757,"rho":0.8795368163867767},"icK":[[4,415.62403082388414],[8,306.61302815264156],[16,109.733840334793],[31,1.0000000000000315]]};
+/*__END_UVDATA__*/
+</script>
+<script>
+(function(){
+'use strict';
+var NS='http://www.w3.org/2000/svg';
+var SANS='ui-sans-serif,system-ui,sans-serif';
+function el(p,t,a,s){var e=document.createElementNS(NS,t),k;for(k in a)e.setAttribute(k,a[k]);
+  if(s!==undefined)e.textContent=s;p.appendChild(e);return e;}
+function tx(p,x,y,s,o){o=o||{};var a={x:x,y:y,'font-family':SANS,'font-size':o.fs||11,
+  fill:o.fill||'#5A6773'};if(o.anchor)a['text-anchor']=o.anchor;if(o.w)a['font-weight']=o.w;
+  if(o.halo){a.stroke='#fff';a['stroke-width']=3;a['paint-order']='stroke';a['stroke-linejoin']='round';}
+  return el(p,'text',a,s);}
+var SUP={'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴',
+  '5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+function sup(str){var s='',i;for(i=0;i<str.length;i++)s+=SUP[str[i]]||'';return s;}
+function sci(v){if(v===0)return '0';var e=Math.floor(Math.log10(Math.abs(v)));
+  var m=v/Math.pow(10,e),r=m.toFixed(1);
+  if(parseFloat(r)>=10){e+=1;r=(m/10).toFixed(1);}
+  return r+'×'+'10'+sup(String(e));}
+function badge(id,ok,text){var b=document.getElementById(id);if(!b)return;
+  b.textContent=text;b.className='stbadge'+(ok?'':' fail');}
+
+var N=UV.n,h=UV.h,ALPHA=UV.alpha,WOPT=UV.omegaOpt,PI=Math.PI;
+var b=UV.b.slice(),xStar=UV.xStar.slice();
+var nrm0=0;(function(){var i,s=0;for(i=0;i<N;i++)s+=xStar[i]*xStar[i];nrm0=Math.sqrt(s);})();
+
+/* ================= component loops (the five-line sweeps) ================= */
+function doSweep(m,w,x){
+  var i,l,r,xn;
+  if(m==='richardson'){xn=new Float64Array(N);
+    for(i=0;i<N;i++){l=i>0?x[i-1]:0;r=i<N-1?x[i+1]:0;
+      xn[i]=x[i]+ALPHA*(b[i]-(2*x[i]-l-r)/(h*h));}return xn;}
+  if(m==='jacobi'){xn=new Float64Array(N);
+    for(i=0;i<N;i++){l=i>0?x[i-1]:0;r=i<N-1?x[i+1]:0;
+      xn[i]=(l+r+h*h*b[i])/2;}return xn;}
+  if(m==='gs'){for(i=0;i<N;i++){l=i>0?x[i-1]:0;r=i<N-1?x[i+1]:0;
+      x[i]=(l+r+h*h*b[i])/2;}return x;}
+  if(m==='sor'){for(i=0;i<N;i++){l=i>0?x[i-1]:0;r=i<N-1?x[i+1]:0;
+      x[i]=(1-w)*x[i]+w*(l+r+h*h*b[i])/2;}return x;}
+  for(i=0;i<N;i++){l=i>0?x[i-1]:0;r=i<N-1?x[i+1]:0;
+    x[i]=(1-w)*x[i]+w*(l+r+h*h*b[i])/2;}
+  for(i=N-1;i>=0;i--){l=i>0?x[i-1]:0;r=i<N-1?x[i+1]:0;
+    x[i]=(1-w)*x[i]+w*(l+r+h*h*b[i])/2;}
+  return x;
+}
+function relErr(x){var i,s=0,d;for(i=0;i<N;i++){d=x[i]-xStar[i];s+=d*d;}
+  return Math.sqrt(s)/nrm0;}
+function makeTraj(m,w){
+  var x=new Float64Array(N),errs=[1],snaps=[new Float64Array(N)],snapIters=[0];
+  var k=0,cap=120000,e=1;
+  while(k<cap&&e>1e-8){
+    k++;x=doSweep(m,w,x);e=relErr(x);errs.push(e);
+    if(k<=1200||k%8===0||e<=1e-8){snaps.push(new Float64Array(x));snapIters.push(k);}
+  }
+  return {errs:errs,snaps:snaps,snapIters:snapIters,iters:(e<=1e-8?k:null)};
+}
+
+/* ================= spectrum thumbnails on the method cards ================= */
+(function(){
+  var specs=document.querySelectorAll('svg.spec'),i;
+  function axis(svg,x0,x1,y){el(svg,'line',{x1:x0,y1:y,x2:x1,y2:y,stroke:'#C7CED4','stroke-width':1});
+    var t=[-1,0,1],j;for(j=0;j<3;j++){var px=x0+(t[j]+1)/2*(x1-x0);
+      el(svg,'line',{x1:px,y1:y-3,x2:px,y2:y+3,stroke:'#8A949D','stroke-width':1});
+      tx(svg,px,y+14,t[j]===0?'0':(t[j]<0?'−1':'+1'),{anchor:'middle',fs:9});}}
+  function xm(v,x0,x1){return x0+(v+1)/2*(x1-x0);}
+  for(i=0;i<specs.length;i++){
+    var svg=specs[i],kind=svg.getAttribute('data-spec'),k,v,px;
+    if(kind==='richardson'||kind==='jacobi'){
+      axis(svg,14,306,40);
+      for(k=1;k<=N;k++){v=Math.cos(k*PI*h);px=xm(v,14,306);
+        el(svg,'line',{x1:px,y1:31,x2:px,y2:49,stroke:'#1F4E79','stroke-width':1,opacity:0.75});}
+      el(svg,'line',{x1:xm(UV.mu,14,306),y1:27,x2:xm(UV.mu,14,306),y2:53,stroke:'#C9A227','stroke-width':1.8});
+      el(svg,'line',{x1:xm(-UV.mu,14,306),y1:27,x2:xm(-UV.mu,14,306),y2:53,stroke:'#C9A227','stroke-width':1.8});
+      tx(svg,160,12,(kind==='richardson'?'eigs of T = I − αA:  1 − αλₖ = cos kπh':'eigs of T = I − D⁻¹A:  cos kπh'),{anchor:'middle',fs:10,halo:true});
+      tx(svg,xm(UV.mu,14,306)-4,24,'ρ = 0.995472',{anchor:'end',fs:9.5,fill:'#A88A1F',halo:true,w:600});
+    }else if(kind==='gs'){
+      axis(svg,14,306,40);
+      for(k=1;k<=16;k++){v=Math.cos(k*PI*h);v=v*v;px=xm(v,14,306);
+        el(svg,'line',{x1:px,y1:31,x2:px,y2:49,stroke:'#1F4E79','stroke-width':1,opacity:0.75});}
+      el(svg,'line',{x1:xm(0,14,306),y1:27,x2:xm(0,14,306),y2:53,stroke:'#B5443C','stroke-width':3});
+      tx(svg,xm(0,14,306)+5,24,'0 (×16)',{fs:9.5,fill:'#B5443C',halo:true,w:600});
+      el(svg,'line',{x1:xm(UV.rhoGS,14,306),y1:27,x2:xm(UV.rhoGS,14,306),y2:53,stroke:'#C9A227','stroke-width':1.8});
+      tx(svg,xm(UV.rhoGS,14,306)-4,24,'ρ = cos²πh = 0.990964',{anchor:'end',fs:9.5,fill:'#A88A1F',halo:true,w:600});
+      tx(svg,160,12,'eigs of T_GS: μₖ² and 0',{anchor:'middle',fs:10,halo:true});
+    }else if(kind==='sor'){
+      var cx=160,cy=33,R1=25;
+      el(svg,'line',{x1:cx-34,y1:cy,x2:cx+34,y2:cy,stroke:'#C7CED4','stroke-width':1});
+      el(svg,'circle',{cx:cx,cy:cy,r:R1,fill:'none',stroke:'#C7CED4','stroke-width':1,'stroke-dasharray':'3 3'});
+      el(svg,'circle',{cx:cx,cy:cy,r:R1*(WOPT-1),fill:'none',stroke:'#1F4E79','stroke-width':1.2});
+      for(k=1;k<=N;k++){var mk=Math.cos(k*PI*h),bq=2*(WOPT-1)-(WOPT*mk)*(WOPT*mk),
+        cq=(WOPT-1)*(WOPT-1),disc=bq*bq-4*cq,re,im;
+        if(disc>=0){re=(-bq+Math.sqrt(disc))/2;im=0;}else{re=-bq/2;im=Math.sqrt(-disc)/2;}
+        el(svg,'circle',{cx:cx+R1*re,cy:cy-R1*im,r:1.7,fill:'#B5443C'});
+        el(svg,'circle',{cx:cx+R1*re,cy:cy+R1*im,r:1.7,fill:'#B5443C'});}
+      tx(svg,cx+R1+8,cy+4,'unit circle',{fs:9});
+      tx(svg,60,14,'eigs of T_SOR(ω*):',{fs:10,halo:true});
+      tx(svg,60,26,'all on |z| = ω*−1 = 0.826391',{fs:10,fill:'#1F4E79',halo:true,w:600});
+    }else if(kind==='interval'){
+      var rho=parseFloat(svg.getAttribute('data-rho'));
+      axis(svg,14,306,40);
+      el(svg,'rect',{x:xm(-rho,14,306),y:35,width:xm(rho,14,306)-xm(-rho,14,306),height:10,
+        fill:'#1F4E79',opacity:0.14});
+      el(svg,'line',{x1:xm(rho,14,306),y1:27,x2:xm(rho,14,306),y2:53,stroke:'#C9A227','stroke-width':1.8});
+      el(svg,'line',{x1:xm(-rho,14,306),y1:27,x2:xm(-rho,14,306),y2:53,stroke:'#C9A227','stroke-width':1.8});
+      tx(svg,160,12,'real spectrum (M SPD), |λ| ≤ ρ',{anchor:'middle',fs:10,halo:true});
+      tx(svg,xm(rho,14,306)-4,24,svg.getAttribute('data-lab'),{anchor:'end',fs:9.5,fill:'#A88A1F',halo:true,w:600});
+    }else if(kind==='ic'){
+      var bars=UV.icK,j2,bx=[44,112,180,248],bw=44,maxl=Math.log10(500);
+      el(svg,'line',{x1:30,y1:50,x2:300,y2:50,stroke:'#C7CED4','stroke-width':1});
+      for(j2=0;j2<4;j2++){var kv=bars[j2][1],hh=Math.max(2,Math.log10(Math.max(kv,1))/maxl*34);
+        el(svg,'rect',{x:bx[j2],y:50-hh,width:bw,height:hh,fill:'#1F4E79',opacity:0.75});
+        tx(svg,bx[j2]+bw/2,50-hh-3,(kv<1.01?'1':kv.toFixed(2)),{anchor:'middle',fs:9,fill:'#1F4E79',w:600,halo:true});
+        tx(svg,bx[j2]+bw/2,60,'T='+bars[j2][0],{anchor:'middle',fs:9});}
+      tx(svg,165,12,'κ_eff(M⁻¹A) vs rank T (log scale)',{anchor:'middle',fs:10,halo:true});
+    }else if(kind==='twolevel'){
+      var x0=14,x1=306,mn=UV.tl.muMin,mx=UV.tl.muMax;
+      function q(v){return x0+v/2.6*(x1-x0);}
+      el(svg,'line',{x1:x0,y1:40,x2:x1,y2:40,stroke:'#C7CED4','stroke-width':1});
+      el(svg,'rect',{x:q(mn),y:35,width:q(mx)-q(mn),height:10,fill:'#1F4E79',opacity:0.14});
+      el(svg,'line',{x1:q(mn),y1:27,x2:q(mn),y2:53,stroke:'#C9A227','stroke-width':1.8});
+      el(svg,'line',{x1:q(mx),y1:27,x2:q(mx),y2:53,stroke:'#C9A227','stroke-width':1.8});
+      el(svg,'line',{x1:q(1),y1:31,x2:q(1),y2:49,stroke:'#B5443C','stroke-width':1.4});
+      tx(svg,q(0),56,'0',{anchor:'middle',fs:9});tx(svg,q(1),56,'1',{anchor:'middle',fs:9});
+      tx(svg,q(2),56,'2',{anchor:'middle',fs:9});
+      tx(svg,q(mn),24,'0.1565',{anchor:'middle',fs:9.5,fill:'#A88A1F',halo:true,w:600});
+      tx(svg,q(mx),24,'2.4411',{anchor:'middle',fs:9.5,fill:'#A88A1F',halo:true,w:600});
+      tx(svg,160,12,'eigs of M₀⁻¹A: κ_eff = 15.60',{anchor:'middle',fs:10,halo:true});
+    }
+  }
+})();
+
+/* ================= widget a: the sweep theater ================= */
+(function(){
+  var svg=document.getElementById('th-svg'),esvg=document.getElementById('th-err');
+  if(!svg)return;
+  var X0=60,X1=700,YZ=165,SC=730;
+  function nx(i){return X0+640*(i+1)/33;}
+  function ny(v){return YZ-SC*v;}
+  /* static scenery */
+  el(svg,'line',{x1:X0,y1:40,x2:X0,y2:300,stroke:'#1B2733','stroke-width':2.5});
+  el(svg,'line',{x1:X1,y1:40,x2:X1,y2:300,stroke:'#1B2733','stroke-width':2.5});
+  tx(svg,X0-8,34,'0° wall',{anchor:'end',fs:11});
+  tx(svg,X1+8,34,'0° wall',{fs:11});
+  el(svg,'line',{x1:X0,y1:YZ,x2:X1,y2:YZ,stroke:'#5A6773','stroke-width':1,'stroke-dasharray':'2 5',opacity:0.7});
+  tx(svg,X1+8,YZ+4,'u = 0',{fs:10});
+  var defs=el(svg,'defs',{});
+  var mk=el(defs,'marker',{id:'th-ah',viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:6.5,
+    markerHeight:6.5,orient:'auto-start-reverse'});
+  el(mk,'path',{d:'M0,0 L10,5 L0,10 z',fill:'#B5443C'});
+  /* x_star gold */
+  var i,pts=[];
+  for(i=0;i<N;i++)pts.push(nx(i).toFixed(1)+','+ny(xStar[i]).toFixed(1));
+  el(svg,'polyline',{points:'60,165 '+pts.join(' ')+' 700,165',fill:'none',stroke:'#C9A227',
+    'stroke-width':1.6,'stroke-dasharray':'6 4',opacity:0.9});
+  for(i=0;i<N;i++)el(svg,'circle',{cx:nx(i).toFixed(1),cy:ny(xStar[i]).toFixed(1),r:2.4,
+    fill:'#C9A227',stroke:'#fff','stroke-width':0.7});
+  tx(svg,nx(28),ny(xStar[28])-12,'x★',{fs:12,fill:'#A88A1F',w:700,halo:true});
+  /* source and sink arrows */
+  el(svg,'line',{x1:nx(7),y1:52,x2:nx(7),y2:ny(xStar[7])-10,stroke:'#B5443C','stroke-width':1.8,
+    'marker-end':'url(#th-ah)'});
+  tx(svg,nx(7),44,'+1/h in at node 8',{anchor:'middle',fs:11,fill:'#B5443C',w:600,halo:true});
+  el(svg,'line',{x1:nx(23),y1:ny(xStar[23])+10,x2:nx(23),y2:296,stroke:'#B5443C','stroke-width':1.8,
+    'marker-end':'url(#th-ah)'});
+  tx(svg,nx(23),312,'−1/h out at node 24',{anchor:'middle',fs:11,fill:'#B5443C',w:600,halo:true});
+  /* dynamic pieces */
+  var curve=el(svg,'polyline',{points:'',fill:'none',stroke:'#1F4E79','stroke-width':2.6,
+    'stroke-linejoin':'round'});
+  var dots=[],ringsAll=[];
+  for(i=0;i<N;i++)dots.push(el(svg,'circle',{cx:nx(i),cy:YZ,r:3,fill:'#1F4E79',
+    stroke:'#fff','stroke-width':0.8}));
+  for(i=0;i<N;i++)ringsAll.push(el(svg,'circle',{cx:nx(i),cy:YZ,r:7,fill:'none',
+    stroke:'#B5443C','stroke-width':2,opacity:0}));
+  var walker=el(svg,'path',{d:'M0,0 L-6,-11 L6,-11 z',fill:'#B5443C',opacity:0});
+  /* error chart */
+  var EX0=64,EX1=730,EY0=14,EY1=150;
+  function ey(e){return EY0+(EY1-EY0)*Math.min(8.5,-Math.log10(Math.max(e,1e-12)))/8.5;}
+  var eg=el(esvg,'g',{}),dec;
+  for(dec=0;dec<=8;dec+=2){
+    el(esvg,'line',{x1:EX0,y1:ey(Math.pow(10,-dec)),x2:EX1,y2:ey(Math.pow(10,-dec)),
+      stroke:'#EDF0F3','stroke-width':1});
+    tx(esvg,EX0-6,ey(Math.pow(10,-dec))+4,dec===0?'1':'10'+sup('-'+dec),{anchor:'end',fs:10});}
+  el(esvg,'line',{x1:EX0,y1:ey(1e-8),x2:EX1,y2:ey(1e-8),stroke:'#C9A227','stroke-width':1,
+    'stroke-dasharray':'4 4'});
+  tx(esvg,EX1-4,ey(1e-8)-5,'target 10⁻⁸',{anchor:'end',fs:10,fill:'#A88A1F',halo:true});
+  tx(esvg,(EX0+EX1)/2,172,'iteration k · rel. error ‖xₖ−x★‖/‖x★‖ (log)',{anchor:'middle',fs:10.5});
+  var epoly=el(esvg,'polyline',{points:'',fill:'none',stroke:'#1F4E79','stroke-width':1.8});
+  var exlab0=tx(esvg,EX0,164,'0',{anchor:'middle',fs:10});
+  var exlab1=tx(esvg,EX1,164,'3609',{anchor:'middle',fs:10});
+  var emark=el(esvg,'circle',{cx:EX0,cy:ey(1),r:4,fill:'#B5443C',stroke:'#fff','stroke-width':1});
+  /* state */
+  var segBtns=document.querySelectorAll('#th-seg button');
+  var wSlider=document.getElementById('th-omega'),wVal=document.getElementById('th-wval'),
+      wLab=document.getElementById('th-wlab');
+  var scrub=document.getElementById('th-scrub'),kLab=document.getElementById('th-k'),
+      eLab=document.getElementById('th-e'),itLab=document.getElementById('th-it'),
+      refLab=document.getElementById('th-ref');
+  var playBtn=document.getElementById('th-play'),walkBtn=document.getElementById('th-walk'),
+      resetBtn=document.getElementById('th-reset'),snapBtn=document.getElementById('th-snap');
+  var method='jacobi',omega=WOPT,traj=null,idx=0,playing=false,raf=null,walking=false;
+  var cache={};
+  function getTraj(){
+    var key=method+'@'+(method==='sor'||method==='ssor'?omega:'-');
+    if(!cache[key])cache[key]=makeTraj(method,omega);
+    return cache[key];
+  }
+  function ex(k){return EX0+(EX1-EX0)*(traj.iters?k/traj.iters:0);}
+  function drawCurve(x){
+    var j,p=[];p.push(X0+','+YZ);
+    for(j=0;j<N;j++){p.push(nx(j).toFixed(1)+','+ny(x[j]).toFixed(1));
+      dots[j].setAttribute('cy',ny(x[j]).toFixed(1));}
+    p.push(X1+','+YZ);
+    curve.setAttribute('points',p.join(' '));
+  }
+  function drawErrChart(){
+    var kk,step=Math.max(1,Math.floor(traj.errs.length/380)),p=[];
+    for(kk=0;kk<traj.errs.length;kk+=step)
+      p.push(ex(kk).toFixed(1)+','+ey(traj.errs[kk]).toFixed(1));
+    p.push(ex(traj.errs.length-1).toFixed(1)+','+ey(traj.errs[traj.errs.length-1]).toFixed(1));
+    epoly.setAttribute('points',p.join(' '));
+    exlab1.textContent=String(traj.iters||traj.errs.length-1);
+    exlab1.setAttribute('x',EX1);
+  }
+  function show(iSnap){
+    idx=iSnap;
+    var k=traj.snapIters[idx];
+    drawCurve(traj.snaps[idx]);
+    kLab.textContent='k = '+k;
+    eLab.textContent=sci(traj.errs[k]);
+    emark.setAttribute('cx',ex(k).toFixed(1));
+    emark.setAttribute('cy',ey(traj.errs[k]).toFixed(1));
+    scrub.value=String(idx);
+  }
+  function refresh(){
+    traj=getTraj();
+    scrub.max=String(traj.snaps.length-1);
+    itLab.textContent=traj.iters?String(traj.iters):'>1.2×10⁵';
+    var isW=(method==='sor'||method==='ssor');
+    refLab.textContent=(!isW||Math.abs(omega-WOPT)<5e-4)?String(UV.refs[method].it):'—';
+    drawErrChart();
+    show(0);
+  }
+  function setMethod(m){
+    method=m;
+    var j;for(j=0;j<segBtns.length;j++)
+      segBtns[j].className=segBtns[j].getAttribute('data-m')===m?'active':'';
+    var isW=(m==='sor'||m==='ssor');
+    wSlider.disabled=!isW;snapBtn.disabled=!isW;wLab.style.opacity=isW?'1':'.35';
+    if(isW){omega=WOPT;wSlider.value=String(WOPT);wVal.textContent=WOPT.toFixed(4);}
+    stopPlay();refresh();
+  }
+  function stopPlay(){playing=false;playBtn.textContent='▶ play';
+    if(raf){cancelAnimationFrame(raf);raf=null;}}
+  function tick(){
+    if(!playing)return;
+    var step=Math.max(1,Math.floor(idx/30));
+    var next=Math.min(traj.snaps.length-1,idx+step);
+    show(next);
+    if(next>=traj.snaps.length-1){stopPlay();return;}
+    raf=requestAnimationFrame(tick);
+  }
+  var jj;
+  for(jj=0;jj<segBtns.length;jj++)(function(btn){
+    btn.addEventListener('click',function(){if(!walking)setMethod(btn.getAttribute('data-m'));});
+  })(segBtns[jj]);
+  wSlider.addEventListener('input',function(){
+    if(walking)return;
+    omega=parseFloat(wSlider.value);wVal.textContent=omega.toFixed(4);
+    stopPlay();refresh();
+  });
+  snapBtn.addEventListener('click',function(){
+    if(walking||snapBtn.disabled)return;
+    omega=WOPT;wSlider.value=String(WOPT);wVal.textContent=WOPT.toFixed(4);
+    stopPlay();refresh();
+  });
+  scrub.addEventListener('input',function(){
+    if(walking)return;stopPlay();show(parseInt(scrub.value,10));
+  });
+  playBtn.addEventListener('click',function(){
+    if(walking)return;
+    if(playing){stopPlay();return;}
+    if(idx>=traj.snaps.length-1)show(0);
+    playing=true;playBtn.textContent='❚❚ pause';
+    raf=requestAnimationFrame(tick);
+  });
+  resetBtn.addEventListener('click',function(){if(!walking){stopPlay();show(0);}});
+  walkBtn.addEventListener('click',function(){
+    if(walking||playing)return;
+    var k=traj.snapIters[idx];
+    if(traj.iters&&k>=traj.iters)return;
+    walking=true;walkBtn.className='btn toggled';
+    var xw=new Float64Array(traj.snaps[idx]);
+    if(method==='jacobi'||method==='richardson'){
+      var xn=doSweep(method,omega,xw),j;
+      for(j=0;j<N;j++){ringsAll[j].setAttribute('cy',ny(xn[j]).toFixed(1));
+        ringsAll[j].setAttribute('opacity','0.9');}
+      drawCurve(xn);
+      setTimeout(function(){var j2;for(j2=0;j2<N;j2++)ringsAll[j2].setAttribute('opacity','0');
+        finishWalk(k);},420);
+    }else{
+      var seq=[],j3;
+      for(j3=0;j3<N;j3++)seq.push(j3);
+      if(method==='ssor')for(j3=N-1;j3>=0;j3--)seq.push(j3);
+      var pos=0;
+      var tmr=setInterval(function(){
+        if(pos>=seq.length){clearInterval(tmr);
+          ringsAll[seq[seq.length-1]].setAttribute('opacity','0');
+          walker.setAttribute('opacity','0');finishWalk(k);return;}
+        if(pos>0)ringsAll[seq[pos-1]].setAttribute('opacity','0');
+        var i2=seq[pos],l=i2>0?xw[i2-1]:0,r=i2<N-1?xw[i2+1]:0,
+            tgt=(l+r+h*h*b[i2])/2;
+        xw[i2]=(method==='gs')?tgt:(1-omega)*xw[i2]+omega*tgt;
+        drawCurve(xw);
+        ringsAll[i2].setAttribute('cy',ny(xw[i2]).toFixed(1));
+        ringsAll[i2].setAttribute('opacity','0.9');
+        walker.setAttribute('d','M'+nx(i2).toFixed(1)+','+(ny(xw[i2])-10).toFixed(1)+
+          ' l-6,-11 l12,0 z');
+        walker.setAttribute('opacity','1');
+        pos++;
+      },30);
+    }
+    function finishWalk(kOld){
+      walking=false;walkBtn.className='btn';
+      var t2,target=idx;
+      for(t2=0;t2<traj.snapIters.length;t2++)
+        if(traj.snapIters[t2]===kOld+1){target=t2;break;}
+      show(target);
+    }
+  });
+  /* ---- self-test: reproduce the JSON reference numbers ---- */
+  try{
+    var methods=['richardson','jacobi','gs','sor','ssor'],mi,maxdev=0,okAll=true,nOK=0;
+    for(mi=0;mi<methods.length;mi++){
+      var m=methods[mi],t=(cache[m+'@'+((m==='sor'||m==='ssor')?WOPT:'-')]=makeTraj(m,WOPT)),
+          ref=UV.refs[m];
+      var d1=Math.abs(t.snaps[20][7]-ref.p20),d2=Math.abs(t.snaps[60][23]-ref.p60);
+      maxdev=Math.max(maxdev,d1,d2);
+      if(d1<1e-9)nOK++;else okAll=false;
+      if(d2<1e-9)nOK++;else okAll=false;
+      if(t.iters===ref.it)nOK++;else okAll=false;
+    }
+    badge('th-badge',okAll,okAll?('self-test '+nOK+'/15 ✓ · max dev '+sci(maxdev)):
+      ('self-test '+nOK+'/15 ✗'));
+  }catch(err){badge('th-badge',false,'self-test error');
+    if(window.console)console.error(err);}
+  setMethod('jacobi');
+})();
+
+/* ================= widget b: the omega explorer ================= */
+(function(){
+  var svg=document.getElementById('om-svg');if(!svg)return;
+  var X0=60,X1=720,Y0=26,Y1=330;
+  function px(w){return X0+(X1-X0)*w/2;}
+  function py(r){return Y1-(Y1-Y0)*(r-0.80)/0.20;}
+  function rhoFormula(w){
+    var best=0,k,mk,bq,cq,disc,r;
+    for(k=1;k<=N;k++){mk=Math.cos(k*PI*h);
+      bq=2*(w-1)-(w*mk)*(w*mk);cq=(w-1)*(w-1);disc=bq*bq-4*cq;
+      if(disc>=0)r=Math.max(Math.abs((-bq+Math.sqrt(disc))/2),Math.abs((-bq-Math.sqrt(disc))/2));
+      else r=Math.sqrt(cq);
+      if(r>best)best=r;}
+    return best;
+  }
+  /* axes */
+  var g,rr;
+  for(rr=0.80;rr<1.001;rr+=0.05){
+    el(svg,'line',{x1:X0,y1:py(rr),x2:X1,y2:py(rr),stroke:'#EDF0F3','stroke-width':1});
+    tx(svg,X0-7,py(rr)+4,rr.toFixed(2),{anchor:'end',fs:10.5});}
+  var wt;
+  for(wt=0;wt<=2.001;wt+=0.5){
+    el(svg,'line',{x1:px(wt),y1:Y1,x2:px(wt),y2:Y1+5,stroke:'#5A6773'});
+    tx(svg,px(wt),Y1+18,wt.toFixed(1),{anchor:'middle',fs:10.5});}
+  el(svg,'line',{x1:X0,y1:Y1,x2:X1,y2:Y1,stroke:'#5A6773','stroke-width':1});
+  el(svg,'line',{x1:X0,y1:Y0,x2:X0,y2:Y1,stroke:'#5A6773','stroke-width':1});
+  tx(svg,(X0+X1)/2,Y1+36,'relaxation factor ω',{anchor:'middle',fs:11.5});
+  tx(svg,X0+8,Y0-8,'ρ(T_SOR(ω))',{fs:11.5});
+  /* omega-1 law */
+  el(svg,'line',{x1:px(WOPT),y1:py(WOPT-1),x2:px(1.95),y2:py(0.95),stroke:'#B5443C','stroke-width':1.6});
+  tx(svg,px(1.93),py(0.945)-8,'ρ = ω − 1 (exact above ω*)',{anchor:'end',fs:10.5,fill:'#B5443C',halo:true});
+  /* kink */
+  el(svg,'line',{x1:px(WOPT),y1:Y0,x2:px(WOPT),y2:Y1,stroke:'#C9A227','stroke-width':1.2,'stroke-dasharray':'5 4'});
+  tx(svg,px(WOPT)-6,Y0+12,'ω* = 1.826391',{anchor:'end',fs:11,fill:'#A88A1F',w:600,halo:true});
+  tx(svg,px(WOPT)-6,Y0+26,'ρ = 0.826391',{anchor:'end',fs:10.5,fill:'#A88A1F',halo:true});
+  /* JSON grid dots */
+  var i,c=UV.sorCurve;
+  for(i=0;i<c.length;i++)
+    el(svg,'circle',{cx:px(c[i][0]).toFixed(1),cy:py(c[i][1]).toFixed(1),r:2.1,
+      fill:'#C9A227',stroke:'#fff','stroke-width':0.5});
+  /* formula curve */
+  var pts=[],w2;
+  for(w2=0.02;w2<=1.982;w2+=0.004){var r2=rhoFormula(w2);
+    if(r2<=1.0)pts.push(px(w2).toFixed(1)+','+py(Math.max(0.80,r2)).toFixed(1));}
+  el(svg,'polyline',{points:pts.join(' '),fill:'none',stroke:'#1F4E79','stroke-width':2});
+  tx(svg,px(0.6),py(rhoFormula(0.6))-12,'quadratic-root formula',{fs:10.5,fill:'#1F4E79',halo:true});
+  var mark=el(svg,'circle',{cx:px(1.4),cy:py(rhoFormula(1.4)),r:5,fill:'#1F4E79',
+    stroke:'#fff','stroke-width':1.4});
+  /* controls */
+  var slider=document.getElementById('om-slider'),wLab=document.getElementById('om-wval'),
+      rhoLab=document.getElementById('om-rho'),predLab=document.getElementById('om-pred'),
+      measLab=document.getElementById('om-meas');
+  function sorIters(w){
+    var x=new Float64Array(N),k=0,cap=200000,e=1;
+    while(k<cap&&e>1e-8){k++;x=doSweep('sor',w,x);e=relErr(x);}
+    return e<=1e-8?k:null;
+  }
+  function upd(wArg){
+    /* the drag grid does not contain omega* exactly (and the browser clamps
+       programmatic values to the grid), so the snap button passes it in */
+    var w=(typeof wArg==='number')?wArg:parseFloat(slider.value),r=rhoFormula(w);
+    wLab.textContent=w.toFixed(4);
+    mark.setAttribute('cx',px(w).toFixed(1));
+    mark.setAttribute('cy',py(Math.max(0.80,Math.min(1,r))).toFixed(1));
+    rhoLab.textContent=r.toFixed(6);
+    predLab.textContent=r<1?String(Math.ceil(Math.log(1e-8)/Math.log(r))):'∞';
+    var it=sorIters(w);
+    measLab.textContent=it?String(it):'>2×10⁵';
+  }
+  slider.addEventListener('input',upd);
+  document.getElementById('om-snap').addEventListener('click',function(){
+    slider.value=String(WOPT);upd(WOPT);
+  });
+  /* ---- self-test ---- */
+  try{
+    var maxdev=0,j;
+    for(j=0;j<c.length;j++)maxdev=Math.max(maxdev,Math.abs(rhoFormula(c[j][0])-c[j][1]));
+    var wf,best=1e9,argw=0;
+    for(wf=WOPT-0.05;wf<=WOPT+0.05;wf+=5e-5){var rf=rhoFormula(wf);
+      if(rf<best){best=rf;argw=wf;}}
+    var kinkOK=Math.abs(argw-WOPT)<1e-4;
+    var forms=Math.abs(2/(1+Math.sin(PI*h))-2/(1+Math.sqrt(1-UV.mu*UV.mu)));
+    var itStar=sorIters(WOPT);
+    var ok=maxdev<1e-6&&kinkOK&&forms<1e-14&&itStar===UV.refs.sor.it;
+    badge('om-badge',ok,ok?('self-test ✓ · 192/192 grid pts (max '+sci(maxdev)+
+      ') · kink at ω* · '+itStar+' sweeps'):'self-test ✗');
+  }catch(err){badge('om-badge',false,'self-test error');
+    if(window.console)console.error(err);}
+  upd();
+})();
+
+/* ================= widget c: the pivot theater ================= */
+(function(){
+  var chain=document.getElementById('pv-chain'),bars=document.getElementById('pv-bars');
+  if(!chain)return;
+  /* bridge covariance, closed form (check 4.bridge) */
+  var i,j,S=[];
+  for(i=0;i<N;i++){S.push(new Float64Array(N));
+    for(j=0;j<N;j++){var si=(i+1)*h,sj=(j+1)*h;
+      S[i][j]=h*Math.min(si,sj)*(1-Math.max(si,sj));}}
+  /* Algorithm 5.12 replaying the recorded pivot tape */
+  var tape=UV.st.pivots,d=new Float64Array(N),R=[],nus=[],dHist=[],traces=[],greedyDev=0;
+  for(i=0;i<N;i++)d[i]=S[i][i];
+  function trace(){var s=0,t;for(t=0;t<N;t++)s+=d[t];return s;}
+  dHist.push(new Float64Array(d));traces.push(trace());
+  for(j=0;j<N;j++){
+    var ij=tape[j]-1,mx=-1,t2;
+    for(t2=0;t2<N;t2++)if(d[t2]>mx)mx=d[t2];
+    greedyDev=Math.max(greedyDev,mx-d[ij]);
+    var nu=Math.sqrt(Math.max(d[ij],0));nus.push(nu);
+    var Rj=new Float64Array(N),t3,t4,s2;
+    for(t3=0;t3<N;t3++){s2=S[ij][t3];
+      for(t4=0;t4<j;t4++)s2-=R[t4][ij]*R[t4][t3];
+      Rj[t3]=s2/nu;}
+    R.push(Rj);
+    for(t3=0;t3<N;t3++)d[t3]-=Rj[t3]*Rj[t3];
+    dHist.push(new Float64Array(d));traces.push(trace());
+  }
+  /* chain glyph */
+  function nx(i2){return 60+640*(i2+1)/33;}
+  el(chain,'line',{x1:40,y1:44,x2:720,y2:44,stroke:'#C7CED4','stroke-width':2});
+  el(chain,'line',{x1:44,y1:26,x2:44,y2:62,stroke:'#1B2733','stroke-width':2.5});
+  el(chain,'line',{x1:716,y1:26,x2:716,y2:62,stroke:'#1B2733','stroke-width':2.5});
+  tx(chain,44,80,'wall',{anchor:'middle',fs:9.5});
+  tx(chain,716,80,'wall',{anchor:'middle',fs:9.5});
+  var nodeC=[],nodeT=[],lab=[1,8,17,25,32],li;
+  for(i=0;i<N;i++){
+    nodeC.push(el(chain,'circle',{cx:nx(i),cy:44,r:8,fill:'#fff',stroke:'#8A949D','stroke-width':1.2}));
+    nodeT.push(tx(chain,nx(i),47.5,'',{anchor:'middle',fs:8.5,fill:'#fff',w:700}));
+  }
+  var nextRing=el(chain,'circle',{cx:nx(16),cy:44,r:12,fill:'none',stroke:'#B5443C',
+    'stroke-width':2,opacity:0});
+  for(li=0;li<lab.length;li++)
+    tx(chain,nx(lab[li]-1),80,String(lab[li]),{anchor:'middle',fs:9.5});
+  /* bars */
+  var BX0=60,BW=13,BY=206,BH=176,dmax=0;
+  for(i=0;i<N;i++)if(dHist[0][i]>dmax)dmax=dHist[0][i];
+  function bh(v){return Math.max(0,v/dmax*BH);}
+  el(bars,'line',{x1:40,y1:BY,x2:720,y2:BY,stroke:'#5A6773','stroke-width':1});
+  el(bars,'line',{x1:40,y1:BY-BH,x2:720,y2:BY-BH,stroke:'#EDF0F3','stroke-width':1});
+  tx(bars,44,BY-BH+12,'0.007569',{fs:9.5,halo:true});
+  tx(bars,34,BY+3,'0',{anchor:'end',fs:9.5});
+  tx(bars,52,16,'dᵢ — variance still unexplained by the gold pivots (= diag of the Schur complement)',{fs:10.5});
+  var barR=[];
+  for(i=0;i<N;i++)barR.push(el(bars,'rect',{x:nx(i)-BW/2,y:BY-bh(dHist[0][i]),
+    width:BW,height:bh(dHist[0][i]),fill:'#8A99A8',opacity:0.85}));
+  var nextOut=el(bars,'rect',{x:nx(16)-BW/2-2,y:0,width:BW+4,height:10,fill:'none',
+    stroke:'#B5443C','stroke-width':1.6,opacity:0});
+  /* state + controls */
+  var T=0,auto=null;
+  var TL=document.getElementById('pv-T'),NX=document.getElementById('pv-next'),
+      NU=document.getElementById('pv-nu'),TR=document.getElementById('pv-tr'),
+      PR=document.getElementById('pv-prec');
+  function redraw(){
+    TL.textContent=String(T);
+    var dd=dHist[T],i2;
+    for(i2=0;i2<N;i2++){
+      var hh=bh(dd[i2]);
+      barR[i2].setAttribute('y',(BY-hh).toFixed(2));
+      barR[i2].setAttribute('height',Math.max(hh,0.01).toFixed(2));
+      barR[i2].setAttribute('fill','#8A99A8');
+    }
+    for(i2=0;i2<N;i2++){nodeC[i2].setAttribute('fill','#fff');
+      nodeC[i2].setAttribute('stroke','#8A949D');nodeT[i2].textContent='';}
+    var t5;
+    for(t5=0;t5<T;t5++){var p=tape[t5]-1;
+      nodeC[p].setAttribute('fill','#C9A227');nodeC[p].setAttribute('stroke','#A88A1F');
+      nodeT[p].textContent=String(t5+1);
+      barR[p].setAttribute('fill','#C9A227');}
+    if(T<N){var np=tape[T]-1;
+      nextRing.setAttribute('cx',nx(np));nextRing.setAttribute('opacity','1');
+      nextOut.setAttribute('x',(nx(np)-BW/2-2).toFixed(1));
+      nextOut.setAttribute('y',(BY-bh(dHist[T][np])-2).toFixed(1));
+      nextOut.setAttribute('height',(bh(dHist[T][np])+4).toFixed(1));
+      nextOut.setAttribute('opacity','1');
+      NX.textContent='node '+tape[T];
+      NU.textContent='ν = '+nus[T].toFixed(6);
+    }else{nextRing.setAttribute('opacity','0');nextOut.setAttribute('opacity','0');
+      NX.textContent='done';NU.textContent='—';}
+    TR.textContent=traces[T].toFixed(6);
+    var pr=UV.st.prec[String(T)];
+    PR.textContent=pr?('κ_eff '+(pr.k<1.01?'1':pr.k.toFixed(2))+' · '+pr.it+' sweep'+
+      (pr.it===1?'':'s')):'—';
+  }
+  function step(n2){T=Math.max(0,Math.min(N,T+n2));redraw();}
+  document.getElementById('pv-step').addEventListener('click',function(){step(1);});
+  document.getElementById('pv-back').addEventListener('click',function(){step(-1);});
+  document.getElementById('pv-reset').addEventListener('click',function(){T=0;redraw();});
+  var autoBtn=document.getElementById('pv-auto');
+  autoBtn.addEventListener('click',function(){
+    if(auto){clearInterval(auto);auto=null;autoBtn.textContent='▶ auto';
+      autoBtn.className='btn';return;}
+    if(T>=N)T=0;
+    autoBtn.textContent='■ stop';autoBtn.className='btn toggled';
+    auto=setInterval(function(){
+      if(T>=N){clearInterval(auto);auto=null;autoBtn.textContent='▶ auto';
+        autoBtn.className='btn';return;}
+      step(1);
+    },620);
+  });
+  /* ---- self-test ---- */
+  try{
+    var devNu=0,devTr=0,devD0=0,k2;
+    for(k2=0;k2<N;k2++){
+      devNu=Math.max(devNu,Math.abs(nus[k2]-UV.st.nu[k2]));
+      devD0=Math.max(devD0,Math.abs(dHist[0][k2]-UV.st.diag[k2]));}
+    for(k2=0;k2<=N;k2++)devTr=Math.max(devTr,Math.abs(traces[k2]-UV.st.trace[k2]));
+    var ok=greedyDev<1e-12&&devNu<1e-12&&devTr<1e-12&&devD0<1e-12;
+    badge('pv-badge',ok,ok?('self-test ✓ · tape greedy to '+sci(greedyDev)+
+      ' · ν dev '+sci(devNu)+' · trace dev '+sci(devTr)):'self-test ✗');
+  }catch(err){badge('pv-badge',false,'self-test error');
+    if(window.console)console.error(err);}
+  redraw();
+})();
+
+})();
+</script>
+</body>
+</html>
