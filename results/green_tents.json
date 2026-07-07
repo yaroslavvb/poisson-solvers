@@ -1,0 +1,149 @@
+{
+  "checks": [
+    {
+      "name": "tent flanks are straight lines, wall to kink, on both sides",
+      "pass": true,
+      "max_err": 1.3322676295501878e-15
+    },
+    {
+      "name": "physical slopes: left = 1-s = 0.6875, right = -s = -0.3125",
+      "pass": true,
+      "max_err": 7.771561172376096e-16
+    },
+    {
+      "name": "slope jump at the source == -1 (the watt)",
+      "pass": true,
+      "max_err": 7.771561172376096e-16
+    },
+    {
+      "name": "peak u(s) == s(1-s) == 0.21484375",
+      "pass": true,
+      "max_err": 2.220446049250313e-16
+    },
+    {
+      "name": "effective resistance to ground == s || (1-s) == the peak",
+      "pass": true,
+      "max_err": 2.220446049250313e-16
+    },
+    {
+      "name": "wall exits: 0.6875 W left + 0.3125 W right = 1 W",
+      "pass": true,
+      "max_err": 1.9984014443252818e-15
+    },
+    {
+      "name": "envelope: G(s,s) == s(1-s) for every source position",
+      "pass": true,
+      "max_err": 7.771561172376096e-16
+    },
+    {
+      "name": "reciprocity G(x,s) == G(s,x)",
+      "pass": true,
+      "max_err": 1.1102230246251565e-16
+    },
+    {
+      "name": "A^{-1}/h == the continuum tent x(1-s)/s(1-x), all 961 entries",
+      "pass": true,
+      "max_err": 7.771561172376096e-16
+    },
+    {
+      "name": "superposition: +2W tent - 1.5W tent == direct solve of Au=b",
+      "pass": true,
+      "max_err": 8.326672684688674e-17
+    },
+    {
+      "name": "wall bookkeeping: 1.234375 W out left, -0.734375 W out right, net 0.5",
+      "pass": true,
+      "max_err": 5.551115123125783e-16
+    },
+    {
+      "name": "lattice normalization: A^{-1}e_j slopes = h(1-s), peak = h s(1-s)",
+      "pass": true,
+      "max_err": 2.42861286636753e-17
+    },
+    {
+      "name": "grounding: free path Laplacian [rows 2..7] == tridiag(-1,2,-1), row sums {1,0,0,0,0,1}",
+      "pass": true
+    },
+    {
+      "name": "one pin: inverse == h*min(x_i,x_j) (Brownian motion)",
+      "pass": true,
+      "max_err": 2.8449465006019636e-16
+    }
+  ],
+  "quoted": {
+    "n": 31,
+    "h": 0.03125,
+    "n_plus_1": 32,
+    "n_plus_2": 33,
+    "max_err_all_checks": 1.9984014443252818e-15,
+    "s": 0.3125,
+    "one_minus_s": 0.6875,
+    "peak": 0.21484374999999978,
+    "peak_exact": 0.21484375,
+    "slope_left": 0.6874999999999992,
+    "slope_right": -0.3125,
+    "kink_jump": -0.9999999999999992,
+    "out_left": 0.6874999999999992,
+    "out_right": 0.3124999999999988,
+    "watts_injected": 1.0,
+    "envelope_max": 0.25,
+    "superposition": {
+      "f1": 2.0,
+      "s1": 0.21875,
+      "f2": -1.5,
+      "s2": 0.78125,
+      "peak_tent1": 0.341796875,
+      "trough_tent2": -0.25634765625,
+      "u_at_s1": 0.27001953125,
+      "u_at_s2": -0.16064453124999992,
+      "slope_left_segment": 1.234375,
+      "slope_mid_segment": -0.7656249999999998,
+      "slope_right_segment": 0.7343749999999994,
+      "out_left": 1.234375,
+      "out_right": -0.7343749999999994,
+      "net_watts": 0.5,
+      "zero_crossing": 0.5714285714285714,
+      "bk_f1_left": 1.5625,
+      "bk_f2_left": -0.328125,
+      "bk_f1_right": 0.4375,
+      "bk_f2_right": -1.171875
+    },
+    "lattice": {
+      "slope_left": 0.021484375,
+      "peak": 0.0067138671875
+    },
+    "grounded": {
+      "path_vertices": 8,
+      "interior": 6,
+      "free_diagonal": [
+        1,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        1
+      ],
+      "sub_diagonal": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "sub_row_sums": [
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+      ]
+    },
+    "one_pin_peak_var": 0.030273437499999716,
+    "checks_total": 14,
+    "checks_passed": 14
+  }
+}
