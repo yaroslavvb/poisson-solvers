@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Which Directions to Leave Wrong — the eigenmode ledger of the Poisson chain</title>
+<script>
+window.MathJax = {tex:{inlineMath:[['$','$']]}, chtml:{scale:0.96}};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+<style>
+:root{
+  --paper:#F2F4F6; --ink:#1B2733; --phy:#1F4E79; --prb:#B5443C;
+  --gold:#C9A227; --graphite:#5A6773; --card:#FFFFFF;
+}
+*{box-sizing:border-box}
+html{background:var(--paper)}
+body{margin:0;color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,"URW Palladio L",Georgia,serif;
+  font-size:17px;line-height:1.62;-webkit-font-smoothing:antialiased}
+main{max-width:1000px;margin:0 auto;padding:0 20px 90px}
+.prose{max-width:700px;margin:0 auto}
+h1{font-size:clamp(30px,5vw,46px);line-height:1.12;font-weight:600;letter-spacing:-0.01em;margin:.2em 0 .25em}
+h2{font-size:24px;font-weight:600;margin:2.6em 0 .5em;letter-spacing:-0.005em}
+.eyebrow{font-size:12px;letter-spacing:.22em;text-transform:uppercase;
+  font-family:ui-sans-serif,system-ui,sans-serif;font-weight:600;margin:3.4em 0 -0.2em}
+.eyebrow.phy{color:var(--phy)} .eyebrow.prb{color:var(--prb)} .eyebrow.syn{color:var(--gold)}
+.eyebrow.ink{color:var(--graphite)}
+p{margin:.85em 0}
+figure{margin:2em auto;max-width:1000px;text-align:center}
+figure img{width:100%;height:auto;border:1px solid #E2E6EA;border-radius:6px;background:#fff}
+figcaption{font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;color:var(--graphite);
+  max-width:760px;margin:.6em auto 0;line-height:1.5}
+.hero{padding:76px 0 8px;text-align:center}
+.hero .sub{color:var(--graphite);font-size:18px;max-width:640px;margin:0 auto}
+.identity{display:flex;align-items:stretch;max-width:860px;margin:38px auto 8px;
+  border:1px solid #DDE3E8;border-radius:10px;overflow:hidden;background:var(--card)}
+.identity>div{flex:1;padding:22px 10px 18px;text-align:center}
+.identity .left{background:linear-gradient(90deg,rgba(31,78,121,.10),rgba(31,78,121,.02))}
+.identity .right{background:linear-gradient(90deg,rgba(181,68,60,.02),rgba(181,68,60,.10))}
+.identity .lab{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;
+  letter-spacing:.16em;text-transform:uppercase;font-weight:600;margin-bottom:8px}
+.identity .left .lab{color:var(--phy)} .identity .right .lab{color:var(--prb)}
+.identity .formula{font-size:22px}
+.timeline{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;max-width:1000px;margin:1.6em auto}
+.timeline.four{grid-template-columns:repeat(4,1fr)}
+.thread{background:var(--card);border:1px solid #E2E6EA;border-radius:8px;padding:18px 18px 8px}
+.thread h3{margin:0 0 4px;font-size:15px;font-family:ui-sans-serif,system-ui,sans-serif;
+  letter-spacing:.14em;text-transform:uppercase;font-weight:700}
+.thread.phy{border-top:3px solid var(--phy)} .thread.phy h3{color:var(--phy)}
+.thread.prb{border-top:3px solid var(--prb)} .thread.prb h3{color:var(--prb)}
+.thread.syn{border-top:3px solid var(--gold)} .thread.syn h3{color:var(--gold)}
+.thread.ink{border-top:3px solid var(--graphite)} .thread.ink h3{color:var(--graphite)}
+.thread p{font-size:14.5px;line-height:1.5;margin:.7em 0}
+.thread b{font-variant-numeric:tabular-nums}
+.note{background:var(--card);border-left:3px solid var(--gold);padding:12px 18px;border-radius:0 8px 8px 0;
+  font-size:15.5px;max-width:700px;margin:1.4em auto}
+.check{font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;color:var(--graphite);
+  border-top:1px solid #DDE3E8;margin-top:70px;padding-top:18px;max-width:700px;margin-left:auto;margin-right:auto}
+.kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em;
+  background:#EAEEF2;padding:1px 5px;border-radius:4px}
+.fig-svg{width:100%;height:auto;border:1px solid #E2E6EA;border-radius:6px;background:#fff}
+.widget{background:var(--card);border:1px solid #E2E6EA;border-radius:8px;padding:16px 16px 12px;
+  max-width:1000px;margin:1.6em auto}
+.widget .fig-svg{border:none}
+.widget .ctrl{display:flex;align-items:center;gap:14px;margin:8px 6px 2px;
+  font-family:ui-sans-serif,system-ui,sans-serif;font-size:13.5px;color:var(--graphite)}
+.widget input[type=range]{flex:1;accent-color:var(--phy)}
+.readouts{display:flex;flex-wrap:wrap;gap:8px 26px;justify-content:center;margin-top:10px;
+  font-family:ui-sans-serif,system-ui,sans-serif;font-size:13.5px;color:var(--graphite)}
+.readouts b{font-variant-numeric:tabular-nums;color:var(--ink)}
+.readouts .phy b{color:var(--phy)} .readouts .gld b{color:#A88A1F}
+table.pins{border-collapse:collapse;margin:1.6em auto;font-size:15px;max-width:100%}
+table.pins th{font-family:ui-sans-serif,system-ui,sans-serif;font-size:11.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--graphite);font-weight:600}
+table.pins th,table.pins td{border:1px solid #E2E6EA;padding:7px 14px;text-align:left;background:var(--card)}
+table.pins td.r{text-align:right;font-variant-numeric:tabular-nums}
+table.pins tr.gold td{background:#FDF9EC}
+.tablewrap{overflow-x:auto;margin:0 -20px;padding:0 20px}
+.pull{max-width:720px;margin:2.2em auto;padding:18px 26px;text-align:center;
+  border-top:2px solid var(--gold);border-bottom:2px solid var(--gold);
+  font-size:21px;line-height:1.5;font-style:normal}
+.pull .src{display:block;margin-top:10px;font-family:ui-sans-serif,system-ui,sans-serif;
+  font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--graphite);font-style:normal}
+a{color:var(--phy)}
+@media(max-width:760px){.timeline,.timeline.four{grid-template-columns:1fr}.identity{flex-direction:column}}
+</style>
+</head>
+<body>
+<main>
+
+<div class="hero prose" style="max-width:880px">
+  <div class="eyebrow ink" style="margin-top:0">n = 64 &nbsp;·&nbsp; h = 1/65 &nbsp;·&nbsp; sixty-four directions, each with a name &nbsp;·&nbsp; 32 machine checks, all PASS</div>
+  <h1>Which Directions to Leave Wrong</h1>
+  <p class="sub">The chain's matrix $A=\mathrm{tridiag}(-1,2,-1)/h^2$ owns sixty-four private axes.
+  Rotate into them and solving is one division per axis; refuse to rotate and every solver becomes a
+  budget decision — fix a few directions exactly, damp the rest, and choose where the error is allowed
+  to live. This page runs that budget as a measured ledger.</p>
+  <div class="identity">
+    <div class="left"><div class="lab">Physics · standing waves of the chain</div>
+      <div class="formula">$v_k(i)=\sin\dfrac{ik\pi}{65}$, stiffness $\lambda_k$</div></div>
+    <div class="right"><div class="lab">Probability · principal components of the bridge</div>
+      <div class="formula">same vectors, variance $1/\lambda_k$</div></div>
+  </div>
+</div>
+
+<div class="prose">
+<div class="eyebrow phy">§1 · The modes</div>
+<h2>Sixty-four directions, each with a name</h2>
+<p>Everything on this page happens inside one matrix — the suite's 1-D stiffness-and-precision operator,
+here at $n=64$ interior nodes, $h=\tfrac1{65}$. Small enough to print whole (at $n=8$):</p>
+<p style="overflow-x:auto">$$h^2A\big|_{n=8}=\begin{pmatrix}2&-1&&&&&&\\[-2pt]-1&2&-1&&&&&\\[-2pt]&-1&2&-1&&&&\\[-2pt]&&-1&2&-1&&&\\[-2pt]&&&-1&2&-1&&\\[-2pt]&&&&-1&2&-1&\\[-2pt]&&&&&-1&2&-1\\[-2pt]&&&&&&-1&2\end{pmatrix}$$</p>
+<p><a href="02-eigenvalues.html">Report 02</a> derived its eigenpairs from the three-term recurrence, in closed form:</p>
+<p style="text-align:center">$v_k(i)=\sin\dfrac{ik\pi}{n+1},\qquad
+\lambda_k=\dfrac{4}{h^2}\sin^2\!\dfrac{k\pi h}{2},\qquad k=1,\dots,n.$</p>
+<p>Verified here to $1.4\times10^{-14}$ against the matrix and to $5.4\times10^{-16}$ against
+<span class="kbd">eigh</span>: the modes are pure sine waves pinned at both walls, and the eigenvalues run from
+$\lambda_1=9.8677$ (a whisker under $\pi^2=9.8696$) to $\lambda_{64}=16890.13$ (a whisker under
+$4/h^2=16900$). Their ratio is the suite's villain: $\kappa=\lambda_{64}/\lambda_1=1711.66$.</p>
+</div>
+
+<figure>
+<svg viewBox="0 0 980 260" xmlns="http://www.w3.org/2000/svg" class="fig-svg" role="img" aria-label="Sine modes k = 1, 2, 3 and the zigzag mode k = 64">
+<g font-family="ui-sans-serif,system-ui,sans-serif">
+<text x="130" y="26" font-size="13.5" fill="#1B2733" text-anchor="middle" font-weight="700">k = 1</text>
+<text x="130" y="43" font-size="12" fill="#5A6773" text-anchor="middle">&#955;&#8321; = 9.87 &#8776; &#960;&#178;</text>
+<text x="372" y="26" font-size="13.5" fill="#1B2733" text-anchor="middle" font-weight="700">k = 2</text>
+<text x="372" y="43" font-size="12" fill="#5A6773" text-anchor="middle">&#955;&#8322; = 39.45</text>
+<text x="614" y="26" font-size="13.5" fill="#1B2733" text-anchor="middle" font-weight="700">k = 3</text>
+<text x="614" y="43" font-size="12" fill="#5A6773" text-anchor="middle">&#955;&#8323; = 88.67</text>
+<text x="856" y="26" font-size="13.5" fill="#B5443C" text-anchor="middle" font-weight="700">k = 64 &#183; the zigzag</text>
+<text x="856" y="43" font-size="12" fill="#5A6773" text-anchor="middle">&#955;&#8326;&#8324; = 16890 &#8776; 4/h&#178;</text>
+</g>
+<g stroke="#C7CED4" stroke-width="1">
+<line x1="30" y1="122" x2="230" y2="122"/><line x1="272" y1="122" x2="472" y2="122"/>
+<line x1="514" y1="122" x2="714" y2="122"/><line x1="756" y1="122" x2="956" y2="122"/>
+</g>
+<g stroke="#1B2733" stroke-width="2">
+<line x1="30" y1="96" x2="30" y2="148"/><line x1="230" y1="96" x2="230" y2="148"/>
+<line x1="272" y1="96" x2="272" y2="148"/><line x1="472" y1="96" x2="472" y2="148"/>
+<line x1="514" y1="96" x2="514" y2="148"/><line x1="714" y1="96" x2="714" y2="148"/>
+<line x1="756" y1="96" x2="756" y2="148"/><line x1="956" y1="96" x2="956" y2="148"/>
+</g>
+<polyline fill="none" stroke="#1F4E79" stroke-width="2.2" points="30.0,122.0 35.0,117.1 40.0,112.3 45.0,107.5 50.0,102.8 55.0,98.3 60.0,93.9 65.0,89.6 70.0,85.6 75.0,81.7 80.0,78.2 85.0,74.9 90.0,71.8 95.0,69.1 100.0,66.8 105.0,64.7 110.0,63.0 115.0,61.7 120.0,60.8 125.0,60.2 130.0,60.0 135.0,60.2 140.0,60.8 145.0,61.7 150.0,63.0 155.0,64.7 160.0,66.8 165.0,69.1 170.0,71.8 175.0,74.9 180.0,78.2 185.0,81.7 190.0,85.6 195.0,89.6 200.0,93.9 205.0,98.3 210.0,102.8 215.0,107.5 220.0,112.3 225.0,117.1 230.0,122.0"/>
+<polyline fill="none" stroke="#1F4E79" stroke-width="2.2" points="272.0,122.0 277.0,112.3 282.0,102.8 287.0,93.9 292.0,85.6 297.0,78.2 302.0,71.8 307.0,66.8 312.0,63.0 317.0,60.8 322.0,60.0 327.0,60.8 332.0,63.0 337.0,66.8 342.0,71.8 347.0,78.2 352.0,85.6 357.0,93.9 362.0,102.8 367.0,112.3 372.0,122.0 377.0,131.7 382.0,141.2 387.0,150.1 392.0,158.4 397.0,165.8 402.0,172.2 407.0,177.2 412.0,181.0 417.0,183.2 422.0,184.0 427.0,183.2 432.0,181.0 437.0,177.2 442.0,172.2 447.0,165.8 452.0,158.4 457.0,150.1 462.0,141.2 467.0,131.7 472.0,122.0"/>
+<polyline fill="none" stroke="#1F4E79" stroke-width="2.2" points="514.0,122.0 519.0,107.5 524.0,93.9 529.0,81.7 534.0,71.8 539.0,64.7 544.0,60.8 549.0,60.2 554.0,63.0 559.0,69.1 564.0,78.2 569.0,89.6 574.0,102.8 579.0,117.1 584.0,131.7 589.0,145.7 594.0,158.4 599.0,169.1 604.0,177.2 609.0,182.3 614.0,184.0 619.0,182.3 624.0,177.2 629.0,169.1 634.0,158.4 639.0,145.7 644.0,131.7 649.0,117.1 654.0,102.8 659.0,89.6 664.0,78.2 669.0,69.1 674.0,63.0 679.0,60.2 684.0,60.8 689.0,64.7 694.0,71.8 699.0,81.7 704.0,93.9 709.0,107.5 714.0,122.0"/>
+<g fill="#C9A227" stroke="#fff" stroke-width="0.7">
+<circle cx="33.1" cy="119.0" r="2.6"/><circle cx="45.4" cy="107.2" r="2.6"/><circle cx="57.7" cy="95.9" r="2.6"/><circle cx="70.0" cy="85.6" r="2.6"/><circle cx="82.3" cy="76.6" r="2.6"/><circle cx="94.6" cy="69.3" r="2.6"/><circle cx="106.9" cy="64.0" r="2.6"/><circle cx="119.2" cy="60.9" r="2.6"/><circle cx="131.5" cy="60.0" r="2.6"/><circle cx="143.8" cy="61.5" r="2.6"/><circle cx="156.2" cy="65.2" r="2.6"/><circle cx="168.5" cy="71.0" r="2.6"/><circle cx="180.8" cy="78.7" r="2.6"/><circle cx="193.1" cy="88.0" r="2.6"/><circle cx="205.4" cy="98.6" r="2.6"/><circle cx="217.7" cy="110.1" r="2.6"/>
+<circle cx="275.1" cy="116.0" r="2.6"/><circle cx="287.4" cy="93.2" r="2.6"/><circle cx="299.7" cy="74.6" r="2.6"/><circle cx="312.0" cy="63.0" r="2.6"/><circle cx="324.3" cy="60.2" r="2.6"/><circle cx="336.6" cy="66.4" r="2.6"/><circle cx="348.9" cy="80.9" r="2.6"/><circle cx="361.2" cy="101.4" r="2.6"/><circle cx="373.5" cy="125.0" r="2.6"/><circle cx="385.8" cy="148.1" r="2.6"/><circle cx="398.2" cy="167.4" r="2.6"/><circle cx="410.5" cy="180.0" r="2.6"/><circle cx="422.8" cy="184.0" r="2.6"/><circle cx="435.1" cy="178.8" r="2.6"/><circle cx="447.4" cy="165.3" r="2.6"/><circle cx="459.7" cy="145.4" r="2.6"/>
+<circle cx="517.1" cy="113.0" r="2.6"/><circle cx="529.4" cy="80.9" r="2.6"/><circle cx="541.7" cy="62.2" r="2.6"/><circle cx="554.0" cy="63.0" r="2.6"/><circle cx="566.3" cy="83.2" r="2.6"/><circle cx="578.6" cy="116.0" r="2.6"/><circle cx="590.9" cy="150.8" r="2.6"/><circle cx="603.2" cy="176.2" r="2.6"/><circle cx="615.5" cy="183.8" r="2.6"/><circle cx="627.8" cy="171.3" r="2.6"/><circle cx="640.2" cy="142.6" r="2.6"/><circle cx="652.5" cy="107.2" r="2.6"/><circle cx="664.8" cy="76.6" r="2.6"/><circle cx="677.1" cy="60.9" r="2.6"/><circle cx="689.4" cy="65.2" r="2.6"/><circle cx="701.7" cy="88.0" r="2.6"/>
+</g>
+<path fill="none" stroke="#C9A227" stroke-width="1.3" stroke-dasharray="6 5" opacity="0.85" d="M756,122 Q856,38.7 956,122"/>
+<path fill="none" stroke="#C9A227" stroke-width="1.3" stroke-dasharray="6 5" opacity="0.85" d="M756,122 Q856,205.3 956,122"/>
+<polyline fill="none" stroke="#B5443C" stroke-width="1" opacity="0.8" points="759.1,119.0 762.2,128.0 765.2,113.0 768.3,133.9 771.4,107.2 774.5,139.7 777.5,101.4 780.6,145.4 783.7,95.9 786.8,150.8 789.8,90.6 792.9,156.0 796.0,85.6 799.1,160.8 802.2,80.9 805.2,165.3 808.3,76.6 811.4,169.4 814.5,72.7 817.5,173.0 820.6,69.3 823.7,176.2 826.8,66.4 829.8,178.8 832.9,64.0 836.0,181.0 839.1,62.2 842.2,182.5 845.2,60.9 848.3,183.5 851.4,60.2 854.5,184.0 857.5,60.0 860.6,183.8 863.7,60.5 866.8,183.1 869.8,61.5 872.9,181.8 876.0,63.0 879.1,180.0 882.2,65.2 885.2,177.6 888.3,67.8 891.4,174.7 894.5,71.0 897.5,171.3 900.6,74.6 903.7,167.4 906.8,78.7 909.8,163.1 912.9,83.2 916.0,158.4 919.1,88.0 922.2,153.4 925.2,93.2 928.3,148.1 931.4,98.6 934.5,142.6 937.5,104.3 940.6,136.8 943.7,110.1 946.8,131.0 949.8,116.0 952.9,125.0"/>
+<g fill="#B5443C" stroke="#fff" stroke-width="0.6">
+<circle cx="759.1" cy="119.0" r="1.9"/><circle cx="762.2" cy="128.0" r="1.9"/><circle cx="765.2" cy="113.0" r="1.9"/><circle cx="768.3" cy="133.9" r="1.9"/><circle cx="771.4" cy="107.2" r="1.9"/><circle cx="774.5" cy="139.7" r="1.9"/><circle cx="777.5" cy="101.4" r="1.9"/><circle cx="780.6" cy="145.4" r="1.9"/><circle cx="783.7" cy="95.9" r="1.9"/><circle cx="786.8" cy="150.8" r="1.9"/><circle cx="789.8" cy="90.6" r="1.9"/><circle cx="792.9" cy="156.0" r="1.9"/><circle cx="796.0" cy="85.6" r="1.9"/><circle cx="799.1" cy="160.8" r="1.9"/><circle cx="802.2" cy="80.9" r="1.9"/><circle cx="805.2" cy="165.3" r="1.9"/><circle cx="808.3" cy="76.6" r="1.9"/><circle cx="811.4" cy="169.4" r="1.9"/><circle cx="814.5" cy="72.7" r="1.9"/><circle cx="817.5" cy="173.0" r="1.9"/><circle cx="820.6" cy="69.3" r="1.9"/><circle cx="823.7" cy="176.2" r="1.9"/><circle cx="826.8" cy="66.4" r="1.9"/><circle cx="829.8" cy="178.8" r="1.9"/><circle cx="832.9" cy="64.0" r="1.9"/><circle cx="836.0" cy="181.0" r="1.9"/><circle cx="839.1" cy="62.2" r="1.9"/><circle cx="842.2" cy="182.5" r="1.9"/><circle cx="845.2" cy="60.9" r="1.9"/><circle cx="848.3" cy="183.5" r="1.9"/><circle cx="851.4" cy="60.2" r="1.9"/><circle cx="854.5" cy="184.0" r="1.9"/><circle cx="857.5" cy="60.0" r="1.9"/><circle cx="860.6" cy="183.8" r="1.9"/><circle cx="863.7" cy="60.5" r="1.9"/><circle cx="866.8" cy="183.1" r="1.9"/><circle cx="869.8" cy="61.5" r="1.9"/><circle cx="872.9" cy="181.8" r="1.9"/><circle cx="876.0" cy="63.0" r="1.9"/><circle cx="879.1" cy="180.0" r="1.9"/><circle cx="882.2" cy="65.2" r="1.9"/><circle cx="885.2" cy="177.6" r="1.9"/><circle cx="888.3" cy="67.8" r="1.9"/><circle cx="891.4" cy="174.7" r="1.9"/><circle cx="894.5" cy="71.0" r="1.9"/><circle cx="897.5" cy="171.3" r="1.9"/><circle cx="900.6" cy="74.6" r="1.9"/><circle cx="903.7" cy="167.4" r="1.9"/><circle cx="906.8" cy="78.7" r="1.9"/><circle cx="909.8" cy="163.1" r="1.9"/><circle cx="912.9" cy="83.2" r="1.9"/><circle cx="916.0" cy="158.4" r="1.9"/><circle cx="919.1" cy="88.0" r="1.9"/><circle cx="922.2" cy="153.4" r="1.9"/><circle cx="925.2" cy="93.2" r="1.9"/><circle cx="928.3" cy="148.1" r="1.9"/><circle cx="931.4" cy="98.6" r="1.9"/><circle cx="934.5" cy="142.6" r="1.9"/><circle cx="937.5" cy="104.3" r="1.9"/><circle cx="940.6" cy="136.8" r="1.9"/><circle cx="943.7" cy="110.1" r="1.9"/><circle cx="946.8" cy="131.0" r="1.9"/><circle cx="949.8" cy="116.0" r="1.9"/><circle cx="952.9" cy="125.0" r="1.9"/>
+<text x="856" y="232" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11.5" fill="#5A6773" text-anchor="middle" stroke="none">mode 1 wearing alternating signs; dashed: &#177;sin(&#960;x)</text>
+</g>
+<text x="130" y="232" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11.5" fill="#5A6773" text-anchor="middle">gold dots: v&#8321; sampled at every 4th node</text>
+<text x="372" y="232" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11.5" fill="#5A6773" text-anchor="middle">walls pinned: v&#8342;(0) = v&#8342;(65) = 0</text>
+<text x="614" y="232" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11.5" fill="#5A6773" text-anchor="middle">k &#8722; 1 interior sign changes</text>
+</svg>
+<figcaption><b>The gallery.</b> Modes $k=1,2,3$ drawn from the exact formula (curves are the continuum
+sines, dots the lattice samples), and the roughest mode $k=64$: since
+$\sin\frac{64\,i\pi}{65}=(-1)^{i+1}\sin\frac{i\pi}{65}$, the zigzag is mode&nbsp;1 wearing alternating
+signs — the dashed gold envelope is $\pm\sin(\pi x)$. Smooth and rough are mirror images; their
+eigenvalues differ by a factor $\kappa=1711.66$.</figcaption>
+</figure>
+
+<div class="prose">
+<p>The reason the whole suite keeps meeting these vectors: one number, $\lambda_k$, plays four
+different characters depending on which report you are standing in.</p>
+</div>
+
+<div class="timeline four">
+  <div class="thread phy"><h3>Stiffness</h3>
+    <p>Bend energy $\tfrac12\lambda_k c_k^2$ per unit of mode-$k$ amplitude. The zigzag costs
+    <b>1711.66&#215;</b> more than the arch. <a href="02-eigenvalues.html">Report 02</a>.</p></div>
+  <div class="thread phy"><h3>Decay rate</h3>
+    <p>Under heat flow $\dot u=-Au$, mode $k$ dies as $e^{-\lambda_k t}$: half-life
+    $\ln 2/\lambda_k$ = <b>0.0702</b> for $k{=}1$ vs <b>4.1&#215;10<sup>&#8722;5</sup></b> for $k{=}64$
+    (measured via <span class="kbd">expm</span>; ratio exactly $\kappa$).
+    <a href="10-fluctuation-dissipation.html">Report 10</a>.</p></div>
+  <div class="thread prb"><h3>Inverse variance</h3>
+    <p>The Brownian bridge $u\sim\mathcal N(0,A^{-1})$ jitters with variance $1/\lambda_k$ along mode
+    $k$: the sines are its Karhunen&#8211;Lo&#232;ve / PCA axes.
+    <a href="09-stiffness-as-precision.html">Report 09 &#167;4.3</a>.</p></div>
+  <div class="thread syn"><h3>Frequency</h3>
+    <p>$k$ counts half-waves, and the map $u\mapsto\hat u$ is the DST — the chain's private Fourier
+    transform, in which $A$ is diagonal. <a href="02-eigenvalues.html">02 &#167;3</a>,
+    <a href="13-preconditioning-as-decoupling.html">13</a>.</p></div>
+</div>
+
+<div class="prose">
+<div class="eyebrow phy">§2 · The mechanism</div>
+<h2>What gradient descent actually does: 64 races at once</h2>
+<p>Run Richardson / gradient descent on $\tfrac12x^\top Ax-b^\top x$ with a single step size $\alpha$:
+$x_{m+1}=x_m+\alpha(b-Ax_m)$. The error obeys $e_{m+1}=(I-\alpha A)e_m$, and because the sines
+diagonalize $A$, the iteration <i>never mixes modes</i>. Each coefficient runs its own private race,</p>
+<p style="text-align:center">$c_k(m)\;=\;(1-\alpha\lambda_k)^m\,c_k(0),$</p>
+<p>and "convergence rate" just means the worst racer. The optimal single step is
+$\alpha=2/(\lambda_1+\lambda_{64})=1.183\times10^{-4}$, which balances the two extremes at
+$\rho=(\kappa-1)/(\kappa+1)=0.998832$. We ran it — actual GD from a known error mix with unit
+amplitude in every mode, every iterate projected onto the modes by the DST — and the measured
+coefficients sit on the predicted $(1-\alpha\lambda_k)^m$ to $4.0\times10^{-14}$, all 64 modes,
+all 400 iterations:</p>
+</div>
+
+<figure class="widget">
+<svg id="gd-svg" viewBox="0 0 760 430" xmlns="http://www.w3.org/2000/svg" class="fig-svg" role="img" aria-label="Per-mode error decay under optimally damped gradient descent, measured versus predicted"></svg>
+<figcaption><b>The central mechanism, measured.</b> Dots: DST coefficients of the actual GD error at
+every 10th iteration. Lines: the prediction $|1-\alpha\lambda_k|^m$. Mode 8 contracts by
+$0.9262$ per step and is gone by iteration $\sim$300; mode 33 contracts by $0.0242$ — its dots crash
+into the $\sim10^{-16}$ double-precision floor by iteration 10 and stay there (the prediction line keeps
+falling; the measurement honestly cannot). And the punchline of the whole page: $k=1$ and $k=64$ decay
+<i>identically</i> — because $\lambda_k+\lambda_{65-k}=4/h^2=16900$ exactly, the optimally damped
+iteration pairs mode $k$ with mode $65-k$; the slowest pair is $\{1,64\}$ at $0.998832$ per step,
+the fastest is $\{32,33\}$. Smoothest and roughest are <i>equally</i> hopeless: with one step size
+you cannot be right about both ends, only symmetrically wrong.</figcaption>
+</figure>
+
+<div class="prose">
+<p>So $\kappa$ is not an abstract condition number; it is the length of the race between
+$\lambda_1$ and $\lambda_{64}$. Everything a preconditioner does on this page will be visible as
+surgery on this picture: move some $\lambda$'s, shorten the race.</p>
+</div>
+
+<div class="prose">
+<div class="eyebrow prb">§3 · The luxury option</div>
+<h2>Rotate all the way, and the problem falls apart</h2>
+<p>In mode coordinates $\hat x=V^\top x$ the energy is
+$\sum_k\bigl(\tfrac12\lambda_k\hat x_k^2-\hat b_k\hat x_k\bigr)$ — verified:
+$V^\top AV$ is diagonal to $3.9\times10^{-15}$ (relative), with the $\lambda_k$ on the diagonal.
+Sixty-four independent one-dimensional parabolas; nothing couples to anything. The whole solve is one
+division per axis, $\hat x_k=\hat b_k/\lambda_k$, and the rotation itself is the DST-I, a real-signal
+FFT costing $O(N\log N)$: transform, divide, transform back matches <span class="kbd">spsolve</span> to
+$1.7\times10^{-15}$. In the probability column this same move is PCA whitening in the bridge's
+Karhunen&#8211;Lo&#232;ve basis (<a href="09-stiffness-as-precision.html">09 &#167;4.3</a>): independent
+components, rescaled.</p>
+<p>That is the luxury option, and it is worth being clear about why the rest of the suite exists at
+all: <b>the full rotation is only for sale on special matrices.</b> The chain's eigenvectors are sines
+because the chain is translation-invariant with clean walls; perturb a coefficient
+(<span class="kbd">variable_poisson_2d</span>), move to an irregular mesh, or just present a matrix you
+have never seen, and there is no fast transform waiting. A dense eigendecomposition costs $O(N^3)$ —
+more than the solve it would enable. Off the chain you cannot afford to be right about all $N$
+directions. The honest question becomes: <i>right about which ones?</i></p>
+</div>
+
+<div class="prose">
+<div class="eyebrow syn">§4 · Partial rotation</div>
+<h2>Deflation: buy $p$ directions, damp the rest</h2>
+<p>Suppose the budget covers only $p$ eigenvectors — the $p$ <i>floppiest</i>, since §2 showed the
+slow lane is where GD bleeds. Solve exactly inside $\mathrm{span}(V_p)$, and on the orthogonal
+complement fall back to the best single scalar step for what remains:</p>
+<p style="text-align:center;overflow-x:auto">
+$M_p^{-1}\;=\;V_p\Lambda_p^{-1}V_p^\top\;+\;\dfrac{2}{\lambda_{p+1}+\lambda_{64}}\,\bigl(I-V_pV_p^\top\bigr).$</p>
+<p>The measured spectrum of $M_p^{-1}A$ is exactly the promised surgery: $p$ eigenvalues sitting at
+$1$ (exact to $10^{-14}$) and the tail rescaled to $\alpha_p\lambda_k$, already optimally centered.
+The effective condition number collapses to
+$\kappa_{\mathrm{eff}}=\lambda_{64}/\lambda_{p+1}$, and since $\lambda_k\approx\pi^2k^2$ at the bottom
+of the spectrum, <b>each unit of rank pays quadratically</b>: $\kappa_{\mathrm{eff}}\approx\kappa/(p+1)^2$
+(measured ratio 1.0000 at $p=0$ drifting only to 1.0580 at $p=16$). Drag the budget yourself:</p>
+</div>
+
+<figure class="widget">
+<div class="ctrl"><span>rank budget&nbsp;p</span>
+  <input id="d-p" type="range" min="0" max="16" step="1" value="4" aria-label="deflation rank p">
+  <span id="d-pval" style="min-width:34px;text-align:right;font-variant-numeric:tabular-nums;font-weight:700">4</span></div>
+<svg id="d-spec" viewBox="0 0 760 130" xmlns="http://www.w3.org/2000/svg" class="fig-svg" role="img" aria-label="Spectrum of the deflated operator as p grows"></svg>
+<svg id="d-curve" viewBox="0 0 760 330" xmlns="http://www.w3.org/2000/svg" class="fig-svg" role="img" aria-label="Predicted error curve of deflated gradient descent with measured endpoints"></svg>
+<div class="readouts">
+  <span>&#954;<sub>eff</sub> = &#955;&#8326;&#8324;/&#955;<sub>p+1</sub> &nbsp;<b id="d-keff"></b></span>
+  <span>rate &nbsp;<b id="d-rate"></b></span>
+  <span class="phy">predicted iterations to 10<sup>&#8722;10</sup> &nbsp;<b id="d-pred"></b></span>
+  <span class="gld">measured &nbsp;<b id="d-meas"></b></span>
+</div>
+<figcaption><b>Spectrum surgery, live.</b> Top strip: eigenvalues of $M_p^{-1}A$ — as $p$ grows, blue
+tail eigenvalues are bought out one by one and re-pinned at exactly $1$ (gold). Bottom: the predicted
+error line $\tfrac{\sqrt2}{8}\rho_p^{\,m}$ on log&#8211;log axes, $\rho_p=(\kappa_{\mathrm{eff}}-1)/(\kappa_{\mathrm{eff}}+1)$
+(the $\sqrt2/8 = 0.1768$ prefactor is the share of the starting error in the two slowest modes).
+Gold diamonds: <i>measured</i> GD iteration counts at $p\in\{0,1,2,4,8,16\}$ from the checks script —
+prediction and measurement agree to $\pm1$ iteration at every measured $p$.</figcaption>
+</figure>
+
+<div class="tablewrap"><table class="pins">
+<tr><th>p</th><th>&#955;<sub>p+1</sub></th><th>&#954;<sub>eff</sub> = &#955;&#8326;&#8324;/&#955;<sub>p+1</sub></th>
+<th>&#954;<sub>eff</sub> &#247; &#954;/(p+1)&#178;</th><th>rate</th><th>GD iterations to 10<sup>&#8722;10</sup></th></tr>
+<tr><td class="r">0</td><td class="r">9.87</td><td class="r">1711.66</td><td class="r">1.0000</td><td class="r">0.998832</td><td class="r">18224</td></tr>
+<tr><td class="r">1</td><td class="r">39.45</td><td class="r">428.17</td><td class="r">1.0006</td><td class="r">0.995340</td><td class="r">4559</td></tr>
+<tr><td class="r">2</td><td class="r">88.67</td><td class="r">190.48</td><td class="r">1.0016</td><td class="r">0.989555</td><td class="r">2028</td></tr>
+<tr><td class="r">4</td><td class="r">245.54</td><td class="r">68.79</td><td class="r">1.0047</td><td class="r">0.971341</td><td class="r">733</td></tr>
+<tr><td class="r">8</td><td class="r">786.91</td><td class="r">21.46</td><td class="r">1.0157</td><td class="r">0.910968</td><td class="r">229</td></tr>
+<tr><td class="r">16</td><td class="r">2695.42</td><td class="r">6.27</td><td class="r">1.0580</td><td class="r">0.724755</td><td class="r">67</td></tr>
+</table></div>
+
+<div class="prose">
+<p>Sixteen directions out of sixty-four — a quarter of the basis — and the bill drops from
+<b>18224</b> iterations to <b>67</b>, a factor of 272. Every row is a measured run, and every row obeys
+the same sentence: <i>be exactly right about the $p$ directions you paid for, be honestly, symmetrically
+wrong about the rest.</i></p>
+</div>
+
+<div class="prose">
+<div class="eyebrow prb">§5 · The stochastic caricature</div>
+<h2>The same surgery under gradient noise</h2>
+<p>One deliberately narrow detour toward optimization. Take the identical chain quadratic, but hand GD a
+noisy gradient: $g_m = Ax_m - b + \sigma\xi_m$ with $\xi_m\sim\mathcal N(0,I)$, $\sigma=1$, fixed seed,
+constant steps. Two runs, both measured. <b>Plain:</b> the optimal scalar step $\alpha$. <b>Head-solved:</b>
+each step, project the (noisy) gradient onto the $p=4$ floppiest modes and take the exact Newton step
+there — i.e. apply $M_4^{-1}$ from §4 — and the damped step on the tail.</p>
+</div>
+
+<figure class="widget">
+<svg id="sgd-svg" viewBox="0 0 760 400" xmlns="http://www.w3.org/2000/svg" class="fig-svg" role="img" aria-label="SGD error trajectories with and without exact head solve"></svg>
+<figcaption><b>Both trajectories measured, seed 0.</b> Relative error $\|e_m\|/\|e_0\|$, log axes. Dashed
+lines: each method's own stationary noise floor, computed exactly per mode from
+$\mathrm{Var}=s_k^2\sigma^2/(1-(1-s_k\lambda_k)^2)$ and confirmed by the runs (measured long-run
+mean-square within 24% and 0.03% of the formula, respectively). Plain constant-step SGD spends
+<b>4142</b> iterations crossing its transient — the low-curvature modes creep at $0.998832$ per step —
+then flattens at a low floor. With the 4-mode head solved exactly the transient collapses to
+<b>74</b> iterations, a <b>56&#215;</b> shortening, but onto a floor <b>23.7&#215;</b> higher: the exact
+head update re-injects fresh noise as $\sigma/\lambda_k$ every step, and small $\lambda$ amplifies it.
+You buy speed with variance.</figcaption>
+</figure>
+
+<div class="note"><b>Truth in labeling.</b> This is the quadratic caricature of why curvature-aware
+preconditioning helps stochastic optimization — a convex bowl whose Hessian we know exactly, isotropic
+additive noise, no minibatching, no nonconvexity, no learning-rate schedule. It shows the mechanism
+(slow low-curvature transients; the bias&#8211;variance price of solving them exactly) and claims
+nothing beyond it. The JSON carries the same disclaimer next to the numbers.</div>
+
+<div class="prose">
+<div class="eyebrow syn">§6 · The ledger</div>
+<h2>Every preconditioner, audited in the same currency</h2>
+<p>The <a href="bridge_explainer.html">bridge explainer</a> ends with a sentence this page exists to
+expand. Quoted exactly:</p>
+</div>
+
+<div class="pull">&#8220;Domain decomposition, deflation, incomplete factorizations, Nyström — all of
+them are strategies for choosing <i>which few directions to leave wrong</i>.&#8221;
+<span class="src">the coda of the bridge explainer</span></div>
+
+<div class="prose">
+<p>So: same chain, same starting error, same optimally damped Richardson/GD outer iteration, and six
+strategies run as preconditioners. Three measurements each: iterations to $10^{-10}$; the effective
+condition number $\kappa_{\mathrm{eff}}$ of $M^{-1}A$; and <b>directions left wrong</b> — how many of
+the 64 eigenvalues of the (optimally rescaled) $M^{-1}A$ land farther than 10% from $1$. The last
+column re-runs each method under CG, because the two solvers price wrongness differently
+(<a href="13-preconditioning-as-decoupling.html">13</a>): Richardson pays for the <i>range</i> of the
+spectrum, CG pays roughly one iteration per <i>cluster</i>.</p>
+</div>
+
+<div class="tablewrap"><table class="pins">
+<tr><th>preconditioner</th><th>wrong (of 64)</th><th>which directions</th><th>&#954;<sub>eff</sub></th>
+<th>GD iters</th><th>CG iters</th></tr>
+<tr><td>none (damped GD)</td><td class="r">60</td><td>everything; both ends of the race</td>
+<td class="r">1711.66</td><td class="r">18224</td><td class="r">64</td></tr>
+<tr><td>Nyström rank 4</td><td class="r">60</td><td>the bottom — the end that mattered</td>
+<td class="r">1711.53</td><td class="r">18250</td><td class="r">64</td></tr>
+<tr><td>Nyström rank 8</td><td class="r">59</td><td>the bottom, still</td>
+<td class="r">1704.62</td><td class="r">18156</td><td class="r">65</td></tr>
+<tr><td>coarse averages, p=4</td><td class="r">58</td><td>low modes nearly right (&#8804;36.5&#176; off)</td>
+<td class="r">144.97</td><td class="r">1640</td><td class="r">67</td></tr>
+<tr><td>coarse averages, p=8</td><td class="r">58</td><td>low modes nearly right (&#8804;41.2&#176; off)</td>
+<td class="r">46.07</td><td class="r">518</td><td class="r">59</td></tr>
+<tr class="gold"><td>spectral deflation, p=4</td><td class="r">56</td><td>modes 1&#8211;4 exactly right; tail by design</td>
+<td class="r">68.79</td><td class="r">733</td><td class="r">58</td></tr>
+<tr class="gold"><td>spectral deflation, p=8</td><td class="r">52</td><td>modes 1&#8211;8 exactly right</td>
+<td class="r">21.46</td><td class="r">229</td><td class="r">43</td></tr>
+<tr><td>block-Jacobi, 2 subdomains</td><td class="r">2</td><td>the interface pair, 1 &#177; 32/33</td>
+<td class="r">65.00</td><td class="r">663</td><td class="r">3</td></tr>
+<tr><td>IC(0)</td><td class="r">0</td><td>none</td>
+<td class="r">1.00</td><td class="r">1</td><td class="r">1</td></tr>
+</table></div>
+
+<div class="prose">
+<p><b>Spectral deflation is the gold standard the others imitate.</b> For a rank-$p$ correction aimed at
+Richardson, fixing the $p$ smallest eigenpairs is the best you can do — it is literally the surgery of §4,
+and the ledger shows everything else as an approximation to it. Its "56 wrong" is honest bookkeeping,
+not failure: the tail is <i>deliberately</i> spread across $[0.03,1.97]$, centered so its range, not its
+count, is optimized. That is why it wins the GD column at every rank while barely denting the CG column.</p>
+<p><b>Coarse averages are cheap imitations of low modes — measurably good ones.</b> Replace the four true
+sine modes with four flat block-averages (blocks of 16) in the <i>same</i> deflation formula, and the
+principal angles between the block-average space and the true bottom-4 eigenspace are
+$12.5^\circ,\,23.5^\circ,\,26.2^\circ,\,36.5^\circ$: never orthogonal, never exact. The price of
+imitation is precise: $\kappa_{\mathrm{eff}}$ 144.97 instead of 68.79, iterations 1640 instead of 733 —
+call it a factor of 2.2 for skipping the eigensolve. At $p=8$ (blocks of 8, largest angle
+$41.2^\circ$): 518 vs 229. This is the whole two-grid idea of
+<a href="11-regressions-and-multiscale.html">11</a>/<a href="12-autoregressive-preconditioning.html">12</a>
+in one row: piecewise-constant functions <i>approximately span</i> the smooth end of the spectrum, and
+"approximately" costs a small constant, not the asymptotics.</p>
+<p><b>Nyström leaves the wrong end wrong.</b> The randomized sketch (<span class="kbd">python/nystrom.py</span>,
+rank 8, seed 0) faithfully does its job: it captures the <i>top</i> of the spectrum — its eigenvalue
+estimates undershoot the true top eight, as Lemma 2.1 promises, with $\hat\lambda_8=9782.3$ — and
+deflates it. But on the Laplacian the top is the harmless end: $\kappa_{\mathrm{eff}}$ falls from
+1711.66 to 1704.62, iterations from 18224 to 18156, and at rank 4 the run measures 18250 —
+<i>slightly worse than nothing</i>, transient noise included honestly. The bottom modes, where GD
+actually bleeds, stay exactly as wrong as before ($k=1$ is still the first wrong direction by the
+Rayleigh diagnostic). This is <a href="07-nystrom-preconditioning.html">report 07</a>'s lesson relocated
+to 1-D and priced in the same currency as its competitors: Nyström is built for spectra that decay fast
+from the top (regularized ridge problems), and the chain is its adversarial case.</p>
+<p><b>Domain decomposition leaves the fewest directions wrong — and the wrongest.</b> Two exact
+half-solves (block-Jacobi on nodes 1&#8211;32 and 33&#8211;64) leave <i>exactly two</i> eigenvalues off
+$1$: the pair $1\pm\tfrac{32}{33}$ generated by the single severed bond, the smallest separator the
+suite's <a href="14-hierarchical-inverse.html">report 14</a> story ever meets. CG names those two
+exceptions and finishes in <b>3</b> iterations. Richardson cannot name anything: it pays the full range
+$\kappa_{\mathrm{eff}}=(1+\tfrac{32}{33})/(1-\tfrac{32}{33})=65=n+1$, and grinds for <b>663</b>
+iterations at rate $\tfrac{32}{33}=0.9697$. Same preconditioner, 221&#215; apart — the sharpest
+clustering-versus-range contrast in the ledger.</p>
+<p><b>IC(0) leaves nothing wrong — here.</b> On the chain, zero-fill incomplete Cholesky <i>is</i>
+Cholesky: a path is a tree, elimination creates no fill, and the measured factor satisfies
+$LL^\top=A$ to $2.2\times10^{-16}$. Zero directions wrong, one iteration, by either solver. The honest
+caveat is that this perfection is a property of the 1-D graph, not of the method: on the 2-D grid the
+same pattern truncation discards real fill-in and IC(0) rejoins the imperfect field —
+<a href="11-regressions-and-multiscale.html">11</a> and <a href="15-preconditioning-as-prediction.html">15
+(step 5)</a> measure exactly what that truncation costs.</p>
+<p>Read down the "wrong" column and the coda stops being a slogan: 60, 60, 59, 58, 58, 56, 52, 2, 0 —
+every method is an answer to the same budget question, and where two counts tie (Nyström rank 4 against
+doing nothing, the two coarse ranks at 58) the "which directions" column is what still separates them.
+The two solver columns are two different prices for the same answer.</p>
+</div>
+
+<div class="prose">
+<div class="eyebrow ink">§7 · Crossings</div>
+<h2>Where the suite has already met these directions</h2>
+</div>
+
+<div class="timeline">
+  <div class="thread phy"><h3>Physics</h3>
+    <p><a href="02-eigenvalues.html">02</a> derives the sines, the DST, and $\kappa=O(n^2)$ — this page's
+    §1&#8211;§3 are its formulas, re-measured at $n=64$.</p>
+    <p><a href="12-autoregressive-preconditioning.html">12</a> runs every preconditioner as stationary
+    Richardson; the per-mode factor $1-\alpha\lambda_k$ of §2 is "the per-sweep fraction of structure
+    the predictor fails to explain," one mode at a time.</p></div>
+  <div class="thread prb"><h3>Probability</h3>
+    <p><a href="09-stiffness-as-precision.html">09 &#167;4.3</a>: the eigenbasis is the bridge's KL basis;
+    §3's fast solve is PCA whitening. The <a href="bridge_explainer.html">bridge explainer</a> tells that
+    story visually — and donates this page's coda.</p>
+    <p><a href="green_tents_explainer.html">The green tents</a> read $A^{-1}$ column-wise; this page
+    reads it axis-wise. Same inverse, two decompositions.</p></div>
+  <div class="thread syn"><h3>Synthesis</h3>
+    <p><a href="13-preconditioning-as-decoupling.html">13</a> (decoupling; clustering vs range),
+    <a href="14-hierarchical-inverse.html">14</a> (separators — here, one node),
+    <a href="15-preconditioning-as-prediction.html">15</a> (IC(0) as truncated prediction, exact on the
+    chain), <a href="07-nystrom-preconditioning.html">07</a> (Nyström's honest domain). The ledger is
+    their shared scoreboard.</p></div>
+</div>
+
+<div class="check">
+<b>Everything above is machine-verified</b> (<span class="kbd">python/experiments/eigenmodes_checks.py</span>,
+<b>32 checks, all PASS</b>, deterministic, &lt;1&#8201;s; every quoted number exported to
+<span class="kbd">results/eigenmodes.json</span>): the sine/eigenvalue formulas ($1.4\times10^{-14}$);
+heat half-lives via <span class="kbd">expm</span> with ratio $\kappa$; measured GD-iterate DST
+coefficients $=(1-\alpha\lambda_k)^m$ to $4.0\times10^{-14}$ (400 iterations &#215; 64 modes); the mode
+pairing $\lambda_k+\lambda_{65-k}=4/h^2$; $V^\top AV$ diagonal and the DST one-pass solve vs
+<span class="kbd">spsolve</span> ($1.7\times10^{-15}$); the deflated spectra $\{1^{(p)}\}\cup\{\alpha_p\lambda_k\}$,
+$\kappa_{\mathrm{eff}}=\lambda_{64}/\lambda_{p+1}$, the $(p+1)^2$ ratio table, measured iteration counts
+and tail slopes for $p\in\{0,1,2,4,8,16\}$; the SGD floors against the exact stationary-variance formula
+and both transit times (seed 0); and the full ledger — coarse-average principal angles, Nyström
+Lemma-2.1 undershoot and bottom-heavy wrongness, block-Jacobi's exact $1\pm\frac{32}{33}$ pair,
+IC(0)$\,=\,$Cholesky on the chain. Reuses <span class="kbd">poisson.laplacian_1d</span>,
+<span class="kbd">nystrom.NystromPreconditioner</span>, <span class="kbd">preconditioners.ic0</span>,
+<span class="kbd">pcg.pcg</span>. Companion pages:
+<a href="02-eigenvalues.html">02 · eigenvalues</a> ·
+<a href="09-stiffness-as-precision.html">09 · stiffness as precision</a> ·
+<a href="13-preconditioning-as-decoupling.html">13 · decoupling</a> ·
+<a href="bridge_explainer.html">the bridge explainer</a> ·
+<a href="green_tents_explainer.html">the green tents</a>.
+</div>
+
+</main>
+
+<script>
+/*__EIGDATA__*/
+const GD={"1":{"f":0.998832,"pts":[[0,1.0],[10,0.988],[20,0.977],[30,0.966],[40,0.954],[50,0.943],[60,0.932],[70,0.921],[80,0.911],[90,0.9],[100,0.89],[110,0.879],[120,0.869],[130,0.859],[140,0.849],[150,0.839],[160,0.829],[170,0.82],[180,0.81],[190,0.801],[200,0.792],[210,0.782],[220,0.773],[230,0.764],[240,0.755],[250,0.747],[260,0.738],[270,0.729],[280,0.721],[290,0.713],[300,0.704],[310,0.696],[320,0.688],[330,0.68],[340,0.672],[350,0.664],[360,0.657],[370,0.649],[380,0.641],[390,0.634],[400,0.627]]},"8":{"f":0.926175,"pts":[[0,1.0],[10,0.464],[20,0.216],[30,0.1],[40,0.0465],[50,0.0216],[60,0.01],[70,0.00466],[80,0.00216],[90,0.00101],[100,0.000467],[110,0.000217],[120,0.000101],[130,4.68e-05],[140,2.17e-05],[150,1.01e-05],[160,4.69e-06],[170,2.18e-06],[180,1.01e-06],[190,4.7e-07],[200,2.18e-07],[210,1.01e-07],[220,4.7e-08],[230,2.18e-08],[240,1.01e-08],[250,4.71e-09],[260,2.19e-09],[270,1.02e-09],[280,4.72e-10],[290,2.19e-10],[300,1.02e-10],[310,4.73e-11],[320,2.2e-11],[330,1.02e-11],[340,4.74e-12],[350,2.2e-12],[360,1.02e-12],[370,4.76e-13],[380,2.22e-13],[390,1.03e-13],[400,4.85e-14]]},"33":{"f":0.0241637,"pts":[[0,1.0],[10,2.91e-16],[20,6.94e-17],[30,1.41e-16],[40,3.14e-17],[50,1.48e-17],[60,1.78e-16],[70,1.33e-16],[80,1.12e-16],[90,7.8e-17],[100,2.56e-17],[110,9.53e-19],[120,1.45e-16],[130,1.78e-16],[140,6.22e-17],[150,9.42e-17],[160,3.6e-17],[170,1.04e-17],[180,1.25e-16],[190,3.69e-17],[200,3e-17],[210,7.7e-17],[220,3.62e-17],[230,1.19e-16],[240,1e-16],[250,1.13e-17],[260,9.32e-18],[270,8.18e-17],[280,1.68e-16],[290,1.27e-16],[300,9.84e-17],[310,2.58e-17],[320,9.43e-18],[330,2.57e-17],[340,1.9e-16],[350,2.69e-17],[360,1.34e-16],[370,2.05e-17],[380,8.62e-17],[390,1.81e-16],[400,7.43e-17]]},"64":{"f":0.998832,"pts":[[0,1.0],[10,0.988],[20,0.977],[30,0.966],[40,0.954],[50,0.943],[60,0.932],[70,0.921],[80,0.911],[90,0.9],[100,0.89],[110,0.879],[120,0.869],[130,0.859],[140,0.849],[150,0.839],[160,0.829],[170,0.82],[180,0.81],[190,0.801],[200,0.792],[210,0.782],[220,0.773],[230,0.764],[240,0.755],[250,0.747],[260,0.738],[270,0.729],[280,0.721],[290,0.713],[300,0.704],[310,0.696],[320,0.688],[330,0.68],[340,0.672],[350,0.664],[360,0.657],[370,0.649],[380,0.641],[390,0.634],[400,0.627]]}};
+const SGD={"plain":[[0,1.0],[40,0.273],[80,0.22],[120,0.191],[160,0.172],[200,0.158],[240,0.146],[280,0.136],[320,0.128],[360,0.121],[400,0.114],[440,0.108],[480,0.102],[520,0.0973],[560,0.0926],[600,0.0882],[640,0.0841],[680,0.0803],[720,0.0766],[760,0.0731],[800,0.0697],[840,0.0665],[880,0.0634],[920,0.0604],[960,0.0575],[1000,0.0548],[1040,0.0522],[1080,0.0501],[1120,0.0478],[1160,0.0456],[1200,0.0436],[1240,0.0417],[1280,0.0398],[1320,0.0381],[1360,0.0365],[1400,0.0347],[1440,0.0331],[1480,0.0318],[1520,0.0303],[1560,0.0289],[1600,0.0276],[1640,0.0265],[1680,0.0252],[1720,0.024],[1760,0.0229],[1800,0.0218],[1840,0.0207],[1880,0.0198],[1920,0.0189],[1960,0.0181],[2000,0.0172],[2040,0.0164],[2080,0.0159],[2120,0.0152],[2160,0.0144],[2200,0.0136],[2240,0.0131],[2280,0.0124],[2320,0.0119],[2360,0.0113],[2400,0.0107],[2440,0.0102],[2480,0.00977],[2520,0.00933],[2560,0.0089],[2600,0.00853],[2640,0.00819],[2680,0.00792],[2720,0.00745],[2760,0.0071],[2800,0.00664],[2840,0.00641],[2880,0.00616],[2920,0.00586],[2960,0.00562],[3000,0.00537],[3040,0.00517],[3080,0.00493],[3120,0.00469],[3160,0.00453],[3200,0.00419],[3240,0.0041],[3280,0.00406],[3320,0.00401],[3360,0.00384],[3400,0.00369],[3440,0.00348],[3480,0.00333],[3520,0.00306],[3560,0.00277],[3600,0.00269],[3640,0.0024],[3680,0.0023],[3720,0.00207],[3760,0.00194],[3800,0.00189],[3840,0.00183],[3880,0.00175],[3920,0.0017],[3960,0.00163],[4000,0.00149],[4040,0.00143],[4080,0.0013],[4120,0.0012],[4160,0.00108],[4200,0.00104],[4240,0.000875],[4280,0.000957],[4320,0.000819],[4360,0.000694],[4400,0.000719],[4440,0.000652],[4480,0.000721],[4520,0.000688],[4560,0.000751],[4600,0.000654],[4640,0.00083],[4680,0.000831],[4720,0.000794],[4760,0.000691],[4800,0.000633],[4840,0.000645],[4880,0.000579],[4920,0.000555],[4960,0.000537],[5000,0.00044],[5040,0.00045],[5080,0.000385],[5120,0.000342],[5160,0.000405],[5200,0.000331],[5240,0.000302],[5280,0.000255],[5320,0.000384],[5360,0.000554],[5400,0.000423],[5440,0.000321],[5480,0.000409],[5520,0.000569],[5560,0.000484],[5600,0.000433],[5640,0.000418],[5680,0.00056],[5720,0.000535],[5760,0.000506],[5800,0.000571],[5840,0.000525],[5880,0.000558],[5920,0.000547],[5960,0.000575],[6000,0.000494],[6040,0.00055],[6080,0.000447],[6120,0.000577],[6160,0.000601],[6200,0.000507],[6240,0.000541],[6280,0.000562],[6320,0.000463],[6360,0.000477],[6400,0.000504],[6440,0.000358],[6480,0.000484],[6520,0.000446],[6560,0.000393],[6600,0.000392],[6640,0.000475],[6680,0.00042],[6720,0.000263],[6760,0.000315],[6800,0.000298],[6840,0.000296],[6880,0.000252],[6920,0.000318],[6960,0.000324],[7000,0.000422],[7040,0.000485],[7080,0.000395],[7120,0.000526],[7160,0.000429],[7200,0.000357],[7240,0.000376],[7280,0.000413],[7320,0.000417],[7360,0.000516],[7400,0.000599],[7440,0.000775],[7480,0.00072],[7520,0.000688],[7560,0.000794],[7600,0.000821],[7640,0.000851],[7680,0.000941],[7720,0.000856],[7760,0.000893],[7800,0.00106],[7840,0.00101],[7880,0.0009],[7920,0.000787],[7960,0.000704],[8000,0.000784],[8040,0.000676],[8080,0.000538],[8120,0.00042],[8160,0.000425],[8200,0.000479],[8240,0.000472],[8280,0.000494],[8320,0.000417],[8360,0.00041],[8400,0.0004],[8440,0.000403],[8480,0.000541],[8520,0.000449],[8560,0.000417],[8600,0.000513],[8640,0.000503],[8680,0.000327],[8720,0.000279],[8760,0.000334],[8800,0.000324],[8840,0.00042],[8880,0.000424],[8920,0.000417],[8960,0.000309],[9000,0.00038],[9040,0.000328],[9080,0.000314],[9120,0.000248],[9160,0.000334],[9200,0.000445],[9240,0.000266],[9280,0.000291],[9320,0.000438],[9360,0.000444],[9400,0.000496],[9440,0.00057],[9480,0.000582],[9520,0.000473],[9560,0.000428],[9600,0.000379],[9640,0.00043],[9680,0.000448],[9720,0.000461],[9760,0.00074],[9800,0.000704],[9840,0.000759],[9880,0.000704],[9920,0.00066],[9960,0.000581],[10000,0.000624],[10040,0.000712],[10080,0.000535],[10120,0.000578],[10160,0.000563],[10200,0.000405],[10240,0.000413],[10280,0.000425],[10320,0.000551],[10360,0.000611],[10400,0.000606],[10440,0.000532],[10480,0.000449],[10520,0.000454],[10560,0.000422],[10600,0.000532],[10640,0.000454],[10680,0.000378],[10720,0.000464],[10760,0.000379],[10800,0.000489],[10840,0.000461],[10880,0.000421],[10920,0.000391],[10960,0.000394],[11000,0.000342],[11040,0.000329],[11080,0.00043],[11120,0.000499],[11160,0.00041],[11200,0.000406],[11240,0.000512],[11280,0.00058],[11320,0.000596],[11360,0.000439],[11400,0.000419],[11440,0.000454],[11480,0.000421],[11520,0.000489],[11560,0.0005],[11600,0.000548],[11640,0.000458],[11680,0.000431],[11720,0.000386],[11760,0.00034],[11800,0.00057],[11840,0.000532],[11880,0.000633],[11920,0.000629],[11960,0.000614],[12000,0.000573]],"head":[[0,1.0],[10,0.276],[20,0.17],[30,0.117],[40,0.0813],[50,0.0563],[60,0.047],[70,0.0307],[80,0.026],[90,0.0275],[100,0.0141],[110,0.0202],[120,0.00898],[130,0.00618],[140,0.0346],[150,0.00507],[160,0.0164],[170,0.0258],[180,0.00931],[190,0.00867],[200,0.0113],[210,0.015],[220,0.00206],[230,0.0125],[240,0.0124],[250,0.0132],[260,0.0217],[270,0.00676],[280,0.00982],[290,0.00832],[300,0.0111],[310,0.0291],[320,0.0263],[330,0.0163],[340,0.00381],[350,0.00367],[360,0.00774],[370,0.023],[380,0.00846],[390,0.00336],[400,0.00159],[410,0.00612],[420,0.0169],[430,0.00842],[440,0.0158],[450,0.0106],[460,0.00936],[470,0.0155],[480,0.00718],[490,0.0136],[500,0.013],[510,0.00651],[520,0.0135],[530,0.00124],[540,0.0235],[550,0.00606],[560,0.00584],[570,0.00925],[580,0.0265],[590,0.0125],[600,0.0283],[610,0.00545],[620,0.0218],[630,0.0166],[640,0.0127],[650,0.00772],[660,0.00569],[670,0.0101],[680,0.0117],[690,0.0149],[700,0.0233],[710,0.00401],[720,0.00918],[730,0.0024],[740,0.00682],[750,0.017],[760,0.00465],[770,0.0133],[780,0.00272],[790,0.00757],[800,0.00471],[810,0.00858],[820,0.0115],[830,0.00817],[840,0.00271],[850,0.0195],[860,0.00554],[870,0.0123],[880,0.00449],[890,0.0185],[900,0.0126],[910,0.00574],[920,0.00234],[930,0.0088],[940,0.00523],[950,0.0069],[960,0.00666],[970,0.00236],[980,0.0144],[990,0.00823],[1000,0.0257],[1010,0.0116],[1020,0.0256],[1030,0.00784],[1040,0.0181],[1050,0.0207],[1060,0.0178],[1070,0.0119],[1080,0.0113],[1090,0.00939],[1100,0.00306],[1110,0.00206],[1120,0.0226],[1130,0.0141],[1140,0.00203],[1150,0.0105],[1160,0.00473],[1170,0.000969],[1180,0.0398],[1190,0.015],[1200,0.00365],[1210,0.015],[1220,0.0133],[1230,0.0141],[1240,0.021],[1250,0.00921],[1260,0.0211],[1270,0.0139],[1280,0.0147],[1290,0.00413],[1300,0.0203],[1310,0.00469],[1320,0.00677],[1330,0.00835],[1340,0.011],[1350,0.0129],[1360,0.00458],[1370,0.00328],[1380,0.00328],[1390,0.0078],[1400,0.0033],[1410,0.0102],[1420,0.0135],[1430,0.0105],[1440,0.0198],[1450,0.0118],[1460,0.00651],[1470,0.00446],[1480,0.0121],[1490,0.0139],[1500,0.00403],[1510,0.00379],[1520,0.0294],[1530,0.00542],[1540,0.00597],[1550,0.00451],[1560,0.0153],[1570,0.00474],[1580,0.0151],[1590,0.0047],[1600,0.0117],[1610,0.00501],[1620,0.00878],[1630,0.00527],[1640,0.00314],[1650,0.00507],[1660,0.00474],[1670,0.00827],[1680,0.00609],[1690,0.0136],[1700,0.016],[1710,0.0165],[1720,0.0133],[1730,0.00898],[1740,0.00643],[1750,0.0065],[1760,0.00189],[1770,0.00822],[1780,0.00385],[1790,0.00283],[1800,0.00959],[1810,0.012],[1820,0.00325],[1830,0.00852],[1840,0.0102],[1850,0.00734],[1860,0.0268],[1870,0.0197],[1880,0.00583],[1890,0.0145],[1900,0.00775],[1910,0.0035],[1920,0.0148],[1930,0.0177],[1940,0.00484],[1950,0.00589],[1960,0.015],[1970,0.0102],[1980,0.00432],[1990,0.00786],[2000,0.0157],[2010,0.0131],[2020,0.00512],[2030,0.00628],[2040,0.0122],[2050,0.00384],[2060,0.00492],[2070,0.0232],[2080,0.0154],[2090,0.00424],[2100,0.00577],[2110,0.0228],[2120,0.00108],[2130,0.0042],[2140,0.0205],[2150,0.0101],[2160,0.00471],[2170,0.00797],[2180,0.0165],[2190,0.00251],[2200,0.00522],[2210,0.0182],[2220,0.00428],[2230,0.016],[2240,0.00834],[2250,0.0203],[2260,0.0159],[2270,0.0119],[2280,0.0205],[2290,0.00493],[2300,0.00199],[2310,0.0236],[2320,0.00912],[2330,0.0174],[2340,0.00379],[2350,0.0165],[2360,0.0205],[2370,0.00699],[2380,0.0138],[2390,0.00457],[2400,0.0102],[2410,0.0144],[2420,0.0125],[2430,0.00356],[2440,0.0135],[2450,0.00174],[2460,0.000931],[2470,0.00469],[2480,0.00825],[2490,0.00487],[2500,0.0103],[2510,0.0137],[2520,0.00482],[2530,0.0195],[2540,0.0448],[2550,0.0135],[2560,0.00773],[2570,0.00361],[2580,0.0114],[2590,0.0237],[2600,0.00871],[2610,0.02],[2620,0.0153],[2630,0.00589],[2640,0.0153],[2650,0.0201],[2660,0.0102],[2670,0.0136],[2680,0.0147],[2690,0.00713],[2700,0.00702],[2710,0.00941],[2720,0.0123],[2730,0.0123],[2740,0.00519],[2750,0.00787],[2760,0.0127],[2770,0.0182],[2780,0.0128],[2790,0.00577],[2800,0.00861],[2810,0.00593],[2820,0.00789],[2830,0.00349],[2840,0.00377],[2850,0.0143],[2860,0.00647],[2870,0.0196],[2880,0.0324],[2890,0.0149],[2900,0.00167],[2910,0.0118],[2920,0.00919],[2930,0.00701],[2940,0.00291],[2950,0.00439],[2960,0.00958],[2970,0.00502],[2980,0.00501],[2990,0.00916],[3000,0.00687]],"floorPlain":0.0005551,"floorHead":0.01316,"hitPlain":4142,"hitHead":74};
+const MEAS={"0":{"iters":18224,"keff":1711.66,"rate":0.998832},"1":{"iters":4559,"keff":428.165,"rate":0.99534},"2":{"iters":2028,"keff":190.481,"rate":0.989555},"4":{"iters":733,"keff":68.7872,"rate":0.971341},"8":{"iters":229,"keff":21.4638,"rate":0.910968},"16":{"iters":67,"keff":6.26624,"rate":0.724755}};
+/*__END_EIGDATA__*/
+</script>
+<script>
+(function(){
+"use strict";
+var SVGNS = "http://www.w3.org/2000/svg";
+function el(parent, tag, attrs, text){
+  var e = document.createElementNS(SVGNS, tag), k;
+  for (k in attrs) e.setAttribute(k, attrs[k]);
+  if (text !== undefined) e.textContent = text;
+  parent.appendChild(e);
+  return e;
+}
+var SANS = "ui-sans-serif,system-ui,sans-serif";
+function txt(parent, x, y, s, opts){
+  var a = {x: x, y: y, "font-family": SANS, "font-size": (opts && opts.fs) || 12,
+           fill: (opts && opts.fill) || "#5A6773"};
+  if (opts && opts.anchor) a["text-anchor"] = opts.anchor;
+  if (opts && opts.w) a["font-weight"] = opts.w;
+  if (opts && opts.halo){ a.stroke = "#fff"; a["stroke-width"] = 3.2;
+    a["paint-order"] = "stroke"; a["stroke-linejoin"] = "round"; }
+  return el(parent, "text", a, s);
+}
+
+/* ================= figure: per-mode GD decay ================= */
+(function(){
+  var svg = document.getElementById("gd-svg");
+  var X0 = 70, X1 = 730, Y0 = 34, Y1 = 372;      /* log10|c| from 0 to -18 */
+  function px(m){ return X0 + (X1 - X0) * m / 400; }
+  function py(v){ var l = Math.log10(Math.max(v, 1e-19)); return Y0 + (Y1 - Y0) * (-l) / 18; }
+  var sup = {3: "³", 6: "⁶", 9: "⁹", 12: "¹²", 15: "¹⁵", 18: "¹⁸"};
+  var dec, m;
+  for (dec = 0; dec <= 18; dec += 3){
+    var y = Y0 + (Y1 - Y0) * dec / 18;
+    el(svg, "line", {x1: X0, y1: y, x2: X1, y2: y, stroke: "#EDF0F3", "stroke-width": 1});
+    txt(svg, X0 - 8, y + 4, dec === 0 ? "1" : "10⁻" + sup[dec], {anchor: "end"});
+  }
+  for (m = 0; m <= 400; m += 100){
+    el(svg, "line", {x1: px(m), y1: Y1, x2: px(m), y2: Y1 + 5, stroke: "#5A6773"});
+    txt(svg, px(m), Y1 + 20, String(m), {anchor: "middle"});
+  }
+  txt(svg, (X0 + X1) / 2, Y1 + 40, "iteration m", {anchor: "middle", fs: 12.5});
+  el(svg, "line", {x1: X0, y1: Y1, x2: X1, y2: Y1, stroke: "#5A6773", "stroke-width": 1});
+  el(svg, "line", {x1: X0, y1: Y0, x2: X0, y2: Y1, stroke: "#5A6773", "stroke-width": 1});
+  /* machine floor */
+  var yfl = py(1e-16);
+  el(svg, "line", {x1: X0, y1: yfl, x2: X1, y2: yfl, stroke: "#5A6773",
+                   "stroke-width": 1, "stroke-dasharray": "3 5", opacity: 0.7});
+  txt(svg, X1 - 4, yfl - 6, "double-precision floor ≈10⁻¹⁶",
+      {anchor: "end", halo: true});
+  var conf = [
+    {k: "1",  color: "#1F4E79", dash: null,  label: "k = 1 (smooth, slowest)"},
+    {k: "64", color: "#B5443C", dash: "9 6", label: "k = 64 (rough, equally slow)"},
+    {k: "8",  color: "#C9A227", dash: null,  label: "k = 8"},
+    {k: "33", color: "#5A6773", dash: null,  label: "k = 33 (fastest pair)"}
+  ];
+  var ci, pts, s, mm, v;
+  for (ci = 0; ci < conf.length; ci++){
+    var c = conf[ci], d = GD[c.k];
+    pts = [];
+    for (mm = 0; mm <= 400; mm += 2){
+      v = Math.pow(d.f, mm);
+      if (v < 1e-19) break;
+      pts.push(px(mm).toFixed(1) + "," + py(v).toFixed(1));
+    }
+    var at = {fill: "none", stroke: c.color, "stroke-width": ci < 2 ? 2.4 : 1.8,
+              points: pts.join(" "), opacity: ci === 1 ? 0.9 : 1};
+    if (c.dash) at["stroke-dasharray"] = c.dash;
+    el(svg, "polyline", at);
+    for (s = 0; s < d.pts.length; s++){
+      el(svg, "circle", {cx: px(d.pts[s][0]).toFixed(1), cy: py(d.pts[s][1]).toFixed(1),
+                         r: 2.6, fill: c.color, stroke: "#fff", "stroke-width": 0.7});
+    }
+  }
+  /* legend in the empty bottom-left region */
+  var lx = X0 + 24, ly = Y0 + 214, li;
+  for (li = 0; li < conf.length; li++){
+    var a2 = {x1: lx, y1: ly + li * 19, x2: lx + 26, y2: ly + li * 19,
+              stroke: conf[li].color, "stroke-width": 2.4};
+    if (conf[li].dash) a2["stroke-dasharray"] = conf[li].dash;
+    el(svg, "line", a2);
+    txt(svg, lx + 34, ly + li * 19 + 4, conf[li].label, {fill: "#1B2733", halo: true});
+  }
+  txt(svg, 400, Y0 + 24, "|cₖ(m)|  measured (dots) vs (1−αλₖ)ᵐ (lines)",
+      {fill: "#1B2733", w: 600, halo: true, anchor: "middle"});
+})();
+
+/* ================= figure: SGD caricature ================= */
+(function(){
+  var svg = document.getElementById("sgd-svg");
+  var X0 = 70, X1 = 730, Y0 = 30, Y1 = 340;      /* y: log10 rel 0..-4 ; x: log10(m+1) 0..log10(12001) */
+  var LX = Math.log10(12001);
+  function px(m){ return X0 + (X1 - X0) * Math.log10(m + 1) / LX; }
+  function py(v){ var l = Math.log10(Math.max(v, 2e-5)); return Y0 + (Y1 - Y0) * (-l) / 4; }
+  var dec, i;
+  for (dec = 0; dec <= 4; dec++){
+    var y = Y0 + (Y1 - Y0) * dec / 4;
+    el(svg, "line", {x1: X0, y1: y, x2: X1, y2: y, stroke: "#EDF0F3"});
+    var sup = ["1", "10⁻¹", "10⁻²", "10⁻³", "10⁻⁴"];
+    txt(svg, X0 - 8, y + 4, sup[dec], {anchor: "end"});
+  }
+  var ticks = [0, 10, 100, 1000, 10000];
+  for (i = 0; i < ticks.length; i++){
+    el(svg, "line", {x1: px(ticks[i]), y1: Y1, x2: px(ticks[i]), y2: Y1 + 5, stroke: "#5A6773"});
+    txt(svg, px(ticks[i]), Y1 + 20, ticks[i] === 0 ? "0" : String(ticks[i]), {anchor: "middle"});
+  }
+  txt(svg, (X0 + X1) / 2, Y1 + 40, "iteration m (log scale)", {anchor: "middle", fs: 12.5});
+  el(svg, "line", {x1: X0, y1: Y1, x2: X1, y2: Y1, stroke: "#5A6773"});
+  el(svg, "line", {x1: X0, y1: Y0, x2: X0, y2: Y1, stroke: "#5A6773"});
+  /* floors */
+  el(svg, "line", {x1: X0, y1: py(SGD.floorPlain), x2: X1, y2: py(SGD.floorPlain),
+    stroke: "#1F4E79", "stroke-dasharray": "3 5", opacity: 0.75});
+  txt(svg, X1 - 4, py(SGD.floorPlain) + 15, "plain noise floor 5.6×10⁻⁴",
+      {anchor: "end", fill: "#1F4E79", halo: true});
+  el(svg, "line", {x1: X0, y1: py(SGD.floorHead), x2: X1, y2: py(SGD.floorHead),
+    stroke: "#B5443C", "stroke-dasharray": "3 5", opacity: 0.75});
+  txt(svg, X0 + 6, py(SGD.floorHead) + 16, "head-solved floor 1.3×10⁻² (23.7× higher)",
+      {fill: "#B5443C", halo: true});
+  function line(data, color, wdt){
+    var pts = [], j;
+    for (j = 0; j < data.length; j++)
+      pts.push(px(data[j][0]).toFixed(1) + "," + py(data[j][1]).toFixed(1));
+    el(svg, "polyline", {fill: "none", stroke: color, "stroke-width": wdt,
+                         points: pts.join(" "), opacity: 0.9});
+  }
+  line(SGD.plain, "#1F4E79", 1.8);
+  line(SGD.head, "#B5443C", 1.4);
+  /* hit markers */
+  el(svg, "circle", {cx: px(SGD.hitPlain), cy: py(2 * SGD.floorPlain), r: 4.5,
+                     fill: "#C9A227", stroke: "#fff", "stroke-width": 1});
+  txt(svg, px(SGD.hitPlain), py(2 * SGD.floorPlain) - 12,
+      "2× floor at m = 4142", {anchor: "middle", fill: "#A88A1F", w: 600, halo: true});
+  el(svg, "circle", {cx: px(SGD.hitHead), cy: py(2 * SGD.floorHead), r: 4.5,
+                     fill: "#C9A227", stroke: "#fff", "stroke-width": 1});
+  txt(svg, px(SGD.hitHead) + 8, py(2 * SGD.floorHead) - 10,
+      "m = 74", {fill: "#A88A1F", w: 600, halo: true});
+  txt(svg, px(300), py(0.12), "plain SGD, step α", {fill: "#1F4E79", w: 600, halo: true});
+  txt(svg, px(6), py(0.5) - 2, "p = 4 head solved exactly", {fill: "#B5443C", w: 600, halo: true});
+})();
+
+/* ================= widget: deflation slider ================= */
+(function(){
+  var N = 64, NP1 = 130;                          /* 2(n+1) */
+  function lam(k){ var s = Math.sin(k * Math.PI / NP1); return 4 * s * s * 65 * 65; }
+  var LAMN = lam(64), C0 = Math.SQRT2 / 8;
+  var spec = document.getElementById("d-spec");
+  var curve = document.getElementById("d-curve");
+  var slider = document.getElementById("d-p");
+  var outP = document.getElementById("d-pval");
+  var outK = document.getElementById("d-keff");
+  var outR = document.getElementById("d-rate");
+  var outPred = document.getElementById("d-pred");
+  var outMeas = document.getElementById("d-meas");
+
+  /* --- static parts of the spectrum strip --- */
+  var SX0 = 60, SX1 = 730, SY = 74;
+  function sx(v){ return SX0 + (SX1 - SX0) * v / 2.1; }
+  var g;
+  el(spec, "line", {x1: SX0, y1: SY, x2: SX1, y2: SY, stroke: "#5A6773"});
+  for (g = 0; g <= 2; g += 0.5){
+    el(spec, "line", {x1: sx(g), y1: SY, x2: sx(g), y2: SY + 5, stroke: "#5A6773"});
+    if (g !== 1) txt(spec, sx(g), SY + 19, g.toFixed(1), {anchor: "middle"});
+  }
+  el(spec, "line", {x1: sx(1), y1: 18, x2: sx(1), y2: SY, stroke: "#C9A227",
+                    "stroke-width": 1, "stroke-dasharray": "3 4", opacity: 0.8});
+  txt(spec, sx(1) + 6, 26, "1", {fill: "#A88A1F", w: 600});
+  txt(spec, 12, 20, "eigenvalues of Mₚ⁻¹A", {fill: "#1B2733", w: 600});
+  var dotsG = el(spec, "g", {});
+  var headLab = txt(spec, sx(1), 110, "", {anchor: "middle", fill: "#A88A1F", w: 600});
+
+  /* --- static parts of the curve pane --- */
+  var CX0 = 60, CX1 = 730, CY0 = 24, CY1 = 268;   /* log10 rel 0..-10, x log10 m 0..log10(20000) */
+  var CLX = Math.log10(20000);
+  function cx(m){ return CX0 + (CX1 - CX0) * Math.log10(Math.max(m, 1)) / CLX; }
+  function cy(rel){ var l = Math.log10(Math.max(rel, 1e-11)); return CY0 + (CY1 - CY0) * (-l) / 10; }
+  var supC = {2: "²", 4: "⁴", 6: "⁶", 8: "⁸", 10: "¹⁰"};
+  var d2;
+  for (d2 = 0; d2 <= 10; d2 += 2){
+    var yy = CY0 + (CY1 - CY0) * d2 / 10;
+    el(curve, "line", {x1: CX0, y1: yy, x2: CX1, y2: yy, stroke: "#EDF0F3"});
+    txt(curve, CX0 - 8, yy + 4, d2 === 0 ? "1" : "10⁻" + supC[d2], {anchor: "end"});
+  }
+  var xt = [1, 10, 100, 1000, 10000];
+  for (d2 = 0; d2 < xt.length; d2++){
+    el(curve, "line", {x1: cx(xt[d2]), y1: CY1, x2: cx(xt[d2]), y2: CY1 + 5, stroke: "#5A6773"});
+    txt(curve, cx(xt[d2]), CY1 + 19, String(xt[d2]), {anchor: "middle"});
+  }
+  txt(curve, (CX0 + CX1) / 2, CY1 + 38, "iteration m (log scale)", {anchor: "middle", fs: 12.5});
+  el(curve, "line", {x1: CX0, y1: CY1, x2: CX1, y2: CY1, stroke: "#5A6773"});
+  el(curve, "line", {x1: CX0, y1: CY0, x2: CX0, y2: CY1, stroke: "#5A6773"});
+  el(curve, "line", {x1: CX0, y1: cy(1e-10), x2: CX1, y2: cy(1e-10),
+                     stroke: "#C9A227", "stroke-dasharray": "4 5", opacity: 0.8});
+  txt(curve, CX0 + 6, cy(1e-10) - 6, "10⁻¹⁰ stopping gate", {fill: "#A88A1F", halo: true});
+  txt(curve, 12, 16, "predicted error (√2/8)ρₚᵐ — gold diamonds: measured runs",
+      {fill: "#1B2733", w: 600});
+  /* measured endpoints, all six */
+  var mp, diamonds = {};
+  for (mp in MEAS){
+    var it = MEAS[mp].iters, xx = cx(it), yv = cy(1e-10);
+    diamonds[mp] = el(curve, "path", {
+      d: "M" + xx + "," + (yv - 6) + " L" + (xx + 6) + "," + yv + " L" + xx + "," + (yv + 6) +
+         " L" + (xx - 6) + "," + yv + " Z",
+      fill: "#C9A227", stroke: "#fff", "stroke-width": 1, opacity: 0.55});
+  }
+  var curveG = el(curve, "g", {});
+
+  function fmt(v, d){ return v.toFixed(d); }
+  function draw(){
+    var p = parseInt(slider.value, 10);
+    var lp1 = lam(p + 1), ap = 2 / (lp1 + LAMN);
+    var keff = LAMN / lp1, rho = (keff - 1) / (keff + 1);
+    var k, j;
+    /* strip */
+    while (dotsG.firstChild) dotsG.removeChild(dotsG.firstChild);
+    for (k = p + 1; k <= N; k++){
+      el(dotsG, "circle", {cx: sx(ap * lam(k)).toFixed(1),
+        cy: (SY - 10 - (k % 6) * 8).toFixed(1), r: 3.2, fill: "#1F4E79", opacity: 0.7});
+    }
+    for (j = 0; j < p; j++){
+      el(dotsG, "circle", {cx: (sx(1) + (j % 8 - 3.5) * 9).toFixed(1),
+        cy: (96 + Math.floor(j / 8) * 10).toFixed(1), r: 3.4,
+        fill: "#C9A227", stroke: "#fff", "stroke-width": 0.8});
+    }
+    headLab.textContent = p === 0 ? "p = 0: no directions bought" :
+      p + " direction" + (p > 1 ? "s" : "") + " bought — pinned at exactly 1";
+    headLab.setAttribute("y", p > 8 ? 124 : 118);
+    /* curve */
+    while (curveG.firstChild) curveG.removeChild(curveG.firstChild);
+    var pts = [], mLog, m2, rel;
+    for (mLog = 0; mLog <= CLX + 0.001; mLog += CLX / 240){
+      m2 = Math.pow(10, mLog);
+      rel = C0 * Math.pow(rho, m2);
+      if (rel < 3e-11) { pts.push(cx(m2).toFixed(1) + "," + cy(3e-11).toFixed(1)); break; }
+      pts.push(cx(m2).toFixed(1) + "," + cy(rel).toFixed(1));
+    }
+    el(curveG, "polyline", {fill: "none", stroke: "#1F4E79", "stroke-width": 2.2,
+                            points: pts.join(" ")});
+    var pred = Math.ceil((Math.log(1e-10) - Math.log(C0)) / Math.log(rho));
+    el(curveG, "circle", {cx: cx(pred).toFixed(1), cy: cy(1e-10).toFixed(1), r: 5,
+                          fill: "none", stroke: "#1F4E79", "stroke-width": 1.8});
+    for (var q in diamonds)
+      diamonds[q].setAttribute("opacity", q === String(p) ? 1 : 0.45);
+    /* readouts */
+    outP.textContent = String(p);
+    outK.textContent = fmt(keff, 2);
+    outR.textContent = fmt(rho, 6);
+    outPred.textContent = String(pred);
+    outMeas.textContent = MEAS[p] ? MEAS[p].iters + " (measured run)" : "— (not in the measured set)";
+  }
+  slider.addEventListener("input", draw);
+  draw();
+})();
+})();
+</script>
+</body>
+</html>
