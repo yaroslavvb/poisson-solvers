@@ -88,7 +88,7 @@ figure.wfig figcaption{text-align:center}
 .lab svg text{font-family:ui-sans-serif,system-ui,sans-serif}
 /* bilinearity widget */
 .bilin{background:var(--card);border:1px solid #E2E6EA;border-radius:10px;padding:18px 20px;margin:1.4em 0}
-.bilin .eq{font-size:18.5px;text-align:center;line-height:2.2;margin:.4em 0 .2em}
+.bilin .eq{font-size:18.5px;text-align:center;line-height:1.9;margin:.4em 0 .2em}
 .bilin .term{padding:2px 4px;border-radius:5px;border-bottom:2.5px solid transparent;cursor:pointer;
   transition:background .25s;white-space:nowrap}
 .bilin .term.t1{border-bottom-color:var(--gold)} .bilin .term.t2{border-bottom-color:var(--phy)}
@@ -194,7 +194,7 @@ to the last digit.</p>
 </div>
 <figcaption><b>The continuous tent</b> $G(x,y)=\min(x,y)-xy$ (blue) for a unit source at $y$; the peak
 traces the gold parabola $x(1-x)$. Readouts show the flank slopes $1-y$ and $-y$ — the flux split: of the
-one unit injected, $1-y$ exits the near wall, $y$ the far wall — and the peak $y(1-y)$. The
+one unit injected, $1-y$ exits the left wall, $y$ the right — and the peak $y(1-y)$. The
 <i>discretize</i> buttons overlay gold dots: columns of $\Sigma/h=A^{-1}/h$, computed live by a tridiagonal
 solve of $Au=e_j/h$, <i>not</i> from the formula. They land on the tent to machine precision (verified:
 max gap $5.6\times10^{-17}$ at $n=5$, $7.2\times10^{-16}$ at $n=31$) — nodal exactness, explained by the
@@ -339,8 +339,8 @@ is exact — every row below is a machine-checked identity, not an analogy.</p>
     <p>A wire of resistance 1 Ω per unit length, <b>both ends grounded</b>. Inject <b>one ampere</b> at $y$:
     the voltage profile is the tent, and the peak is the <b>effective resistance to ground</b>,
     $R_{\rm eff}(y)=y\parallel(1-y)=y(1-y)$ — two resistors in parallel.</p>
-    <p>The <b>current divider</b>: $1-y$ of the ampere exits the <i>near</i> wall, $y$ the far wall — the
-    closer ground takes the larger share. Verified for all 31 source positions; see
+    <p>The <b>current divider</b>: $1-y$ of the ampere exits the <i>left</i> wall, $y$ the right — the
+    wall at distance $d$ takes share $1-d$, so the closer ground takes the larger share. Verified for all 31 source positions; see
     <span class="kbd">mathematica/electrical_networks.wls</span> and the free-vs-grounded row-sum story:
     grounding deletes two rows of the free path Laplacian, and the surviving end rows have row sum 1 —
     those are the wires to ground.</p></div>
@@ -349,7 +349,7 @@ is exact — every row below is a machine-checked identity, not an analogy.</p>
     tent, the flanks carry constant flux $1-y$ (left) and $y$ (right), and the <b>kink jumps by exactly
     $-1$ — the injected watt</b>, read off pointwise from $-u''=\delta$.</p>
     <p>At $y=0.3125$: slopes $0.6875$ / $-0.3125$, peak $0.2148$, wall exits $0.6875+0.3125=1$ W. All
-    fourteen thermal facts (superposition included: a $+2$ W and a $-1.5$ W source stack linearly) are
+    fourteen tent facts (superposition included: a $+2$ W and a $-1.5$ W source stack linearly) are
     the <span class="kbd">green_tents_checks.py</span> suite — 14/14 PASS.</p></div>
   <div class="thread prb"><h3>🌉 Mechanical</h3>
     <p>A <b>taut string</b> at unit tension, ends pinned. Apply a transverse <b>unit point load</b> at $y$:
@@ -428,7 +428,7 @@ preconditioned spectrum is a cluster at $1$ plus exactly $2(p-1)$ outliers. Choo
 <figcaption><b>Top strip:</b> eigenvalues of $M^{-1}A$ — a cluster at $1$ (multiplicity $64-2(p-1)$) plus
 exactly $2(p-1)$ red outliers, the interface directions the surrogate refused to model.
 <b>Race:</b> relative error $\|x_k-x_\star\|/\|x_\star\|$, log scale, same preconditioner and same seeded
-right-hand side ($\texttt{RandomState(0).randn(64)}$) for all three solvers. CG plunges to machine precision
+right-hand side ($\texttt{RandomState(0).randn(64)}$) for all three solvers. CG plunges $\sim$10 orders of magnitude
 at iteration $2(p-1)+1$ — it pays one iteration per outlier plus one for the cluster and ignores
 $\kappa$. Steepest descent, rate-limited by $(\kappa-1)/(\kappa+1)$, is still grinding after 400. Plain
 (unpreconditioned) CG needs all $64$. Curves are precomputed by the checks script and embedded —
@@ -800,7 +800,7 @@ function tentColumn(n,j){
     s+=line(d.sd,"#B5443C",2);
     s+=line(d.cg,"#1F4E79",2.6);
     // legend
-    var lx=Xr(xmax*0.55),ly=Yr(1e-1);
+    var lx=Xr(xmax*0.58),ly=Yr(3e-9);
     s+='<line x1="'+lx+'" y1="'+ly+'" x2="'+(lx+26)+'" y2="'+ly+'" stroke="#1F4E79" stroke-width="2.6"/><text x="'+(lx+32)+'" y="'+(ly+4)+'" font-size="12" fill="#1B2733">preconditioned CG</text>';
     s+='<line x1="'+lx+'" y1="'+(ly+20)+'" x2="'+(lx+26)+'" y2="'+(ly+20)+'" stroke="#B5443C" stroke-width="2"/><text x="'+(lx+32)+'" y="'+(ly+24)+'" font-size="12" fill="#1B2733">preconditioned steepest descent</text>';
     s+='<line x1="'+lx+'" y1="'+(ly+40)+'" x2="'+(lx+26)+'" y2="'+(ly+40)+'" stroke="#5A6773" stroke-width="1.5" stroke-dasharray="5 4"/><text x="'+(lx+32)+'" y="'+(ly+44)+'" font-size="12" fill="#1B2733">plain CG (M = I)</text>';
