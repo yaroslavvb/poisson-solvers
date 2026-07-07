@@ -48,6 +48,14 @@ Canonical problem, from [results/results.json](results/results.json):
 
 Variable-coefficient problem (contrast 100): CG 771 iterations → Jacobi-CG **137** (5.6×).
 
+## Tutorials
+
+Standalone visual explainers — long-form, figure-first, each backed by its own machine-check script (every displayed number verified):
+
+- **[One Matrix, Two Worlds](https://yaroslavvb.github.io/poisson-solvers/reports/bridge_explainer.html)** — the Brownian-bridge covariance behind the Poisson chain: the $n=5$ inverse entry-for-entry in exact fractions, the physics/probability double reading, and what the identity buys ([checks](python/experiments/bridge_explainer_checks.py): 27 PASS).
+- **[The Green Tent](https://yaroslavvb.github.io/poisson-solvers/reports/green_tents_explainer.html)** — one watt, two walls, one kink: Green's functions of the pinned chain — tent anatomy (flux split, kink = the injected watt, peak = thermal resistance), the free-vs-grounded Laplacian resolution, three-thread history (Green 1828 → influence lines → propagators), solving by stacking scaled tents, plus an interactive move-the-source slider ([checks](python/experiments/green_tents_checks.py): 14 PASS).
+- **[Which Directions to Leave Wrong](https://yaroslavvb.github.io/poisson-solvers/reports/eigenmodes_explainer.html)** — the eigenmode ledger of the chain: what eigenvalues mean (stiffness = decay rate = inverse variance = GD's per-mode contraction), rotating into the eigenbasis, partial spectral projection / deflation with an interactive slider ($\kappa_{\mathrm{eff}} = \lambda_n/\lambda_{p+1}$), an honest SGD caricature, and the ledger comparing deflation, Nyström, coarse averages, domain decomposition, and IC(0) by how many — and *which* — directions each leaves wrong ([checks](python/experiments/eigenmodes_checks.py): 32 PASS).
+
 ## Reports
 
 Start with [reports/00-overview.md](reports/00-overview.md) (full repo map, run instructions, annotated reading order), then:
