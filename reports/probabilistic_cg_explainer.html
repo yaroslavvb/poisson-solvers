@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Solver That Knows What It Doesn't Know — conjugate gradients as Gaussian inference</title>
+<script>
+window.MathJax = {tex:{inlineMath:[['$','$']]}, chtml:{scale:0.96}};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+<style>
+:root{
+  --paper:#F2F4F6; --ink:#1B2733; --phy:#1F4E79; --prb:#B5443C;
+  --gold:#C9A227; --graphite:#5A6773; --card:#FFFFFF;
+}
+*{box-sizing:border-box}
+html{background:var(--paper)}
+body{margin:0;color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,"URW Palladio L",Georgia,serif;
+  font-size:17px;line-height:1.62;-webkit-font-smoothing:antialiased}
+main{max-width:1000px;margin:0 auto;padding:0 20px 90px}
+.prose{max-width:700px;margin:0 auto}
+h1{font-size:clamp(30px,5vw,46px);line-height:1.12;font-weight:600;letter-spacing:-0.01em;margin:.2em 0 .25em}
+h2{font-size:24px;font-weight:600;margin:2.6em 0 .5em;letter-spacing:-0.005em}
+.eyebrow{font-size:12px;letter-spacing:.22em;text-transform:uppercase;
+  font-family:ui-sans-serif,system-ui,sans-serif;font-weight:600;margin:3.4em 0 -0.2em}
+.eyebrow.phy{color:var(--phy)} .eyebrow.prb{color:var(--prb)} .eyebrow.syn{color:var(--gold)}
+.eyebrow.ink{color:var(--graphite)}
+p{margin:.85em 0}
+figure{margin:2em auto;max-width:1000px;text-align:center}
+figure img{width:100%;height:auto;border:1px solid #E2E6EA;border-radius:6px;background:#fff}
+figcaption{font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;color:var(--graphite);
+  max-width:760px;margin:.6em auto 0;line-height:1.5;text-align:left}
+.hero{padding:76px 0 8px;text-align:center}
+.hero .sub{color:var(--graphite);font-size:18px;max-width:640px;margin:0 auto}
+.identity{display:flex;align-items:stretch;max-width:860px;margin:38px auto 8px;
+  border:1px solid #DDE3E8;border-radius:10px;overflow:hidden;background:var(--card)}
+.identity>div{flex:1;padding:22px 10px 18px;text-align:center}
+.identity .left{background:linear-gradient(90deg,rgba(31,78,121,.10),rgba(31,78,121,.02))}
+.identity .right{background:linear-gradient(90deg,rgba(181,68,60,.02),rgba(181,68,60,.10))}
+.identity .lab{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;
+  letter-spacing:.16em;text-transform:uppercase;font-weight:600;margin-bottom:8px}
+.identity .left .lab{color:var(--phy)} .identity .right .lab{color:var(--prb)}
+.identity .formula{font-size:22px}
+.timeline{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;max-width:1000px;margin:1.6em auto}
+.timeline.four{grid-template-columns:repeat(4,1fr)}
+.thread{background:var(--card);border:1px solid #E2E6EA;border-radius:8px;padding:18px 18px 8px}
+.thread h3{margin:0 0 4px;font-size:15px;font-family:ui-sans-serif,system-ui,sans-serif;
+  letter-spacing:.14em;text-transform:uppercase;font-weight:700}
+.thread.phy{border-top:3px solid var(--phy)} .thread.phy h3{color:var(--phy)}
+.thread.prb{border-top:3px solid var(--prb)} .thread.prb h3{color:var(--prb)}
+.thread.syn{border-top:3px solid var(--gold)} .thread.syn h3{color:var(--gold)}
+.thread.ink{border-top:3px solid var(--graphite)} .thread.ink h3{color:var(--graphite)}
+.thread p{font-size:14.5px;line-height:1.5;margin:.7em 0}
+.thread b{font-variant-numeric:tabular-nums}
+.note{background:var(--card);border-left:3px solid var(--gold);padding:12px 18px;border-radius:0 8px 8px 0;
+  font-size:15.5px;max-width:700px;margin:1.4em auto}
+.check{font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;color:var(--graphite);
+  border-top:1px solid #DDE3E8;margin-top:70px;padding-top:18px;max-width:700px;margin-left:auto;margin-right:auto}
+.kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em;
+  background:#EAEEF2;padding:1px 5px;border-radius:4px}
+.fig-svg{width:100%;height:auto;border:1px solid #E2E6EA;border-radius:6px;background:#fff}
+.widget{background:var(--card);border:1px solid #E2E6EA;border-radius:8px;padding:16px 16px 12px;
+  max-width:1000px;margin:1.6em auto}
+.widget .fig-svg{border:none}
+.widget .ctrl{display:flex;align-items:center;gap:14px;margin:8px 6px 2px;flex-wrap:wrap;
+  font-family:ui-sans-serif,system-ui,sans-serif;font-size:13.5px;color:var(--graphite)}
+.widget input[type=range]{flex:1;accent-color:var(--phy)}
+.readouts{display:flex;flex-wrap:wrap;gap:8px 26px;justify-content:center;margin-top:10px;
+  font-family:ui-sans-serif,system-ui,sans-serif;font-size:13.5px;color:var(--graphite)}
+.readouts b{font-variant-numeric:tabular-nums;color:var(--ink)}
+.readouts .phy b{color:var(--phy)} .readouts .gld b{color:#A88A1F} .readouts .prb b{color:var(--prb)}
+table.pins{border-collapse:collapse;margin:1.6em auto;font-size:15px;max-width:100%}
+table.pins th{font-family:ui-sans-serif,system-ui,sans-serif;font-size:11.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--graphite);font-weight:600}
+table.pins th,table.pins td{border:1px solid #E2E6EA;padding:7px 14px;text-align:left;background:var(--card)}
+table.pins td.r{text-align:right;font-variant-numeric:tabular-nums}
+table.pins tr.gold td{background:#FDF9EC}
+.tablewrap{overflow-x:auto;margin:0 -20px;padding:0 20px}
+.pull{max-width:720px;margin:2.2em auto;padding:18px 26px;text-align:center;
+  border-top:2px solid var(--gold);border-bottom:2px solid var(--gold);
+  font-size:21px;line-height:1.5;font-style:normal}
+.pull .src{display:block;margin-top:10px;font-family:ui-sans-serif,system-ui,sans-serif;
+  font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--graphite);font-style:normal}
+a{color:var(--phy)}
+.mcheck{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;color:var(--graphite);
+  background:var(--card);border:1px dashed #D3DAE0;border-radius:6px;padding:8px 14px;
+  max-width:700px;margin:1.2em auto;line-height:1.55}
+.mcheck b{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600}
+.wbtn{font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;padding:5px 14px;
+  border:1px solid #C7CED4;border-radius:6px;background:#fff;color:var(--ink);cursor:pointer}
+.wbtn:hover{background:#EAEEF2}
+.wbtn:disabled{opacity:.45;cursor:default}
+.widget select{font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;padding:4px 8px;
+  border:1px solid #C7CED4;border-radius:6px;background:#fff;color:var(--ink)}
+.badge{display:inline-block;font-family:ui-sans-serif,system-ui,sans-serif;font-size:11.5px;
+  font-weight:600;letter-spacing:.06em;padding:2px 10px;border-radius:10px;
+  background:#E9F2E9;color:#2F6B33;border:1px solid #C4DCC6;vertical-align:middle}
+.badge.fail{background:#F7E7E5;color:#9C3B33;border-color:#E3C0BB}
+@media(max-width:760px){.timeline,.timeline.four{grid-template-columns:1fr}.identity{flex-direction:column}}
+</style>
+</head>
+<body>
+<main>
+
+<div class="hero prose" style="max-width:880px">
+  <div class="eyebrow ink" style="margin-top:0">Shewchuk's 2&times;2 &nbsp;&middot;&nbsp; the n = 32 chain &nbsp;&middot;&nbsp; prior &Sigma;&#8320; = A&#8315;&sup1; &nbsp;&middot;&nbsp; 30 machine checks, all PASS</div>
+  <h1>The Solver That Knows What It Doesn't Know</h1>
+  <p class="sub">Stop a Krylov solver early and classical numerics hands you a point and an apology.
+  Run the <i>same arithmetic</i> as Gaussian inference and it hands you a distribution — the same
+  point as its mean, plus a covariance that says exactly where the unexplored part of the solution
+  still lives. This page derives conjugate gradients as greedy uncertainty reduction, and measures
+  every step of the derivation.</p>
+  <div class="identity">
+    <div class="left"><div class="lab">Numerics &middot; Shewchuk 1994</div>
+      <div class="formula">$x_n=\displaystyle\arg\min_{x\,\in\,\mathcal K_n(A,b)}\ \|x-x_\ast\|_A$</div></div>
+    <div class="right"><div class="lab">Statistics &middot; Hennig&ndash;Pfoertner&ndash;Weiland 2026</div>
+      <div class="formula">$\mu_n=\mathbb E\!\left[x\mid \bar b_1,\dots,\bar b_n\right]$</div></div>
+  </div>
+  <p class="sub" style="margin-top:14px;font-size:15.5px">Same numbers: on the 32-node chain the two columns agree
+  iterate-for-iterate to <b>2.1&times;10&#8315;&sup1;&#8308;</b>. But the right column also hands you $\Sigma_n$.</p>
+</div>
+
+<div class="prose">
+<div class="eyebrow prb">&sect;1 &middot; The reframe</div>
+<h2>Linear algebra is inference</h2>
+<p>The tutorial's opening move (Hennig, Pfoertner &amp; Weiland, <i>Probabilistic Numerics</i>,
+ICML Seoul 2026, pp.&nbsp;7&ndash;8) is to refuse the usual staging. Solving $Ax_\ast=b$ is not a
+mechanical act that either finishes or fails; it is <b>inference about an unknown quantity from data
+you choose to collect</b>. Put a Gaussian prior on the solution,</p>
+<p style="text-align:center">$p(x)=\mathcal N(x;\,\mu_0,\Sigma_0),\qquad \mu_0=0\ \text{w.l.o.g.},$</p>
+<p>and note what a solver actually gets to see. Never $x$. It picks an <i>action</i> $s_i\in\mathbb R^D$,
+multiplies once by $A$, and observes one projection of the right-hand side — a noiseless linear
+functional of the unknown:</p>
+<p style="text-align:center;overflow-x:auto">$p(\bar b_i\mid x,A,s_i)\;=\;\delta\!\left(s_i^\top b-s_i^\top\!A\,x\right)\;=\;\delta\!\left(\bar b_i-y_i^\top x\right),\qquad y_i:=A^\top\! s_i.$</p>
+<p>That is a regression observation with a delta likelihood — Bayes for Gaussians, in the noiseless
+limit. Condition on $D$ independent projections and the posterior collapses to
+$\delta(x-A^{-1}b)$: exact solving is the boring endpoint of inference. Everything interesting
+happens <i>before</i> the collapse, when the solver has spent $n&lt;D$ matrix&ndash;vector products
+and must say what it believes about the rest.</p>
+<div class="note">Nothing here is random. $x_\ast$ is a fixed vector; the distribution describes the
+<i>solver's ignorance</i> given a finite computation budget — epistemic uncertainty about a
+deterministic quantity. "Computation is inference" is the slides' slogan for exactly this.</div>
+</div>
+
+<div class="prose">
+<div class="eyebrow prb">&sect;2 &middot; The mechanism</div>
+<h2>Loading b one projection at a time</h2>
+<p>Because each observation is one linear functional, the posterior update is a rank-one
+surgery on the Gaussian (slides pp.&nbsp;9&ndash;12). With
+$v_i$ the "new direction learned" and $\xi_i$ "how much of $b$ was found along it":</p>
+<p style="text-align:center;overflow-x:auto">$v_i=\dfrac{\Sigma_{i-1}y_i}{\sqrt{y_i^\top\Sigma_{i-1}y_i}},\qquad
+\xi_i=\dfrac{\bar b_i-y_i^\top\mu_{i-1}}{\sqrt{y_i^\top\Sigma_{i-1}y_i}},\qquad
+\mu_i=\mu_{i-1}+\xi_i v_i,\qquad \Sigma_i=\Sigma_{i-1}-v_iv_i^\top.$</p>
+<p>Run the first step by hand on the arena this page borrows from Shewchuk —
+$A=\begin{pmatrix}3&amp;2\\2&amp;6\end{pmatrix}$, $b=(2,-8)$, $x_\ast=(2,-2)$, eigenvalues
+$\{2,7\}$ — with the prior $\Sigma_0=A^{-1}=\frac{1}{14}\begin{pmatrix}6&amp;-2\\-2&amp;3\end{pmatrix}$
+and the residual action $s_1=r_0=b=(2,-8)$. Everything stays rational:</p>
+<p style="text-align:center;overflow-x:auto">
+$y_1=As_1=(-10,-44),\quad \Sigma_0y_1=s_1=(2,-8),\quad y_1^\top\Sigma_0y_1=332,$<br>
+$\bar b_1=s_1^\top b=68,\quad
+\mu_1=\tfrac{68}{332}\,(2,-8)=\left(\tfrac{34}{83},\,-\tfrac{136}{83}\right),\quad
+\Sigma_1=\tfrac{1}{1162}\begin{pmatrix}484&amp;-110\\-110&amp;25\end{pmatrix}.$</p>
+<p>(With this prior, $\Sigma_0y_1=A^{-1}\!As_1$ is just $s_1$ again — file that away for &sect;4.)
+The update looks humble, but the slides' Proposition (pp.&nbsp;13&ndash;14) says it is secretly a
+classical algorithm: the $v_i$ come out <b>orthonormal in the Mahalanobis inner product</b>
+$\langle u,v\rangle_{\Sigma_0}=u^\top\Sigma_0^{-1}v$, so iterative conditioning <i>implements
+Gram&ndash;Schmidt</i> on the observed directions $\{y_i\}$ in $(\mathbb R^D,\langle\cdot,\cdot\rangle_{\Sigma_0})$, and the posterior is just the running tally in that frame:</p>
+<p style="text-align:center">$\Sigma_i=\Sigma_0-\textstyle\sum_{j\le i}v_jv_j^\top,\qquad
+\mu_i=\textstyle\sum_{j\le i}\xi_j v_j.$</p>
+<p>Stop after any $i$ and you hold a posterior <i>measure</i>, not a point. This is the same move
+<a href="09-stiffness-as-precision.html">report 09 &sect;5</a> made from the other shore — CG as
+sequential regression on precision-uncorrelated directions — now stated as a theorem about the
+conditioning process itself, before any policy is chosen.</p>
+</div>
+
+<div class="mcheck">machine check — 2&times;2 sequential $v_i/\xi_i$ == batch conditioning after 1 and 2 obs:
+<b>exact</b> in Fractions, both priors &middot; chain, 8 random actions: <b>2.2&times;10&#8315;&sup1;&#8310;</b> ($\Sigma_0{=}I$),
+<b>2.9&times;10&#8315;&sup1;&#8310;</b> ($\Sigma_0{=}A^{-1}$) &middot; Gram&ndash;Schmidt proposition, both arenas &times; both priors:
+orthonormality dev &le; <b>1.35&times;10&#8315;&sup1;&sup1;</b> (chain) / <b>5.1&times;10&#8315;&sup1;&#8309;</b> (2&times;2),
+$\Sigma$-decomposition &le; <b>5.7&times;10&#8315;&sup1;&#8310;</b>, $\mu$-decomposition &le; <b>2.2&times;10&#8315;&sup1;&#8310;</b></div>
+
+<div class="prose">
+<div class="eyebrow syn">&sect;3 &middot; The policy</div>
+<h2>Computation is active learning</h2>
+<p>The recursion accepts <i>any</i> actions. Choosing them is experimental design, and the slides
+name the design space's two ends — both of which this suite has already built, without knowing it
+was standing in the same room.</p>
+</div>
+
+<figure>
+<svg viewBox="0 0 960 190" xmlns="http://www.w3.org/2000/svg" class="fig-svg" role="img" aria-label="The policy design space: stability corner (Cholesky/LU) and information corner (CG)">
+<g font-family="ui-sans-serif,system-ui,sans-serif">
+<line x1="250" y1="66" x2="710" y2="66" stroke="#C7CED4" stroke-width="2"/>
+<polygon points="250,66 262,60 262,72" fill="#C7CED4"/>
+<polygon points="710,66 698,60 698,72" fill="#C7CED4"/>
+<text x="480" y="40" font-size="13.5" fill="#1B2733" text-anchor="middle" font-weight="700">the policy chooses the actions s&#8321;, s&#8322;, &#8230;</text>
+<text x="480" y="90" font-size="12" fill="#5A6773" text-anchor="middle">same conditioning rule at both ends &#8212; only the s&#7522; differ</text>
+<rect x="30" y="104" width="400" height="70" rx="8" fill="rgba(31,78,121,.06)" stroke="#1F4E79" stroke-width="1.2"/>
+<text x="230" y="127" font-size="13" fill="#1F4E79" text-anchor="middle" font-weight="700">corner case 1 &#183; stability</text>
+<text x="230" y="146" font-size="12" fill="#1B2733" text-anchor="middle">coordinate actions s&#8345; = e&#8345; &#8594; triangular structure</text>
+<text x="230" y="163" font-size="12" fill="#5A6773" text-anchor="middle">(incomplete) LU; for SPD A: Cholesky &#183; Hennig SIOPT 2015</text>
+<rect x="530" y="104" width="400" height="70" rx="8" fill="rgba(181,68,60,.06)" stroke="#B5443C" stroke-width="1.2"/>
+<text x="730" y="127" font-size="13" fill="#B5443C" text-anchor="middle" font-weight="700">corner case 2 &#183; greedy information</text>
+<text x="730" y="146" font-size="12" fill="#1B2733" text-anchor="middle">residual actions s&#8345; = r&#8345;&#8331;&#8321; &#8594; conjugate directions</text>
+<text x="730" y="163" font-size="12" fill="#5A6773" text-anchor="middle">SPD A + prior A&#8315;&#185;: conjugate gradients &#183; BayesCG 2019</text>
+<text x="230" y="60" font-size="11.5" fill="#1F4E79" text-anchor="middle" letter-spacing="2">CHOOSE FOR STABILITY</text>
+<text x="730" y="60" font-size="11.5" fill="#B5443C" text-anchor="middle" letter-spacing="2">CHOOSE FOR INFORMATION</text>
+</g>
+</svg>
+<figcaption><b>The design space, bracketed.</b> Both corners run the identical rank-one conditioning
+of &sect;2; the policy alone separates a factorization from an iterative method. The two corners are
+also the suite's two solver tutorials: corner 1 <i>is</i> the
+<a href="update_views_explainer.html">update-views explainer</a>'s Shawe&ndash;Taylor/Cholesky
+sections, corner 2 is this page.</figcaption>
+</figure>
+
+<div class="prose">
+<p><b>Corner case 1 — stability.</b> Feed the solver the coordinate actions $s_n=e_n$ in order,
+keep the prior $\Sigma_0=A^{-1}$, and the bookkeeping matrix $R_{ij}=v_i^\top y_j$ comes out
+<i>upper triangular</i> — measured deviation <b>7.9&times;10&#8315;&sup1;&#8309;</b> on the chain — with
+$R^\top R=A$ to <b>4.1&times;10&#8315;&sup1;&#8309;</b> and $R^\top=\mathrm{chol}(A)$ including signs.
+The frame matrix $V$ is upper triangular too (<b>1.3&times;10&#8315;&sup1;&#8310;</b>) with $VV^\top=A^{-1}$
+(<b>2.45&times;10&#8315;&sup1;&#8308;</b>): conditioning on coordinates <i>is</i> Cholesky, one pivot per
+observation [Hennig, SIOPT 2015]. The suite met this exact object as Shawe&ndash;Taylor's
+Algorithm 5.12 in the <a href="update_views_explainer.html">update-views explainer</a> (&sect;9&ndash;10),
+where partial Gram&ndash;Schmidt = incomplete Cholesky; here it returns as the <i>stable</i> corner of
+a probabilistic design space.</p>
+<p><b>Corner case 2 — greedy information.</b> Let the solver look at its own posterior and demand
+the observation that reduces residual error fastest: $s_n=r_{n-1}=b-A\mu_{n-1}$. For general $A$
+this yields conjugate-direction methods on the normal equations [Dennis&nbsp;Jr &amp; Turner 1987].
+For SPD $A$ with the prior $\Sigma_0=A^{-1}$ it yields — exactly, iterate for iterate — <b>conjugate
+gradients</b> [Cockayne, Oates, Ipsen &amp; Girolami 2019, BayesCG]. That is the headline, and the next
+section executes it.</p>
+</div>
+
+<div class="mcheck">machine check — corner case 1 on the chain: $R$ upper triangular <b>7.9&times;10&#8315;&sup1;&#8309;</b> &middot;
+$R^\top=\mathrm{chol}(A)$ signs included <b>7.9&times;10&#8315;&sup1;&#8309;</b> &middot; $R^\top R=A$ <b>4.1&times;10&#8315;&sup1;&#8309;</b> &middot;
+$V$ upper triangular <b>1.3&times;10&#8315;&sup1;&#8310;</b> &middot; $VV^\top=A^{-1}$ <b>2.45&times;10&#8315;&sup1;&#8308;</b></div>
+
+<div class="prose">
+<div class="eyebrow syn">&sect;4 &middot; The headline</div>
+<h2>Greedy actions + prior A&#8315;&sup1; = conjugate gradients, executed</h2>
+<p>Two arenas, one theorem. On the suite's Dirichlet chain — $A=\mathrm{tridiag}(-1,2,-1)/h^2$ at
+$n=32$, $h=\tfrac1{33}$, with the <a href="green_tents_explainer.html">green-tents</a> right-hand
+side (+2&thinsp;W heater at node 7, &minus;1.5&thinsp;W chiller at node 25, entries $f/h$, so
+$b_7=66$, $b_{25}=-49.5$) — we ran the house CG (<span class="kbd">python/pcg.py</span>, no
+preconditioner) and, separately, the &sect;2 conditioning loop with greedy actions and prior
+$A^{-1}$. The posterior means match the CG iterates for every $n=0\dots32$ to a relative
+<b>2.1&times;10&#8315;&sup1;&#8308;</b>, and the learned frame is the CG geometry itself:</p>
+<p style="text-align:center">$v_n=\dfrac{p_n}{\sqrt{p_n^\top A\,p_n}}$ — the $A$-normalized search
+directions, all $n$, to <b>5.1&times;10&#8315;&sup1;&#8309;</b>.</p>
+<p>And Shewchuk's central identity becomes a change of vocabulary, not of substance: the Gram matrix
+$p_i^\top A\,p_j$ (his conjugacy) and the Gram matrix $\langle v_i,v_j\rangle_{\Sigma_0}$ (the slides'
+Mahalanobis orthonormality) are <i>the same matrix</i>, entry for entry, to
+<b>2.9&times;10&#8315;&sup1;&#8308;</b> — because with $\Sigma_0=A^{-1}$ the Mahalanobis inner product
+<i>is</i> the $A$-inner product.</p>
+</div>
+
+<div class="tablewrap"><table class="pins">
+<tr><th>Shewchuk 1994 (deterministic)</th><th>slides pp. 9&ndash;16 (probabilistic)</th><th>measured agreement</th></tr>
+<tr><td>search direction $p_n$</td><td>frame vector $v_n$</td><td class="r">$v_n=p_n/\sqrt{p_n^\top Ap_n}$ &nbsp; 5.1&times;10<sup>&minus;15</sup></td></tr>
+<tr><td>conjugacy $p_i^\top A p_j=0$</td><td>orthonormality $\langle v_i,v_j\rangle_{\Sigma_0}=\delta_{ij}$</td><td class="r">same Gram matrix &nbsp; 2.9&times;10<sup>&minus;14</sup></td></tr>
+<tr><td>step $\alpha_n p_n$</td><td>update $\xi_n v_n$</td><td class="r">identical fractions on the 2&times;2 (below)</td></tr>
+<tr class="gold"><td>iterate $x_n$ = argmin over the Krylov space</td><td>posterior mean $\mu_n$ after $n$ chosen observations</td><td class="r">rel. dev 2.1&times;10<sup>&minus;14</sup>, $n=0\dots32$</td></tr>
+<tr><td>error bound machinery (his &sect;9)</td><td>posterior covariance $\Sigma_n$</td><td class="r">$\operatorname{tr}(A\Sigma_n)=32-n$ exactly (&sect;5)</td></tr>
+<tr><td>stop early: a point</td><td>stop early: $\mathcal N(\mu_n,\Sigma_n)$</td><td class="r">the whole point</td></tr>
+</table></div>
+
+<div class="prose">
+<p>On the 2&times;2 the entire double-run is exact rational arithmetic. CG's numbers
+(left) and the probabilistic solver's (right), same rows:</p>
+</div>
+
+<div class="tablewrap"><table class="pins">
+<tr><th>step</th><th>conjugate gradients (Fractions)</th><th>probabilistic solver (Fractions)</th></tr>
+<tr><td class="r">1</td>
+<td>$\alpha_1=\tfrac{17}{83}$, &nbsp; $x_1=\left(\tfrac{34}{83},-\tfrac{136}{83}\right)$, &nbsp; $r_1=\left(\tfrac{336}{83},\tfrac{84}{83}\right)$</td>
+<td>$\mu_1=\left(\tfrac{34}{83},-\tfrac{136}{83}\right)$, &nbsp; $\Sigma_1=\tfrac{1}{1162}\begin{pmatrix}484&amp;-110\\-110&amp;25\end{pmatrix}$, &nbsp; $\xi_1^2=\tfrac{1156}{83}$</td></tr>
+<tr><td class="r">2</td>
+<td>$\beta_2=\tfrac{1764}{6889}=\left(\tfrac{42}{83}\right)^2$, &nbsp; $p_2=\tfrac{1428}{6889}(22,-5)$, &nbsp; $\alpha_2=\tfrac{83}{238}$, &nbsp; $x_2=(2,-2)$</td>
+<td>$\mu_2=(2,-2)=x_\ast$, &nbsp; $\Sigma_2=0$, &nbsp; $\xi_2^2=\tfrac{504}{83}$</td></tr>
+</table></div>
+
+<div class="prose">
+<p>Both columns land on $x_\ast$ in exactly two steps, and $\Sigma_{n-1}y_n$ is parallel to $p_n$ at
+both steps — the conditioning rule <i>manufactures</i> Shewchuk's conjugate directions without ever
+being told about conjugacy. As a bonus, Parseval in the Mahalanobis frame:
+$\xi_1^2+\xi_2^2=\tfrac{1156}{83}+\tfrac{504}{83}=20=\|x_\ast\|_A^2$ — the energy of the solution
+is recovered coefficient by coefficient.</p>
+<p><b>Why $\Sigma_0=A^{-1}$ is not a trick.</b> Two independent justifications. Statistically, it is
+the unique prior on $x$ consistent with a Gaussian-process prior on the underlying regression
+function (slides pp.&nbsp;21&ndash;23; Hennig, SIOPT 2015), and it carries the signature
+property $S_n^\top A\mu_n=S_n^\top b$: explored directions are <i>residual-free</i> (slides
+p.&nbsp;24; Wenger et&nbsp;al., NeurIPS 2022), verified here to
+<b>3.6&times;10&#8315;&sup1;&sup3;</b> across all three policies of &sect;5. Physically, this suite has
+already measured what $A^{-1}$ <i>is</i>:</p>
+</div>
+
+<div class="note"><b>The thermal reading.</b> <a href="10-fluctuation-dissipation.html">Report 10</a>
+measured, by fluctuation&ndash;dissipation, that $A^{-1}$ is the <i>equilibrium covariance of the
+thermally jittering chain</i>: let the rod trade energy with a bath and its displacement field
+settles into the Gibbs distribution $\mathcal N(0,A^{-1})$. So the "uninformative" prior of BayesCG
+is, on this problem, the <b>physical equilibrium ensemble</b> — uncertainty about the not-yet-computed
+solution and thermal fluctuation of the field are the same covariance. Equipartition hands each of
+the 32 quadratic degrees of freedom one unit of $A$-weighted variance,
+$\operatorname{tr}(A\Sigma_0)=32$, and &sect;5 shows each observation freezes exactly one. A CG
+iteration, in this vocabulary, is a degree of freedom condensing out of the bath.</div>
+
+<div class="mcheck">machine check — HEADLINE: $\mu_n$ == pcg iterate, $n=0\dots32$: <b>2.1&times;10&#8315;&sup1;&#8308;</b> rel &middot;
+$v_n$ == $p_n/\sqrt{p_n^\top Ap_n}$: <b>5.1&times;10&#8315;&sup1;&#8309;</b> &middot; conjugacy == Mahalanobis, same Gram matrix:
+<b>2.9&times;10&#8315;&sup1;&#8308;</b> &middot; 2&times;2 double-run in exact Fractions: <b>PASS</b> (all fractions above) &middot;
+residual-free property $S_n^\top(A\mu_n-b)=0$: <b>3.6&times;10&#8315;&sup1;&sup3;</b></div>
+
+<div class="prose">
+<div class="eyebrow prb">&sect;5 &middot; The ledger</div>
+<h2>Uncertainty accounting: one unit per observation, any policy</h2>
+<p>Here is the part classical CG cannot say. Weight the posterior covariance by the operator itself
+and the bookkeeping becomes exact integer arithmetic: since each update subtracts $v_nv_n^\top$ with
+$v_n^\top Av_n=1$ (that is just the Mahalanobis normalization),</p>
+<p style="text-align:center">$\operatorname{tr}(A\Sigma_n)\;=\;32-n\qquad\text{exactly, for every policy.}$</p>
+<p>Measured: greedy to <b>1.6&times;10&#8315;&sup1;&sup3;</b>; greedy, coordinate and random
+simultaneously to <b>1.2&times;10&#8315;&sup1;&sup1;</b>. Every observation — clever or stupid — removes
+exactly one unit of $A$-weighted uncertainty. And the units mean something:
+$\mathbb E\,\|x-\mu_n\|_A^2=\operatorname{tr}(A\Sigma_n)$ over the prior, confirmed by Monte Carlo
+with $K=2000$ draws and fixed actions to <b>0.49%</b> relative:</p>
+</div>
+
+<div class="tablewrap"><table class="pins">
+<tr><th>k</th><th>MC mean of $\|x-\mu_k\|_A^2$ (2000 draws)</th><th>tr(A&Sigma;<sub>k</sub>) = 32 &minus; k</th></tr>
+<tr><td class="r">0</td><td class="r">31.84</td><td class="r">32</td></tr>
+<tr><td class="r">1</td><td class="r">30.88</td><td class="r">31</td></tr>
+<tr><td class="r">2</td><td class="r">29.91</td><td class="r">30</td></tr>
+<tr><td class="r">3</td><td class="r">28.95</td><td class="r">29</td></tr>
+<tr><td class="r">4</td><td class="r">27.96</td><td class="r">28</td></tr>
+<tr><td class="r">5</td><td class="r">26.99</td><td class="r">27</td></tr>
+</table></div>
+
+<div class="prose">
+<p>So if every policy spends the same budget, what separates them? <i>Where the budget lands.</i>
+The trace averages over all right-hand sides the prior can produce; a policy is good when it spends
+its 32 units in the directions <b>this particular</b> $b$ actually excites. Three policies, same
+prior, same conditioning rule:</p>
+</div>
+
+<figure class="widget">
+<svg id="race-svg" viewBox="0 0 760 400" xmlns="http://www.w3.org/2000/svg" class="fig-svg" role="img" aria-label="A-norm error versus step for greedy, coordinate and random policies; identical uncertainty budget"></svg>
+<figcaption><b>The policy race, from <span class="kbd">results/probabilistic_cg.json</span>.</b>
+$A$-norm error $\|x_\ast-\mu_k\|_A$ (log scale) for the three policies, against the prior-average
+band $\sqrt{\operatorname{tr}(A\Sigma_k)}=\sqrt{32-k}$ (dashed, starting at $\sqrt{32}=5.6569$
+just above $\|x_\ast\|_A=5.0513$). All three curves share that dashed
+budget <i>exactly</i>; the errors differ by <b>3.1&times;</b> (coordinate) and <b>3.5&times;</b>
+(random) at $k=8$, by <b>8.5&times;</b> and <b>13.3&times;</b> at $k=16$. Note the coordinate curve's
+flat start: $b$ is zero at nodes 1&ndash;6, so sweeping coordinates 1&ndash;6 teaches it <i>nothing
+about this right-hand side</i> — error frozen at 5.0513 while the budget ticks down six units — until
+the sweep hits the heater at node 7. At $k=32$ all three posteriors are points at $x_\ast$
+(final errors 8.6&times;10<sup>&minus;14</sup> / 1.3&times;10<sup>&minus;13</sup> /
+5.9&times;10<sup>&minus;12</sup>, drawn as arrows).</figcaption>
+</figure>
+
+<div class="tablewrap"><table class="pins">
+<tr><th>k</th><th>greedy $\|e\|_A$</th><th>coordinate</th><th>random</th><th>budget tr(A&Sigma;<sub>k</sub>)</th></tr>
+<tr><td class="r">0</td><td class="r">5.051</td><td class="r">5.051</td><td class="r">5.051</td><td class="r">32</td></tr>
+<tr><td class="r">4</td><td class="r">3.608</td><td class="r">5.051</td><td class="r">5.005</td><td class="r">28</td></tr>
+<tr><td class="r">8</td><td class="r">1.425</td><td class="r">4.392</td><td class="r">4.919</td><td class="r">24</td></tr>
+<tr class="gold"><td class="r">16</td><td class="r">0.3533</td><td class="r">3.007</td><td class="r">4.697</td><td class="r">16</td></tr>
+<tr><td class="r">24</td><td class="r">0.2386</td><td class="r">2.314</td><td class="r">4.659</td><td class="r">8</td></tr>
+<tr><td class="r">31</td><td class="r">0.02765</td><td class="r">0.7232</td><td class="r">2.046</td><td class="r">1</td></tr>
+<tr><td class="r">32</td><td class="r">8.6&times;10<sup>&minus;14</sup></td><td class="r">1.3&times;10<sup>&minus;13</sup></td><td class="r">5.9&times;10<sup>&minus;12</sup></td><td class="r">0</td></tr>
+</table></div>
+
+<div class="prose">
+<p>Watch it happen node by node. The widget below runs the &sect;2 conditioning loop <i>live in your
+browser</i> — dense 32&times;32 Gaussian conditioning, all three policies — and cross-checks itself
+against the JSON at load:</p>
+</div>
+
+<figure class="widget">
+<div class="ctrl">
+  <span>policy</span>
+  <select id="pw-pol" aria-label="policy">
+    <option value="greedy" selected>greedy &nbsp;s&#8345; = r&#8345;&#8331;&#8321; &nbsp;(= CG)</option>
+    <option value="coordinate">coordinate &nbsp;s&#8345; = e&#8345; &nbsp;(= Cholesky order)</option>
+    <option value="random">random &nbsp;(fixed Gaussian actions, seed 11)</option>
+  </select>
+  <button class="wbtn" id="pw-minus" aria-label="one observation back">&minus;1</button>
+  <input id="pw-k" type="range" min="0" max="32" step="1" value="0" aria-label="number of observations k">
+  <button class="wbtn" id="pw-plus" aria-label="one more observation">+1</button>
+  <span id="pw-badge" class="badge">self-test &hellip;</span>
+</div>
+<svg id="pw-svg" viewBox="0 0 760 430" xmlns="http://www.w3.org/2000/svg" class="fig-svg" role="img" aria-label="Posterior mean and 2-sigma credible band over the 32 chain nodes, shrinking as observations accrue"></svg>
+<div class="readouts">
+  <span>observations &nbsp;<b id="pw-kout">0</b> / 32</span>
+  <span class="phy">budget left &nbsp;tr(A&Sigma;<sub>k</sub>) = 32 &minus; k = <b id="pw-tr"></b> &nbsp;<span style="opacity:.8">(identical for all three policies)</span></span>
+  <span class="prb">actual error &nbsp;&Vert;x&#8727; &minus; &mu;<sub>k</sub>&Vert;<sub>A</sub> = <b id="pw-err"></b> &nbsp;<span style="opacity:.8">(wildly policy-dependent)</span></span>
+</div>
+<svg id="pw-meter" viewBox="0 0 760 34" xmlns="http://www.w3.org/2000/svg" class="fig-svg" style="margin-top:6px" role="img" aria-label="Uncertainty budget meter: one unit spent per observation"></svg>
+<figcaption><b>The juxtaposition is the lesson.</b> Gold curve: posterior mean $\mu_k$ over the 32
+nodes; graphite dashed: the true temperature profile $x_\ast$ (heater at node 7, chiller at node 25);
+red band: pointwise $\mu_k\pm2\sqrt{(\Sigma_k)_{jj}}$ credible band. The <b>budget readout ticks down
+identically</b> no matter which policy you pick — one unit per observation, machine-checked to
+1.2&times;10<sup>&minus;11</sup> — while the <b>error readout</b> depends entirely on <i>where</i> the
+policy points its actions. Greedy hugs $x_\ast$ by $k\approx12$; coordinate mops up left to right;
+random is still guessing at $k=24$. Everything drawn here is recomputed live and verified against
+the JSON (badge above).</figcaption>
+</figure>
+
+<div class="prose">
+<p><b>The honest footnote.</b> The dashed band is a <i>prior-average</i> statement, not a per-$b$
+guarantee: for this particular right-hand side the greedy error sits far <i>below</i>
+$\sqrt{32-k}$ once the policy locks onto the two sources, and no contradiction is involved — one
+draw need not equal the mean. Is the accounting honest as probability, though? Calibration
+spot-check: draw $x\sim\mathcal N(0,A^{-1})$ 200 times, condition every draw on the same 5 fixed
+actions, and test the truth against its own error bars. The Mahalanobis statistic
+$(x-\mu_5)^\top\Sigma_5^{+}(x-\mu_5)$ should be $\chi^2_{27}$ (rank of $\Sigma_5$ = 27, exactly):
+measured mean <b>26.82</b> vs 27, variance <b>53.42</b> vs 54, and <b>90.0%</b> of draws fall under
+the $\chi^2_{27}$ 90% quantile 36.74. The error bars mean what they claim.</p>
+</div>
+
+<div class="mcheck">machine check — $\operatorname{tr}(A\Sigma_n)=32-n$: greedy <b>1.6&times;10&#8315;&sup1;&sup3;</b>, all three policies <b>1.2&times;10&#8315;&sup1;&sup1;</b> &middot;
+$\mathbb E\|x-\mu_n\|_A^2=\operatorname{tr}(A\Sigma_n)$, K = 2000: <b>0.49%</b> rel &middot;
+policy race ratios at k = 8: <b>3.08&times;</b> / <b>3.45&times;</b>, at k = 16: <b>8.51&times;</b> / <b>13.30&times;</b> &middot;
+all collapse to $x_\ast$ at k = 32: <b>1.2&times;10&#8315;&sup1;&sup2;</b> rel &middot;
+calibration: mean <b>26.82</b>/27, var <b>53.42</b>/54, coverage <b>0.900</b></div>
+
+<div class="prose">
+<div class="eyebrow phy">&sect;6 &middot; The bridge</div>
+<h2>Shewchuk's pictures, given error bars</h2>
+<p>Every figure in the 1994 tutorial has a posterior reading. His quadratic-form contours (&sect;3)
+are level sets of $\tfrac12x^\top Ax-b^\top x$ around $x_\ast$; the credible ellipses of
+$\mathcal N(\mu_n,\Sigma_n)$ have <i>the same axes</i> — eigenvectors $(2,-1)$ and $(1,2)$ of $A$,
+axis ratio $\sqrt{7/2}\approx1.87$ — because with $\Sigma_0=A^{-1}$ belief-geometry and
+energy-geometry are inverses of one another. His steepest-descent zigzag (&sect;6) and his conjugate
+two-step solve (&sect;7&ndash;8) become two information policies:</p>
+</div>
+
+<div class="tablewrap"><table class="pins">
+<tr><th>Shewchuk's figure</th><th>deterministic reading (his)</th><th>posterior reading (this page)</th></tr>
+<tr><td>contour ellipses, &sect;3</td><td>level sets of the energy around $x_\ast$</td><td>credible ellipses of $\mathcal N(\mu_n,\Sigma_n)$; same axes, ratio $\sqrt{7/2}$</td></tr>
+<tr><td>steepest-descent zigzag, &sect;6</td><td>successive residuals orthogonal (dev 4.0&times;10<sup>&minus;15</sup>); contraction <b>0.55101</b>/step; 8 steps still 0.038 short</td><td>an <i>amnesiac</i> inferencer: it re-observes overlapping directions, so the posterior barely tightens per step</td></tr>
+<tr><td>conjugate directions, &sect;7&ndash;8</td><td>$p_i^\top Ap_j=0$; exact in $D$ steps</td><td>never condition on the same direction twice: Gram&ndash;Schmidt memory; $\Sigma_2=0$ on the 2&times;2</td></tr>
+</table></div>
+
+<div class="prose">
+<p>The "amnesiac" line is not a metaphor — it is an identity. Feed the &sect;2 rule the residual
+action but <i>reset the covariance to the prior first</i> (condition, keep $\mu$, forget $\Sigma$).
+With $\Sigma_0=A^{-1}$ and $y=Ar$:</p>
+<p style="text-align:center;overflow-x:auto">$v=\dfrac{\Sigma_0y}{\sqrt{y^\top\Sigma_0y}}=\dfrac{r}{\sqrt{r^\top\!Ar}},\qquad
+\xi=\dfrac{r^\top r}{\sqrt{r^\top\!Ar}},\qquad
+\mu'=\mu+\dfrac{r^\top r}{r^\top\!Ar}\,r$</p>
+<p>— which is <i>exactly</i> Shewchuk's steepest-descent step. Steepest descent is the probabilistic
+solver with amnesia: same greedy action, no memory of which directions were already paid for, so it
+keeps re-buying overlapping information at the full price (verified live in the widget's self-test
+below). CG's only extra ingredient is the Gram&ndash;Schmidt bookkeeping that &sect;2 gets for free
+from conditioning. Watch both on his own arena:</p>
+</div>
+
+<figure class="widget">
+<div class="ctrl">
+  <button class="wbtn" id="wa-step">observe &nbsp;s&#8321; = r&#8320; = b</button>
+  <button class="wbtn" id="wa-reset">reset to prior</button>
+  <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+    <input type="checkbox" id="wa-sd"> show steepest descent (8 steps)</label>
+  <span id="wa-badge" class="badge">self-test &hellip;</span>
+</div>
+<svg id="wa-svg" viewBox="0 0 760 560" xmlns="http://www.w3.org/2000/svg" class="fig-svg" role="img" aria-label="Shewchuk's 2 by 2 arena: quadratic contours, CG path, optional steepest-descent zigzag, and the collapsing credible ellipse"></svg>
+<div class="readouts">
+  <span>observations &nbsp;<b id="wa-i">0</b> / 2</span>
+  <span class="prb">&mu;<sub>i</sub> = <b id="wa-mu">(0, 0)</b></span>
+  <span class="phy">tr(A&Sigma;<sub>i</sub>) = <b id="wa-tr">2</b></span>
+  <span class="gld">&Vert;x&#8727; &minus; &mu;<sub>i</sub>&Vert;<sub>A</sub> = <b id="wa-err">4.4721</b></span>
+</div>
+<figcaption><b>Posterior collapse on Shewchuk's own arena.</b> Graphite contours: his quadratic form
+around $x_\ast=(2,-2)$ (the dashed one passes through the start $x_0=\mu_0=0$). Gold: the CG path —
+two steps, done. Blue (toggle): the steepest-descent zigzag, 8 steps and still
+$\|e\|_A=0.038$ from home, contracting by a fixed 0.55101 per step. Red: the credible region of
+$\mathcal N(\mu_i,\Sigma_i)$, drawn at 1&sigma; (solid) and 2&sigma; (faint). Observation 1 spends
+the variance along the measured direction <i>exactly</i> — $\det\Sigma_1=0$ and
+$y_1^\top\Sigma_1y_1=0$ in exact fractions — so the 1&sigma; ellipse (semi-axes 0.707/0.378)
+collapses to a <b>segment</b> of half-length 0.6618 along $(22,-5)/\sqrt{509}$, and $x_\ast$ lies
+<i>exactly on the segment's line</i>, 2.4642&sigma; out. That 2.4642 is simultaneously the $A$-norm
+error — the segment carries precisely the one remaining unit of $\operatorname{tr}(A\Sigma)$, so
+&sigma;-distance and $A$-distance coincide. Observation 2 buys the last unit: the posterior is a
+point, and it is $x_\ast$.</figcaption>
+</figure>
+
+<div class="mcheck">machine check — SD residuals orthogonal: <b>4.0&times;10&#8315;&sup1;&#8309;</b> &middot; constant contraction
+<b>0.5510122</b>/step, 8 steps end at $\|e\|_A$ = <b>0.0380</b> while CG is exact in 2 &middot;
+$\det\Sigma_1=0$ and $y_1^\top\Sigma_1y_1=0$: <b>exact</b> (Fractions) &middot;
+$x_\ast-\mu_1=\tfrac{6}{83}(22,-5)$ on the segment line: <b>exact</b> &middot; prior ellipse semi-axes
+<b>0.70711</b> / <b>0.37796</b> along (2,&minus;1), (1,2): <b>PASS</b></div>
+
+<div class="pull">Steepest descent forgets; conjugate gradients remembers.
+Both are the same Bayesian update — the difference is whether $\Sigma$ survives between steps.
+<span class="src">the bridge, in one sentence</span></div>
+
+<div class="prose">
+<div class="eyebrow ink">&sect;7 &middot; Crossings</div>
+<h2>Where the suite has already been standing</h2>
+</div>
+
+<div class="timeline">
+  <div class="thread phy"><h3>Physics</h3>
+    <p><a href="10-fluctuation-dissipation.html">10</a> measured $A^{-1}$ as the thermal-equilibrium
+    covariance — so this page's prior is the Gibbs ensemble, and "computational uncertainty" is
+    literally thermal fluctuation not yet frozen out; $\operatorname{tr}(A\Sigma_n)=32-n$ is
+    equipartition with $n$ degrees of freedom condensed.</p>
+    <p><a href="02-eigenvalues.html">02</a> owns the spectrum $\{2,7\}$-style analysis at scale; the
+    credible ellipses' axes are its eigenvectors.</p></div>
+  <div class="thread prb"><h3>Probability</h3>
+    <p><a href="09-stiffness-as-precision.html">09 &sect;5</a> built CG as sequential regression on
+    precision-uncorrelated directions and already cites BayesCG — &sect;2's proposition is that
+    construction, promoted to a theorem about conditioning itself.</p>
+    <p>The <a href="eigenmodes_explainer.html">eigenmode ledger</a> asks <i>which directions to leave
+    wrong</i>; the posterior answers per-mode: $\Sigma_n$ is the account book of directions left
+    <i>uncertain</i>, and the greedy policy leaves uncertain exactly what this $b$ never excites.</p></div>
+  <div class="thread syn"><h3>Synthesis</h3>
+    <p><a href="update_views_explainer.html">Update views</a> is corner case 1 (its Shawe&ndash;Taylor
+    Algorithm 5.12 = coordinate-action conditioning = Cholesky); this page is corner case 2. The two
+    tutorials bracket the slides' policy axis.</p>
+    <p><a href="13-preconditioning-as-decoupling.html">13 &sect;5.4</a> holds the $A$-orthogonality
+    receipts (CG as on-the-fly decoupler); <a href="15-preconditioning-as-prediction.html">15 &sect;8</a>
+    runs PCG as whitened CG — swap $\Sigma_0=A^{-1}$ for $M^{-1}$ and this page's story becomes the
+    preconditioned one. <a href="04-krylov-and-pcg.html">04</a> supplies the house solver both columns
+    were checked against.</p></div>
+</div>
+
+<div class="check">
+<b>Everything above is machine-verified</b> (<span class="kbd">python/experiments/probabilistic_cg_checks.py</span>,
+<b>30 checks, all PASS</b>, deterministic, 0.5&thinsp;s; every quoted number exported to
+<span class="kbd">results/probabilistic_cg.json</span>, 95&thinsp;KB): sequential rank-one conditioning ==
+batch Gaussian conditioning (2&times;2 in exact Fractions, chain to 2.9&times;10<sup>&minus;16</sup>);
+the Gram&ndash;Schmidt/Mahalanobis proposition, both arenas &times; both priors (&le;
+1.35&times;10<sup>&minus;11</sup>); the headline $\mu_n$ == pcg iterate for all $n$
+(2.1&times;10<sup>&minus;14</sup> rel) with $v_n$ the $A$-normalized CG directions
+(5.1&times;10<sup>&minus;15</sup>) and conjugacy == Mahalanobis orthonormality as one Gram matrix
+(2.9&times;10<sup>&minus;14</sup>); the full 2&times;2 double-run in Fractions
+($\alpha_1=\tfrac{17}{83}$ through $\Sigma_2=0$); $\operatorname{tr}(A\Sigma_n)=32-n$ for every $n$
+and every policy (&le; 1.2&times;10<sup>&minus;11</sup>); the Monte-Carlo identity
+$\mathbb E\|x-\mu_n\|_A^2=\operatorname{tr}(A\Sigma_n)$ (K = 2000, 0.49%); the residual-free property
+(3.6&times;10<sup>&minus;13</sup>); corner case 1 == Cholesky, signs included
+(7.9&times;10<sup>&minus;15</sup>); the policy race (3.1&times;/3.5&times; at k = 8, 8.5&times;/13.3&times;
+at k = 16, all &rarr; $x_\ast$ at 32); the ellipse-collapse geometry and steepest-descent zigzag in
+exact fractions; and the $\chi^2_{27}$ calibration (mean 26.82, coverage 0.900). Reuses
+<span class="kbd">poisson.laplacian_1d</span> and <span class="kbd">pcg.pcg</span>. Both interactive
+widgets recompute their content live and verify it against the JSON at load (green badges above).
+Sources: Hennig, Pfoertner &amp; Weiland, <i>Probabilistic Numerics</i> tutorial, ICML Seoul,
+06/07/2026, pp.&nbsp;7&ndash;24; Shewchuk, <i>An Introduction to the Conjugate Gradient Method Without
+the Agonizing Pain</i>, 1994, &sect;3/&sect;6/&sect;7&ndash;8; Dennis&nbsp;Jr &amp; Turner 1987; Hennig
+SIOPT 2015; Cockayne, Oates, Ipsen &amp; Girolami 2019 (BayesCG); Wenger et&nbsp;al. NeurIPS 2022.
+Companion pages:
+<a href="update_views_explainer.html">one update, four languages</a> &middot;
+<a href="eigenmodes_explainer.html">the eigenmode ledger</a> &middot;
+<a href="bridge_explainer.html">the bridge explainer</a> &middot;
+<a href="green_tents_explainer.html">the green tents</a> &middot;
+<a href="09-stiffness-as-precision.html">09 &middot; stiffness as precision</a> &middot;
+<a href="10-fluctuation-dissipation.html">10 &middot; fluctuation&ndash;dissipation</a> &middot;
+<a href="13-preconditioning-as-decoupling.html">13 &middot; decoupling</a> &middot;
+<a href="15-preconditioning-as-prediction.html">15 &middot; prediction</a>.
+</div>
+
+</main>
+
+<script>
+/*__BAKED__*/
+const BK = {"xs":[0.03673094582,0.07346189164,0.1101928375,0.1469237833,0.1836547291,0.2203856749,0.2571166208,0.233241506,0.2093663912,0.1854912764,0.1616161616,0.1377410468,0.113865932,0.08999081726,0.06611570248,0.0422405877,0.01836547291,-0.005509641873,-0.02938475666,-0.05325987144,-0.07713498623,-0.101010101,-0.1248852158,-0.1487603306,-0.1726354454,-0.1510560147,-0.129476584,-0.1078971534,-0.08631772268,-0.06473829201,-0.04315886134,-0.02157943067],"band":[5.656854249,5.567764363,5.477225575,5.385164807,5.291502622,5.196152423,5.099019514,5.0,4.898979486,4.795831523,4.69041576,4.582575695,4.472135955,4.358898944,4.242640687,4.123105626,4.0,3.872983346,3.741657387,3.605551275,3.464101615,3.31662479,3.16227766,3.0,2.828427125,2.645751311,2.449489743,2.236067977,2.0,1.732050808,1.414213562,1.0,0.0],"errA":{"greedy":[5.05125247,4.731823276,4.389208529,4.017480742,3.607651801,3.144861128,2.600990487,1.90791811,1.424887024,0.978910539,0.8155665685,0.6865857985,0.5895646223,0.5037605107,0.4238331693,0.3722329184,0.353292025,0.3444161836,0.3274981262,0.313796354,0.2977425788,0.2841733429,0.2726546739,0.2637829446,0.2386411681,0.2267888463,0.192611425,0.1620606075,0.1351638197,0.1050572755,0.07076622473,0.02765092535,8.589778313e-14],"coordinate":[5.05125247,5.05125247,5.05125247,5.05125247,5.05125247,5.05125247,5.05125247,4.692030639,4.392371716,4.137046231,3.915780041,3.721355244,3.548531329,3.393398225,3.25297067,3.124924242,3.007418042,2.898972301,2.798381852,2.704653677,2.616960995,2.534608929,2.457008475,2.383656473,2.31412003,2.122624821,1.928433359,1.728689041,1.519294232,1.293632424,1.039070567,0.7231625095,1.2737247e-13],"random":[5.05125247,5.019726968,5.016533628,5.005174258,5.004877109,4.963258826,4.95813156,4.920530638,4.918914428,4.846802045,4.838807855,4.838790803,4.829039437,4.785281012,4.708454129,4.702515606,4.697176429,4.695027495,4.694811371,4.68784967,4.685665583,4.685489328,4.683882936,4.659058966,4.658965167,4.657273635,4.460873963,3.696549635,3.592423906,3.592173187,2.11290019,2.046169524,5.90282272e-12]},"mu16":[0.03435199305,0.06886616498,0.1033803369,0.1380627668,0.1727451967,0.2082604403,0.2437756839,0.2186096188,0.1934435537,0.1668970661,0.1403505786,0.114546472,0.08874236551,0.06356313298,0.03838390046,0.01399430749,-0.01039528548,-0.03394826422,-0.05750124295,-0.07990331569,-0.1023053884,-0.1236940268,-0.1450826652,-0.1664922531,-0.1879018409,-0.1639572141,-0.1400125872,-0.116777156,-0.09354172469,-0.07010554244,-0.04666936019,-0.02333468009],"sdPath":[[0.0,0.0],[0.4096385542,-1.638554217],[1.392771084,-1.392771084],[1.517143272,-1.890259835],[1.815636522,-1.815636522],[1.853397716,-1.966681299],[1.944024583,-1.944024583],[1.955489427,-1.989883961],[1.983005054,-1.983005054]],"Sfix":[[0.03419276725,1.35974754,1.224721079,-0.5103070768,-0.2979695111,-0.527384193,0.5697263576,-0.05606443905,0.7468856163,-1.847324799,1.566548775,-0.09643216016,0.6803784533,-0.136566334,-0.3790985671,0.4631101586,0.8245135275,-0.2025298707,-0.1527861786,0.6856986108,-0.8703406419,-1.514383504,0.3949818627,-0.6705658237,-1.92034059,-0.8140536639,-0.4675975589,-1.193202477,-1.492463884,0.03663782694,0.8972492567,-0.233132078],[-0.7435960295,0.3849938087,0.7172358072,-0.3000105985,0.5446678079,1.042875477,-0.2069564362,-0.813515542,0.3476505985,0.247545741,1.098812768,-1.284580779,-0.6616129304,-0.8381669607,-1.734014846,0.1264345552,0.5278042125,-0.7387900315,1.385647074,0.8219243367,0.6273764788,0.4017070914,0.9556695644,-1.33197984,0.6139296582,0.6027768335,-1.767718577,0.3470301021,-0.2504213467,0.7815226961,-0.4390621876,-0.01824085765],[0.3428515173,-0.8762616887,0.5985966482,-0.1049631885,0.4924826237,-0.5218375063,1.086201543,0.6052019784,-0.1780250247,0.6319571571,1.259755161,1.791175513,-1.57357637,0.8831318116,0.4650685085,-0.09386078019,-1.006664935,1.257188613,-1.261737993,0.5669454657,1.301867996,-1.599669288,-0.3025178405,-1.309216818,0.244054108,1.514375131,2.023556029,-1.778114443,-0.5749490057,0.7035450933,1.579372652,0.4212106443],[-0.7461519976,0.2971315096,-0.01661920098,-0.2037407224,-0.7344710985,0.3872597559,0.3078796264,-0.09298412758,-0.2216879397,-1.284916571,-0.4861756671,1.206449671,-0.1905582569,-1.439697317,1.334442807,0.5302654085,2.108087029,0.06251216939,-0.4613845791,-1.447644699,1.32383837,2.569511513,-0.8209349372,-0.6470876402,0.5961887987,-0.8303454354,-0.270558367,-0.3498376994,0.1919588873,1.094818443,0.02206758971,0.9189100958],[-0.419888896,0.3277985357,-2.13822559,-1.449948067,0.7959134127,-0.590149399,0.5799149235,0.5423442548,1.322278858,0.8118590597,1.01699135,-0.1116713307,-0.6982851766,-0.7315587777,-0.4880439403,-1.129829114,-0.5474435821,-0.09256905151,0.2516119571,-0.3388907901,-1.923682866,-0.0722829545,0.225345787,1.084475595,0.5778638956,-0.6435606861,-0.7237765601,2.010597522,0.756637954,1.831439823,2.129444531,-0.8180836666],[0.3852693023,0.4581670048,0.5596122241,0.5419022253,0.2020546369,0.1741292442,-1.502499941,-0.1654011832,-0.747619701,0.1260873056,-0.4675462601,0.6185207512,0.8190757097,0.308692365,0.3161681443,0.09294668495,-0.447797893,-0.1645012642,-0.4956460633,0.3879871341,0.01411341184,0.5812911986,-1.328648312,0.8877789284,-0.7626962369,-0.7342821863,-0.1974429849,-0.5633845877,0.2911251955,-0.5741647765,-1.069477551,-0.8458028084],[1.311983325,0.04425832864,-1.167530285,0.008377403177,-1.555946415,1.789566558,-1.52447816,0.4787527046,0.5436256643,-1.450007754,0.3002765184,0.9971720402,0.4675752858,0.2610162741,0.9490966815,0.1609045489,0.3364252881,-0.1267115465,0.631805726,-0.9413841472,0.7917632589,-0.5053015338,-1.090653373,0.3652489558,1.692955552,0.9616782116,-0.5156498276,0.698059672,-0.4542091197,-0.1240194561,0.08952849322,-2.317218217],[0.1916147662,-1.029609189,-0.6973986135,-1.474390411,-1.516558218,-0.9432644007,0.8255972953,1.666041347,-0.02520510352,1.091790934,-0.2639806469,-1.911972825,0.149916616,0.4456482631,-0.4286165548,0.3022242342,0.5725562476,-0.8634075676,-1.476834098,-0.2212541653,-0.2110605403,-0.3526632139,0.9872467528,1.725588789,-0.416647018,0.6988867032,0.9409311129,0.7131564204,1.047486287,-0.38924397,0.7398063595,2.024481936],[0.8036655594,-0.6198936689,0.6077124939,1.262380292,0.3689862864,-0.5634006961,1.543080583,-1.249767047,0.5034250467,-0.01617557447,-1.193665725,1.219449684,0.3478875937,-1.166798177,0.6017283566,-0.4316004289,-1.902788502,-0.6889051254,0.2635514475,0.6357028863,0.1655649051,0.04516501127,0.4699900071,-0.210976102,1.176954604,0.1486416482,0.2939215525,0.5407989915,-1.05716884,-0.7092268763,1.528579114,0.3353086904],[-0.2826160786,0.3414835288,-0.4816222351,0.2785662886,-0.665871055,0.2760188173,-1.577702552,1.330919794,-0.5129578727,-1.581241197,-0.2238416946,-0.3709961947,0.1523984186,-1.145250609,0.3974655998,3.623567688,-1.278667721,0.3377155757,-0.3107188537,0.1926082948,-1.811809038,-1.151009388,0.4596595352,-0.0384180194,1.635238181,-0.7047973923,0.1744995272,2.913121453,-0.7655614364,-0.9038334935,-0.0351300849,-0.04456267884],[0.8441672801,0.1295758728,-0.7567393122,0.211421552,2.638596753,1.271773674,-2.782169118,-0.1420169136,-0.875090522,0.6222625144,-0.1732634806,1.932695748,0.9312355636,0.8904028925,0.18657106,-0.04029765331,0.3401799289,1.295279791,0.5343897699,-0.3511325658,1.275084658,0.1921103691,-0.07761506347,-0.7913768387,-0.5659922765,-0.6360467797,-2.79235716,1.0168462,0.5664775694,-0.2142705916,1.045983738,0.4379877795],[0.371567479,-2.47476355,-0.2330159196,0.5321891258,1.609686832,1.840294882,1.425838246,-1.161609519,-2.197671367,0.5704695747,0.02761583535,0.9625532544,-0.1258843636,0.2197549635,-1.499989013,0.4480096552,-0.4448984529,0.3499853577,0.4594059935,-0.1172221449,0.3168011221,-0.01360703053,0.7591995011,0.5017429484,-0.547216369,-0.5879018811,1.743738778,-0.1015954953,0.9918077626,0.3933857303,-0.5641124905,-0.748973797],[0.1201256895,0.2566544207,0.6143637195,-1.266933428,-0.5946832824,-0.09486620341,1.60074946,-2.360178571,0.4391116481,-0.5400458586,0.4313773428,-0.4919789063,0.3645510636,1.564638041,0.3541965035,0.4333999425,0.3728578884,-0.7503135205,0.5430178519,-0.2083465627,-0.8117136442,-0.03854792621,-0.2272884734,0.7534797953,-0.042839225,-0.5294420575,1.455971576,0.9883877627,1.269729438,0.607667362,-0.1096989944,-0.4190934039],[-0.2793399951,0.9476906098,0.1119032802,-1.482843144,-0.03908279772,-1.416104206,0.1658658341,-1.203819634,-1.263936128,0.1185794539,-0.07821432581,-1.6617617,0.7482237181,2.163096688,-1.481375744,1.819849719,-0.6877894242,-0.4940906192,-0.1788872209,-1.445277221,1.299127214,0.4926936284,-0.7514542018,-0.2770771546,-1.516359438,-0.3477577402,0.9362131514,-1.715289772,-0.436240329,0.1467917356,1.048239346,1.349330553],[-0.4572529558,-0.7403068766,0.4503996611,-0.3632547919,-0.3100193734,1.080183679,1.68973787,0.2658675711,-0.1922147747,0.571261965,-1.887515829,-0.01824906335,-1.060576845,2.389427839,0.7201999275,0.1413698477,-0.1943646293,-2.514956041,0.7128045243,1.629368948,-0.7288198971,0.6834045109,0.7225431566,-1.548127666,0.9357403472,1.354781076,0.2284801183,-0.06318199471,0.7879634904,-1.540753975,0.09328070286,1.054341957],[-1.242435332,0.9925712092,-0.4182296589,-2.080826954,-0.1057479542,-0.9718966096,0.3192596405,-1.172141151,1.050275909,-0.7388303219,0.3563574952,-0.5939799434,-0.3229053122,1.191760045,0.2152784462,-0.3950320912,-1.251508015,1.159951274,0.7328111693,-0.3265355739,0.2433110222,-1.029577552,-1.014844885,-0.8261877085,0.353427218,0.2958458941,-0.7453029309,0.7377745963,0.7846935409,0.1729081643,1.038388568,-0.2873624506],[-0.1130211353,0.4728586749,-0.03404400928,0.7938991985,-1.252668133,1.42576506,-0.7812714863,-0.16469785,-1.377542699,0.6002223198,1.273851373,1.071046929,0.8333749723,-1.55714327,-0.7821680543,-0.4625629912,-0.9347342672,1.122695231,0.1844843129,-0.02447780423,0.4875357321,-0.9516190378,-0.9083507283,-0.88146199,0.497620949,0.3415963791,0.5780924678,1.078383118,-1.357300859,-0.5604943862,0.1475380939,-1.348743107],[-0.5321752283,1.014028903,1.10264413,1.076706892,0.04301768611,-0.211967537,1.07952469,-0.3726459964,0.3382389902,1.325278924,-0.3675708004,-0.6105523009,-0.009371273325,0.5983791788,0.4824090158,0.1558577732,0.5564201353,-1.599598744,-0.8592659923,0.1632261144,-0.9286615229,-1.341674442,-1.207819854,-0.9181639232,-0.1784748908,-1.022625816,0.2348988385,1.696224143,-0.1476263091,1.274698911,0.2884317419,-1.119823499],[-0.256409575,-0.9818347415,0.7679353843,-1.153095414,1.322572701,0.5781879426,-2.0223101,0.7843414146,1.553016362,-0.7905237116,0.9852522129,-1.798381732,0.2521566116,-1.661389362,0.4823909896,-1.78796275,-2.632870207,0.3960931686,2.287889768,-0.5956695756,0.8301655466,0.1107110964,-0.3235047396,0.6153842851,1.642405379,-1.235127987,0.563896944,0.3451354299,-1.424345671,1.614710867,1.949358711,-0.9527719887],[1.737900495,0.05614611814,-0.1632483388,1.503448945,0.2274328552,0.3231759064,1.517674975,1.288219919,0.8931494179,-1.400549884,-1.572390341,1.126141237,-0.9267195256,0.1484835456,-1.074071995,-0.1836865287,-1.278695126,1.630174052,-1.01891243,-0.1219942676,-0.1881994816,1.206097793,-1.419897556,-0.03334203242,-0.2092342676,0.5299255412,0.4720167792,-0.4637465339,0.2395859911,-0.3746311822,0.4681152374,-0.1025801658],[-0.6555690937,-0.02755702262,0.3637839613,2.265882601,-0.4912318708,0.3066580644,1.463036722,-2.078168676,-1.743038198,-1.18865935,-0.1142365428,2.439976781,0.3913669724,1.208075342,-0.2220393507,-2.463723764,-2.313638359,1.018619236,0.1848595425,-1.298499168,1.117320682,-1.538954976,1.134242123,1.45134085,-0.7648233756,-1.108117038,0.8443270506,-1.095288579,0.8618864572,-1.195238778,0.8075785603,0.09386694355],[-0.4327783767,-0.8956846826,0.2375747699,-1.892660633,-0.2759641722,-0.3961541692,0.6783599278,-1.253820355,1.713438139,-0.3115807728,-1.138167522,1.38607875,1.662931037,-0.187772,-0.8910728393,0.01605296865,-0.6904117348,-0.3120335398,1.558429396,0.3919009872,0.1453938242,0.3460121962,-0.0580898063,0.8415678622,0.8792901309,-0.3697167212,0.105088392,2.413607679,0.4215991462,-0.1858533834,2.049691753,0.009432553838],[-1.097301924,0.6745808598,-0.8998261497,-0.4972225145,0.3263253863,-0.1267669248,-0.7634866074,-0.5509565876,-0.5933760027,1.166186454,-0.7210002109,-0.5722190607,2.03835437,-0.5537643268,1.489417709,1.315732203,-0.1527516209,-1.419391334,0.4530141311,0.6726751471,0.9678044817,0.0718942377,1.204557485,1.390358607,-1.054382041,1.429488307,0.1745423542,-0.565744056,-0.3186277281,1.877572142,0.9840299776,-1.78904596],[0.08345750907,-0.1398499486,-0.175587272,-0.5131552267,-1.456301475,0.8616443127,-0.9396897401,-0.3700411092,-0.6023852857,-0.7278238779,0.7432366756,0.3837741585,-0.6741616337,-0.9448106915,-0.4694144108,0.9670241778,0.1259213757,0.2330836921,-0.3281636681,-0.2578804138,0.2165437267,-1.84342501,1.612058112,-0.7876435518,-0.5683143851,1.338497021,0.2224337253,0.04208355419,-0.5833192971,-1.561169396,0.1849453552,1.195261389],[-0.8996552067,1.362754862,-1.127142129,-0.7340111257,0.5058915495,6.522835018e-05,0.6908880011,-0.7417380918,-1.031761621,-1.867062701,-1.20371125,-1.076107755,-1.426965621,0.3084611753,-0.6638851654,-1.988295062,2.483482642,-0.8348536613,-1.255509327,1.239788236,1.165433829,-1.151340929,-1.473981887,-1.00006675,1.129485793,-0.3112607673,-0.8086978584,-0.02837241274,1.204191495,-1.389550372,-0.3838017806,-1.38347562],[2.172155497,1.818319534,0.9511620791,-0.1334015846,0.6591266158,-2.102013511,0.276426775,-1.336165215,-1.324772809,-0.7047259125,-0.3502167467,0.5742192448,0.7006787483,0.2626725768,-0.9443365941,0.675986788,-0.1209469822,1.180228853,-0.9171306451,-2.763225086,-0.4767092044,2.151263494,0.4689873531,-0.1943291707,0.8836363033,0.5031824639,0.4613413034,-0.5135456219,0.07617103969,0.2011920042,-0.6426617737,-1.118730164],[0.139022661,0.9684501384,0.6473043244,0.4939775897,0.5043149399,2.584002716,0.2598837215,1.042038087,1.957099975,0.05306310685,0.2645300485,1.044046512,1.687663271,0.3131053049,0.3630178198,0.09083957639,-1.205599191,1.117667865,-0.2524987544,-1.718752594,-0.1441367147,-1.72702986,-1.004695955,0.02108398423,-0.9169257796,1.075322723,-1.464139305,0.2691328783,0.5642681005,1.467471704,0.9299717703,0.2412044528],[0.0886735491,-0.05003194728,1.147475325,-0.647798478,0.5302385977,-0.08412698087,0.2503985408,-0.2523863805,2.145374724,-0.6467331645,0.2638084741,0.2868878208,0.6192367648,0.461753185,0.4360343564,0.9934980811,-1.493265475,0.02173423985,-1.221681561,0.2445957781,-1.170607213,-0.947817726,-0.04824624694,1.408845745,0.5899841756,0.3093216911,1.416146446,-0.9322607303,-2.07902286,-0.4107004356,-0.2649597977,1.248037662],[2.152547775,-1.316333842,2.490906432,1.578063212,0.8522765535,0.381808035,2.439885908,0.09437491738,-0.4598529641,0.1529785147,-1.355331812,0.4859840376,-0.09581363835,0.344599104,0.3742352326,-1.044790907,1.330321639,-1.000670866,0.9023624353,-1.579075736,0.3858772738,-0.8055641521,0.05724462428,-0.6367143261,-2.168475082,-1.099768727,0.0837288346,0.6391448234,-1.453936182,-2.109847242,-0.8568490922,-0.1960392478],[-0.6178174626,-0.7942455643,0.866027431,0.9813162749,0.7571935711,-0.9225445508,0.09168804514,-0.1782321526,-1.412038214,0.897900785,0.1033622631,-0.4695143533,1.432935463,0.779206985,0.8713792261,1.215393946,0.7331652552,-1.250024351,-0.3736495988,1.018284212,-0.7538829964,0.05186493561,0.4124680042,1.456164956,1.313318097,0.9128286964,-0.1721562424,0.9290069449,0.5420740822,-0.1479790188,1.371391041,0.5081032676],[-0.7426578475,1.279414006,-0.2421404134,0.6064618315,-1.511807283,-0.007087988568,-0.9341909579,-0.961025681,-1.899191961,2.154480826,-0.1390627604,0.2488804075,1.118491805,-0.1115032902,0.5236306329,-1.349120719,0.2061684544,-0.4042889768,0.510039748,0.1903166078,-1.3764607,-1.8428354,-1.006080294,0.7459077892,0.4336598411,0.4115520372,-2.011177059,-2.681530497,-0.6162865475,-0.3255749666,-0.5966591681,0.361024365],[-0.1650713866,-1.180242831,-0.8745474988,0.1481192732,0.07739624965,-0.06981572329,2.271570437,-0.2587801016,0.123784312,-0.9926693952,-0.3560290425,0.5269494376,0.56949809,-0.1553387779,0.3967377374,0.0565823454,-1.880195738,-3.274475025,2.311171568,0.8309166106,-0.05676367967,-1.738038256,-1.275476927,1.355910476,-2.788177397,-0.3243311752,0.8685643708,0.1432311396,0.754792796,-0.1312493324,2.393451584,-1.027995986]]};
+/*__END_BAKED__*/
+</script>
+<script>
+(function(){
+"use strict";
+var SVGNS = "http://www.w3.org/2000/svg";
+function el(parent, tag, attrs, text){
+  var e = document.createElementNS(SVGNS, tag), k;
+  for (k in attrs) e.setAttribute(k, attrs[k]);
+  if (text !== undefined) e.textContent = text;
+  parent.appendChild(e);
+  return e;
+}
+var SANS = "ui-sans-serif,system-ui,sans-serif";
+function txt(parent, x, y, s, opts){
+  var a = {x: x, y: y, "font-family": SANS, "font-size": (opts && opts.fs) || 12,
+           fill: (opts && opts.fill) || "#5A6773"};
+  if (opts && opts.anchor) a["text-anchor"] = opts.anchor;
+  if (opts && opts.w) a["font-weight"] = opts.w;
+  if (opts && opts.halo){ a.stroke = "#fff"; a["stroke-width"] = 3.2;
+    a["paint-order"] = "stroke"; a["stroke-linejoin"] = "round"; }
+  return el(parent, "text", a, s);
+}
+function setBadge(id, okCount, total){
+  var b = document.getElementById(id);
+  if (okCount === total){ b.textContent = "self-test " + okCount + "/" + total + " PASS"; }
+  else { b.textContent = "self-test " + okCount + "/" + total + " FAIL"; b.className = "badge fail"; }
+}
+
+/* =====================================================================
+   linear-algebra core: the n = 32 chain, computed live
+   ===================================================================== */
+var N = 32, H = 1 / 33, CC = 1 / (H * H);   /* A = tridiag(-1,2,-1)/h^2 */
+
+function amul(x){                            /* y = A x, tridiagonal */
+  var y = new Float64Array(N), j;
+  for (j = 0; j < N; j++){
+    var v = 2 * x[j];
+    if (j > 0) v -= x[j - 1];
+    if (j < N - 1) v -= x[j + 1];
+    y[j] = CC * v;
+  }
+  return y;
+}
+function thomas(d){                          /* solve A x = d */
+  var c = new Float64Array(N), dd = new Float64Array(N), x = new Float64Array(N), j;
+  var bdiag = 2 * CC, off = -CC;
+  c[0] = off / bdiag; dd[0] = d[0] / bdiag;
+  for (j = 1; j < N; j++){
+    var m = bdiag - off * c[j - 1];
+    c[j] = off / m;
+    dd[j] = (d[j] - off * dd[j - 1]) / m;
+  }
+  x[N - 1] = dd[N - 1];
+  for (j = N - 2; j >= 0; j--) x[j] = dd[j] - c[j] * x[j + 1];
+  return x;
+}
+function dot(a, b2){ var s = 0, j; for (j = 0; j < a.length; j++) s += a[j] * b2[j]; return s; }
+function aNorm(e){ return Math.sqrt(Math.max(dot(e, amul(e)), 0)); }
+
+var bvec = new Float64Array(N); bvec[6] = 66.0; bvec[24] = -49.5;
+var xstar = thomas(bvec);
+
+/* prior Sigma_0 = A^{-1}: column-by-column tridiagonal solves */
+var Sig0 = [], j0, ecol;
+for (j0 = 0; j0 < N; j0++){
+  ecol = new Float64Array(N); ecol[j0] = 1;
+  Sig0.push(thomas(ecol));
+}
+
+function traceASigma(S){                     /* tr(A Sigma), tridiagonal A */
+  var t = 0, j;
+  for (j = 0; j < N; j++){
+    t += 2 * CC * S[j][j];
+    if (j < N - 1) t -= CC * (S[j][j + 1] + S[j + 1][j]);
+  }
+  return t;
+}
+
+/* the probabilistic linear solver of section 2, verbatim */
+function probRun(actionFn){
+  var mu = new Float64Array(N);
+  var Sig = Sig0.map(function(row){ return Float64Array.from(row); });
+  var out = {mus: [Float64Array.from(mu)], sig: [diagSqrt(Sig)],
+             trace: [traceASigma(Sig)], errA: [aNorm(sub(xstar, mu))]};
+  var k, j, i;
+  for (k = 0; k < N; k++){
+    var r = sub(bvec, amul(mu));
+    var s = actionFn(k, r);
+    var y = amul(s);                         /* A symmetric */
+    var Sy = new Float64Array(N);
+    for (i = 0; i < N; i++) Sy[i] = dot(Sig[i], y);
+    var den = dot(y, Sy);
+    if (den <= 0) break;
+    var sq = Math.sqrt(den);
+    var xi = (dot(s, bvec) - dot(y, mu)) / sq;
+    for (i = 0; i < N; i++) mu[i] += xi * Sy[i] / sq;
+    for (i = 0; i < N; i++){
+      var vi = Sy[i] / sq;
+      for (j = 0; j < N; j++) Sig[i][j] -= vi * Sy[j] / sq;
+    }
+    out.mus.push(Float64Array.from(mu));
+    out.sig.push(diagSqrt(Sig));
+    out.trace.push(traceASigma(Sig));
+    out.errA.push(aNorm(sub(xstar, mu)));
+  }
+  return out;
+}
+function sub(a, b2){ var r = new Float64Array(a.length), j; for (j = 0; j < a.length; j++) r[j] = a[j] - b2[j]; return r; }
+function diagSqrt(S){ var d = new Float64Array(N), j; for (j = 0; j < N; j++) d[j] = Math.sqrt(Math.max(S[j][j], 0)); return d; }
+
+var POL = {
+  greedy:     probRun(function(k, r){ return r; }),
+  coordinate: probRun(function(k, r){ var e = new Float64Array(N); e[k] = 1; return e; }),
+  random:     probRun(function(k, r){ var s = new Float64Array(N), j;
+                for (j = 0; j < N; j++) s[j] = BK.Sfix[j][k]; return s; })
+};
+
+/* ---- widget B self-test against the JSON ---------------------------- */
+(function(){
+  var t = [], p, k;
+  var trDev = 0;
+  for (p in POL) for (k = 0; k < POL[p].trace.length; k++)
+    trDev = Math.max(trDev, Math.abs(POL[p].trace[k] - (N - k)));
+  t.push(trDev < 1e-8);
+  function rel(a, b2){ return Math.abs(a - b2) / Math.abs(b2); }
+  t.push(rel(POL.greedy.errA[8],      1.424887024) < 1e-6);
+  t.push(rel(POL.greedy.errA[16],     0.353292025) < 1e-6);
+  t.push(rel(POL.coordinate.errA[16], 3.007418042) < 1e-6);
+  t.push(rel(POL.random.errA[8],      4.918914428) < 1e-6);
+  t.push(rel(POL.random.errA[16],     4.697176429) < 1e-6);
+  var muDev = 0, xsDev = 0;
+  for (k = 0; k < N; k++){
+    muDev = Math.max(muDev, Math.abs(POL.greedy.mus[16][k] - BK.mu16[k]));
+    xsDev = Math.max(xsDev, Math.abs(xstar[k] - BK.xs[k]));
+  }
+  t.push(muDev < 1e-6);
+  t.push(xsDev < 1e-8);
+  var finDev = 0;
+  for (p in POL) finDev = Math.max(finDev, POL[p].errA[N] / 5.05125247);
+  t.push(finDev < 1e-7);
+  var okc = t.filter(Boolean).length;
+  setBadge("pw-badge", okc, t.length);
+})();
+
+/* =====================================================================
+   figure: the policy race (static, numbers straight from the JSON)
+   ===================================================================== */
+(function(){
+  var svg = document.getElementById("race-svg");
+  var X0 = 64, X1 = 726, Y0 = 30, Y1 = 340;  /* y: log10 err from +1 to -2 */
+  function px(k){ return X0 + (X1 - X0) * k / 32; }
+  function py(v){ var l = Math.log10(Math.max(v, 3e-3)); return Y0 + (Y1 - Y0) * (1 - l) / 3; }
+  var dec, k, labels = ["10", "1", "10⁻¹", "10⁻²"];
+  for (dec = 0; dec <= 3; dec++){
+    var y = Y0 + (Y1 - Y0) * dec / 3;
+    el(svg, "line", {x1: X0, y1: y, x2: X1, y2: y, stroke: "#EDF0F3"});
+    txt(svg, X0 - 8, y + 4, labels[dec], {anchor: "end"});
+  }
+  for (k = 0; k <= 32; k += 4){
+    el(svg, "line", {x1: px(k), y1: Y1, x2: px(k), y2: Y1 + 5, stroke: "#5A6773"});
+    txt(svg, px(k), Y1 + 20, String(k), {anchor: "middle"});
+  }
+  txt(svg, (X0 + X1) / 2, Y1 + 40, "observations k (matrix–vector products spent)", {anchor: "middle", fs: 12.5});
+  el(svg, "line", {x1: X0, y1: Y1, x2: X1, y2: Y1, stroke: "#5A6773"});
+  el(svg, "line", {x1: X0, y1: Y0, x2: X0, y2: Y1, stroke: "#5A6773"});
+  /* prior-average band sqrt(32-k), to k = 31 */
+  var bpts = [];
+  for (k = 0; k <= 31; k++) bpts.push(px(k).toFixed(1) + "," + py(BK.band[k]).toFixed(1));
+  el(svg, "polyline", {fill: "none", stroke: "#5A6773", "stroke-width": 1.4,
+    "stroke-dasharray": "5 5", points: bpts.join(" "), opacity: 0.85});
+  txt(svg, px(3), py(BK.band[1]) - 16, "prior-average band √(32−k), shared by all three", {halo: true});
+  var conf = [
+    {key: "greedy",     color: "#C9A227", w: 2.6, label: "greedy  sₙ = rₙ₋₁  (= CG)"},
+    {key: "coordinate", color: "#1F4E79", w: 2.0, label: "coordinate  sₙ = eₙ"},
+    {key: "random",     color: "#B5443C", w: 2.0, label: "random (fixed, seed 11)"}
+  ];
+  var ci;
+  for (ci = 0; ci < conf.length; ci++){
+    var c = conf[ci], e2 = BK.errA[c.key], pts = [];
+    for (k = 0; k <= 31; k++) pts.push(px(k).toFixed(1) + "," + py(e2[k]).toFixed(1));
+    el(svg, "polyline", {fill: "none", stroke: c.color, "stroke-width": c.w, points: pts.join(" ")});
+    for (k = 0; k <= 31; k++)
+      el(svg, "circle", {cx: px(k).toFixed(1), cy: py(e2[k]).toFixed(1), r: 2.2,
+                         fill: c.color, stroke: "#fff", "stroke-width": 0.6});
+    /* k = 32 collapse arrow (offset per policy so all three stay visible) */
+    var ax = px(32) - 6 + ci * 6;
+    el(svg, "line", {x1: ax, y1: py(e2[31]) + 8, x2: ax, y2: Y1 - 6,
+                     stroke: c.color, "stroke-width": 1.4, opacity: 0.7});
+    el(svg, "polygon", {points: ax + "," + Y1 + " " + (ax - 4) + "," + (Y1 - 8) + " " +
+                        (ax + 4) + "," + (Y1 - 8), fill: c.color, opacity: 0.7});
+  }
+  txt(svg, px(32) - 6, Y1 - 14, "k = 32: all → ~10⁻¹³", {anchor: "end", halo: true});
+  /* ratio guides at k = 8 and k = 16 */
+  [{k: 8, lab: "coord 3.1× / random 3.5× greedy"},
+   {k: 16, lab: "8.5× / 13.3×"}].forEach(function(g){
+    el(svg, "line", {x1: px(g.k), y1: py(BK.errA.greedy[g.k]), x2: px(g.k),
+      y2: py(BK.errA.random[g.k]), stroke: "#1B2733", "stroke-width": 1, opacity: 0.45,
+      "stroke-dasharray": "2 3"});
+    txt(svg, px(g.k) + 6, (py(BK.errA.greedy[g.k]) + py(BK.errA.random[g.k])) / 2, g.lab,
+        {halo: true, fill: "#1B2733"});
+  });
+  var lx = X0 + 20, ly = Y1 - 66, li;
+  for (li = 0; li < conf.length; li++){
+    el(svg, "line", {x1: lx, y1: ly + li * 19, x2: lx + 26, y2: ly + li * 19,
+                     stroke: conf[li].color, "stroke-width": conf[li].w});
+    txt(svg, lx + 34, ly + li * 19 + 4, conf[li].label, {fill: "#1B2733", halo: true});
+  }
+  txt(svg, X1 - 4, Y0 + 8, "‖x∗ − μₖ‖ᴀ, identical budgets", {anchor: "end", w: 600, fill: "#1B2733", halo: true});
+})();
+
+/* =====================================================================
+   widget B: chain posterior band, live
+   ===================================================================== */
+(function(){
+  var svg = document.getElementById("pw-svg");
+  var meter = document.getElementById("pw-meter");
+  var polSel = document.getElementById("pw-pol");
+  var slider = document.getElementById("pw-k");
+  var outK = document.getElementById("pw-kout");
+  var outTr = document.getElementById("pw-tr");
+  var outErr = document.getElementById("pw-err");
+  var COLORS = {greedy: "#A88A1F", coordinate: "#1F4E79", random: "#B5443C"};
+  var X0 = 58, X1 = 726, Y0 = 26, Y1 = 372;
+  /* y-range: global over all policies/steps of mu +/- 2 sigma, plus x* */
+  var lo = 0, hi = 0, p, k, j;
+  for (p in POL){
+    var P = POL[p];
+    for (k = 0; k < P.mus.length; k++)
+      for (j = 0; j < N; j++){
+        lo = Math.min(lo, P.mus[k][j] - 2 * P.sig[k][j]);
+        hi = Math.max(hi, P.mus[k][j] + 2 * P.sig[k][j]);
+      }
+  }
+  for (j = 0; j < N; j++){ lo = Math.min(lo, xstar[j]); hi = Math.max(hi, xstar[j]); }
+  var pad = 0.06 * (hi - lo); lo -= pad; hi += pad;
+  function px(node){ return X0 + (X1 - X0) * node / 33; }   /* node 0..33 incl. walls */
+  function py(v){ return Y0 + (Y1 - Y0) * (hi - v) / (hi - lo); }
+  /* static furniture */
+  el(svg, "line", {x1: X0, y1: py(0), x2: X1, y2: py(0), stroke: "#EDF0F3", "stroke-width": 1.4});
+  txt(svg, X0 - 8, py(0) + 4, "0", {anchor: "end"});
+  var yt;
+  for (yt = -0.2; yt <= 0.35; yt += 0.1){
+    if (Math.abs(yt) < 1e-9) continue;
+    var vv = Math.round(yt * 10) / 10;
+    el(svg, "line", {x1: X0, y1: py(vv), x2: X1, y2: py(vv), stroke: "#F3F5F7"});
+    txt(svg, X0 - 8, py(vv) + 4, vv.toFixed(1), {anchor: "end"});
+  }
+  for (j = 0; j <= 32; j += 4){
+    var nd = j === 0 ? 1 : j;
+    el(svg, "line", {x1: px(nd), y1: Y1, x2: px(nd), y2: Y1 + 5, stroke: "#5A6773"});
+    txt(svg, px(nd), Y1 + 19, String(nd), {anchor: "middle"});
+  }
+  txt(svg, (X0 + X1) / 2, Y1 + 38, "node j (heater at 7, chiller at 25)", {anchor: "middle", fs: 12.5});
+  el(svg, "line", {x1: X0, y1: Y1, x2: X1, y2: Y1, stroke: "#5A6773"});
+  el(svg, "line", {x1: X0, y1: Y0, x2: X0, y2: Y1, stroke: "#5A6773"});
+  /* source markers */
+  el(svg, "path", {d: "M" + px(7) + "," + (Y1 - 10) + " l-5,10 l10,0 Z", fill: "#B5443C", opacity: 0.8});
+  txt(svg, px(7), Y1 - 14, "+2 W", {anchor: "middle", fill: "#B5443C", halo: true});
+  el(svg, "path", {d: "M" + px(25) + "," + (Y1 - 0) + " l-5,-10 l10,0 Z", fill: "#1F4E79", opacity: 0.8});
+  txt(svg, px(25), Y1 - 14, "−1.5 W", {anchor: "middle", fill: "#1F4E79", halo: true});
+  /* x* dashed */
+  var xpts = [px(0) + "," + py(0)];
+  for (j = 0; j < N; j++) xpts.push(px(j + 1).toFixed(1) + "," + py(xstar[j]).toFixed(1));
+  xpts.push(px(33) + "," + py(0));
+  el(svg, "polyline", {fill: "none", stroke: "#5A6773", "stroke-width": 1.6,
+                       "stroke-dasharray": "6 4", points: xpts.join(" ")});
+  txt(svg, px(14), py(xstar[13]) - 10, "x∗ (true profile)", {halo: true, fill: "#1B2733"});
+  var dynG = el(svg, "g", {});
+  var titleT = txt(svg, X0 + 4, Y0 - 8, "", {fill: "#1B2733", w: 600, fs: 12.5});
+  /* meter furniture */
+  var MX0 = 58, MX1 = 726;
+  el(meter, "rect", {x: MX0, y: 10, width: MX1 - MX0, height: 12, rx: 6, fill: "#EAEEF2"});
+  var mfill = el(meter, "rect", {x: MX0, y: 10, width: 0, height: 12, rx: 6, fill: "#C9A227", opacity: 0.85});
+  var mtxt = txt(meter, (MX0 + MX1) / 2, 31, "", {anchor: "middle", fs: 11.5});
+  var mticks, mt;
+  for (mt = 1; mt < 32; mt++)
+    el(meter, "line", {x1: MX0 + (MX1 - MX0) * mt / 32, y1: 10, x2: MX0 + (MX1 - MX0) * mt / 32,
+                       y2: 22, stroke: "#fff", "stroke-width": 1});
+  function draw(){
+    var pol = polSel.value, k2 = parseInt(slider.value, 10);
+    var P = POL[pol], mu = P.mus[k2], sg = P.sig[k2];
+    while (dynG.firstChild) dynG.removeChild(dynG.firstChild);
+    /* band polygon mu +/- 2 sigma (walls pinned at 0, variance 0 there) */
+    var top = [px(0) + "," + py(0)], bot = [px(0) + "," + py(0)], jj;
+    for (jj = 0; jj < N; jj++) top.push(px(jj + 1).toFixed(1) + "," + py(mu[jj] + 2 * sg[jj]).toFixed(1));
+    top.push(px(33) + "," + py(0));
+    for (jj = N - 1; jj >= 0; jj--) bot.push(px(jj + 1).toFixed(1) + "," + py(mu[jj] - 2 * sg[jj]).toFixed(1));
+    bot.push(px(33) + "," + py(0));
+    el(dynG, "polygon", {points: top.join(" ") + " " + bot.reverse().slice(0, -1).reverse().join(" "),
+                         fill: "rgba(181,68,60,.10)", stroke: "rgba(181,68,60,.45)", "stroke-width": 1});
+    /* mu polyline */
+    var mpts = [px(0) + "," + py(0)];
+    for (jj = 0; jj < N; jj++) mpts.push(px(jj + 1).toFixed(1) + "," + py(mu[jj]).toFixed(1));
+    mpts.push(px(33) + "," + py(0));
+    el(dynG, "polyline", {fill: "none", stroke: COLORS[pol], "stroke-width": 2.4, points: mpts.join(" ")});
+    for (jj = 0; jj < N; jj++)
+      el(dynG, "circle", {cx: px(jj + 1).toFixed(1), cy: py(mu[jj]).toFixed(1), r: 2.4,
+                          fill: COLORS[pol], stroke: "#fff", "stroke-width": 0.6});
+    titleT.textContent = "μₖ ± 2σ credible band · policy: " + pol;
+    outK.textContent = String(k2);
+    outTr.textContent = Math.max(0, P.trace[k2]).toFixed(2);
+    outErr.textContent = P.errA[k2] < 1e-9 ? P.errA[k2].toExponential(1) : P.errA[k2].toFixed(4);
+    mfill.setAttribute("width", ((MX1 - MX0) * k2 / 32).toFixed(1));
+    mtxt.textContent = "uncertainty budget spent: " + k2 + " of 32 units — one per observation, whatever the policy";
+  }
+  slider.addEventListener("input", draw);
+  polSel.addEventListener("change", draw);
+  document.getElementById("pw-minus").addEventListener("click", function(){
+    slider.value = String(Math.max(0, parseInt(slider.value, 10) - 1)); draw();
+  });
+  document.getElementById("pw-plus").addEventListener("click", function(){
+    slider.value = String(Math.min(32, parseInt(slider.value, 10) + 1)); draw();
+  });
+  draw();
+})();
+
+/* =====================================================================
+   widget A: posterior collapse on Shewchuk's 2x2
+   ===================================================================== */
+(function(){
+  var svg = document.getElementById("wa-svg");
+  var A2 = [[3, 2], [2, 6]], b2 = [2, -8], XS = [2, -2];
+  var S0 = [[3 / 7, -1 / 7], [-1 / 7, 3 / 14]];        /* A^{-1} exact */
+  function mv(M, v){ return [M[0][0] * v[0] + M[0][1] * v[1], M[1][0] * v[0] + M[1][1] * v[1]]; }
+  function d2(u, v){ return u[0] * v[0] + u[1] * v[1]; }
+  function trAS(S){ return A2[0][0] * S[0][0] + A2[0][1] * S[1][0] + A2[1][0] * S[0][1] + A2[1][1] * S[1][1]; }
+  function anorm2(e){ return Math.sqrt(Math.max(d2(e, mv(A2, e)), 0)); }
+  /* one conditioning step (greedy action s = r) */
+  function step(mu, S){
+    var r = [b2[0] - (A2[0][0] * mu[0] + A2[0][1] * mu[1]),
+             b2[1] - (A2[1][0] * mu[0] + A2[1][1] * mu[1])];
+    var y = mv(A2, r);
+    var Sy = mv(S, y);
+    var den = d2(y, Sy);
+    if (den <= 1e-300) return {mu: mu, S: S, done: true};
+    var xi = (d2(r, b2) - d2(y, mu)) / den;   /* xi/sqrt(den), fold sqrt */
+    var mu2 = [mu[0] + xi * Sy[0], mu[1] + xi * Sy[1]];
+    var S2 = [[S[0][0] - Sy[0] * Sy[0] / den, S[0][1] - Sy[0] * Sy[1] / den],
+              [S[1][0] - Sy[1] * Sy[0] / den, S[1][1] - Sy[1] * Sy[1] / den]];
+    return {mu: mu2, S: S2, done: false};
+  }
+  var st1 = step([0, 0], S0), st2 = step(st1.mu, st1.S);
+  var states = [
+    {mu: [0, 0], S: S0, muTxt: "(0, 0)", tr: "2", err: "4.4721"},
+    {mu: st1.mu, S: st1.S, muTxt: "(34/83, −136/83) ≈ (0.4096, −1.6386)", tr: "1", err: "2.4642"},
+    {mu: st2.mu, S: st2.S, muTxt: "(2, −2) = x∗", tr: "0", err: "0"}
+  ];
+
+  /* ---- self-test against the JSON's exact numbers -------------------- */
+  (function(){
+    var t = [];
+    t.push(Math.max(Math.abs(st1.mu[0] - 34 / 83), Math.abs(st1.mu[1] + 136 / 83)) < 1e-12);
+    t.push(Math.abs(trAS(st1.S) - 1) < 1e-12);
+    t.push(Math.max(Math.abs(st2.mu[0] - 2), Math.abs(st2.mu[1] + 2)) < 1e-12);
+    t.push(Math.max(Math.abs(st2.S[0][0]), Math.abs(st2.S[0][1]), Math.abs(st2.S[1][1])) < 1e-12);
+    /* v1 parallel to b; det Sigma_1 = 0 */
+    var Sy1 = mv(S0, mv(A2, b2));
+    t.push(Math.abs(Sy1[0] * b2[1] - Sy1[1] * b2[0]) < 1e-12);
+    t.push(Math.abs(st1.S[0][0] * st1.S[1][1] - st1.S[0][1] * st1.S[1][0]) < 1e-12);
+    /* x* - mu_1 parallel to (22,-5); sigma along segment = 0.6618442912 */
+    var dst = [2 - st1.mu[0], -2 - st1.mu[1]];
+    t.push(Math.abs(dst[0] * (-5) - dst[1] * 22) < 1e-10);
+    var u = [22 / Math.sqrt(509), -5 / Math.sqrt(509)];
+    t.push(Math.abs(Math.sqrt(d2(u, mv(st1.S, u))) - 0.6618442912) < 1e-9);
+    /* steepest descent == amnesiac conditioning; path matches JSON */
+    var mu = [0, 0], dev = 0, kk;
+    for (kk = 1; kk <= 8; kk++){
+      var am = step(mu, S0);                 /* fresh prior every step */
+      mu = am.mu;
+      dev = Math.max(dev, Math.abs(mu[0] - BK.sdPath[kk][0]), Math.abs(mu[1] - BK.sdPath[kk][1]));
+    }
+    t.push(dev < 1e-8);
+    var okc = t.filter(Boolean).length;
+    setBadge("wa-badge", okc, t.length);
+  })();
+
+  /* ---- geometry ------------------------------------------------------ */
+  var SC = 124, XMIN = -1.75, YMAX = 1.15;
+  function px(wx){ return (wx - XMIN) * SC; }
+  function py(wy){ return (YMAX - wy) * SC; }
+  var ROT = 26.565051;                       /* screen rotation of eigvec (2,-1) */
+  var clip = el(svg, "clipPath", {id: "wa-clip"});
+  el(clip, "rect", {x: 0, y: 0, width: 760, height: 560});
+  var g = el(svg, "g", {"clip-path": "url(#wa-clip)"});
+  /* contours of the quadratic form around x*: semi-axes r/sqrt(2), r/sqrt(7) */
+  var rs = [1, 2, 3, 4], ri;
+  for (ri = 0; ri < rs.length; ri++){
+    el(g, "ellipse", {cx: 0, cy: 0, rx: (rs[ri] / Math.SQRT2 * SC).toFixed(1),
+      ry: (rs[ri] / Math.sqrt(7) * SC).toFixed(1), fill: "none", stroke: "#D8DEE4",
+      "stroke-width": 1.2,
+      transform: "translate(" + px(2).toFixed(1) + "," + py(-2).toFixed(1) + ") rotate(" + ROT + ")"});
+  }
+  /* the contour through x0 = 0: r = sqrt(20) */
+  var r20 = Math.sqrt(20);
+  el(g, "ellipse", {cx: 0, cy: 0, rx: (r20 / Math.SQRT2 * SC).toFixed(1),
+    ry: (r20 / Math.sqrt(7) * SC).toFixed(1), fill: "none", stroke: "#AEB8C0",
+    "stroke-width": 1.2, "stroke-dasharray": "6 5",
+    transform: "translate(" + px(2).toFixed(1) + "," + py(-2).toFixed(1) + ") rotate(" + ROT + ")"});
+  txt(g, px(2) - r20 / Math.SQRT2 * SC * 0.94, py(-2) + r20 / Math.sqrt(7) * SC * 0.62,
+      "contour through x₀", {halo: true});
+  /* SD zigzag (toggle) */
+  var sdG = el(g, "g", {opacity: 0});
+  var sdpts = BK.sdPath.map(function(pt){ return px(pt[0]).toFixed(1) + "," + py(pt[1]).toFixed(1); });
+  el(sdG, "polyline", {fill: "none", stroke: "#1F4E79", "stroke-width": 2, points: sdpts.join(" ")});
+  BK.sdPath.forEach(function(pt){
+    el(sdG, "circle", {cx: px(pt[0]).toFixed(1), cy: py(pt[1]).toFixed(1), r: 2.8,
+                       fill: "#1F4E79", stroke: "#fff", "stroke-width": 0.7});
+  });
+  txt(sdG, px(1.05), py(-0.98) - 8, "steepest descent: 8 steps, still 0.038 away",
+      {fill: "#1F4E79", halo: true, w: 600});
+  /* CG path (gold) */
+  var cgFull = [[0, 0], [st1.mu[0], st1.mu[1]], [2, -2]];
+  var cgG = el(g, "g", {});
+  var cgLine = el(cgG, "polyline", {fill: "none", stroke: "#C9A227", "stroke-width": 2.6, points: ""});
+  var cgDots = [0, 1, 2].map(function(i){
+    return el(cgG, "circle", {cx: px(cgFull[i][0]).toFixed(1), cy: py(cgFull[i][1]).toFixed(1),
+      r: 4, fill: "#C9A227", stroke: "#fff", "stroke-width": 1, opacity: i === 0 ? 1 : 0});
+  });
+  /* x* marker */
+  el(g, "path", {d: "M" + (px(2) - 7) + "," + py(-2) + " L" + (px(2) + 7) + "," + py(-2) +
+    " M" + px(2) + "," + (py(-2) - 7) + " L" + px(2) + "," + (py(-2) + 7),
+    stroke: "#1B2733", "stroke-width": 2});
+  txt(g, px(2) + 11, py(-2) + 4, "x∗ = (2, −2)", {fill: "#1B2733", w: 600, halo: true});
+  txt(g, px(0) + 8, py(0) - 8, "x₀ = μ₀ = 0", {fill: "#1B2733", halo: true});
+  /* credible region group (redrawn per state) */
+  var credG = el(g, "g", {});
+  var segDir = [22 / Math.sqrt(509), -5 / Math.sqrt(509)], segSig = 0.6618442912;
+
+  function drawState(i){
+    while (credG.firstChild) credG.removeChild(credG.firstChild);
+    if (i === 0){
+      /* prior ellipse: 1 and 2 sigma, axes (2,-1) len 1/sqrt2, (1,2) len 1/sqrt7 */
+      [2, 1].forEach(function(m){
+        el(credG, "ellipse", {cx: 0, cy: 0, rx: (m * Math.sqrt(0.5) * SC).toFixed(1),
+          ry: (m * Math.sqrt(1 / 7) * SC).toFixed(1),
+          fill: m === 1 ? "rgba(181,68,60,.10)" : "none",
+          stroke: "#B5443C", "stroke-width": m === 1 ? 2 : 1.1, opacity: m === 1 ? 1 : 0.5,
+          transform: "translate(" + px(0).toFixed(1) + "," + py(0).toFixed(1) + ") rotate(" + ROT + ")"});
+      });
+      txt(credG, px(0.62), py(0.62), "prior N(0, A⁻¹): 1σ and 2σ",
+          {fill: "#B5443C", w: 600, halo: true});
+    } else if (i === 1){
+      var c = st1.mu;
+      /* 2-sigma faint, 1-sigma bold segment; dashed extension to x* */
+      el(credG, "line", {x1: px(c[0] - 2 * segSig * segDir[0]).toFixed(1),
+        y1: py(c[1] - 2 * segSig * segDir[1]).toFixed(1),
+        x2: px(c[0] + 2 * segSig * segDir[0]).toFixed(1),
+        y2: py(c[1] + 2 * segSig * segDir[1]).toFixed(1),
+        stroke: "#B5443C", "stroke-width": 2, opacity: 0.35, "stroke-linecap": "round"});
+      el(credG, "line", {x1: px(c[0] - segSig * segDir[0]).toFixed(1),
+        y1: py(c[1] - segSig * segDir[1]).toFixed(1),
+        x2: px(c[0] + segSig * segDir[0]).toFixed(1),
+        y2: py(c[1] + segSig * segDir[1]).toFixed(1),
+        stroke: "#B5443C", "stroke-width": 5, opacity: 0.85, "stroke-linecap": "round"});
+      el(credG, "line", {x1: px(c[0] + 2 * segSig * segDir[0]).toFixed(1),
+        y1: py(c[1] + 2 * segSig * segDir[1]).toFixed(1),
+        x2: px(2).toFixed(1), y2: py(-2).toFixed(1),
+        stroke: "#B5443C", "stroke-width": 1.2, "stroke-dasharray": "3 4", opacity: 0.7});
+      txt(credG, px(c[0]) - 10, py(c[1]) - 12,
+          "Σ₁ is rank one: the ellipse is now a segment (±1σ, ±2σ)",
+          {fill: "#B5443C", w: 600, halo: true, anchor: "start"});
+      txt(credG, px(1.55), py(-1.72) + 16, "x∗ sits on this line, 2.4642σ out",
+          {fill: "#B5443C", halo: true});
+    } else {
+      el(credG, "circle", {cx: px(2).toFixed(1), cy: py(-2).toFixed(1), r: 6,
+        fill: "none", stroke: "#B5443C", "stroke-width": 2});
+      el(credG, "circle", {cx: px(2).toFixed(1), cy: py(-2).toFixed(1), r: 2.4, fill: "#B5443C"});
+      txt(credG, px(2), py(-2) - 18, "Σ₂ = 0: the posterior is a point — and it is x∗",
+          {fill: "#B5443C", w: 600, halo: true, anchor: "middle"});
+    }
+    /* CG path up to state i */
+    var pts = [];
+    for (var q = 0; q <= i; q++) pts.push(px(cgFull[q][0]).toFixed(1) + "," + py(cgFull[q][1]).toFixed(1));
+    cgLine.setAttribute("points", pts.join(" "));
+    cgDots.forEach(function(dd, q){ dd.setAttribute("opacity", q <= i ? 1 : 0); });
+  }
+
+  var state = 0;
+  var btn = document.getElementById("wa-step");
+  var rst = document.getElementById("wa-reset");
+  var sdT = document.getElementById("wa-sd");
+  var outI = document.getElementById("wa-i");
+  var outMu = document.getElementById("wa-mu");
+  var outTr = document.getElementById("wa-tr");
+  var outErr = document.getElementById("wa-err");
+  var labels = ["observe  s₁ = r₀ = b", "observe  s₂ = r₁",
+                "solved — Σ₂ = 0"];
+  function refresh(){
+    drawState(state);
+    outI.textContent = String(state);
+    outMu.textContent = states[state].muTxt;
+    outTr.textContent = states[state].tr;
+    outErr.textContent = states[state].err;
+    btn.textContent = labels[state];
+    btn.disabled = state === 2;
+  }
+  btn.addEventListener("click", function(){ if (state < 2){ state++; refresh(); } });
+  rst.addEventListener("click", function(){ state = 0; refresh(); });
+  sdT.addEventListener("change", function(){ sdG.setAttribute("opacity", sdT.checked ? 1 : 0); });
+  refresh();
+})();
+})();
+</script>
+</body>
+</html>
