@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One Space, Two Bases — measurements, responses, and preconditioning by imperfect prediction</title>
+<script>
+window.MathJax = {tex:{inlineMath:[['$','$']]}, chtml:{scale:0.96}};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+<style>
+:root{
+  --paper:#F2F4F6; --ink:#1B2733; --phy:#1F4E79; --prb:#B5443C;
+  --gold:#C9A227; --graphite:#5A6773; --card:#FFFFFF;
+}
+*{box-sizing:border-box}
+html{background:var(--paper)}
+body{margin:0;color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,"URW Palladio L",Georgia,serif;
+  font-size:17px;line-height:1.62;-webkit-font-smoothing:antialiased}
+main{max-width:1000px;margin:0 auto;padding:0 20px 90px}
+.prose{max-width:700px;margin:0 auto}
+h1{font-size:clamp(30px,5vw,46px);line-height:1.12;font-weight:600;letter-spacing:-0.01em;margin:.2em 0 .25em}
+h2{font-size:24px;font-weight:600;margin:2.6em 0 .5em;letter-spacing:-0.005em}
+.eyebrow{font-size:12px;letter-spacing:.22em;text-transform:uppercase;
+  font-family:ui-sans-serif,system-ui,sans-serif;font-weight:600;margin:3.4em 0 -0.2em}
+.eyebrow.phy{color:var(--phy)} .eyebrow.prb{color:var(--prb)} .eyebrow.syn{color:var(--gold)}
+.eyebrow.ink{color:var(--graphite)}
+p{margin:.85em 0}
+figure{margin:2em auto;max-width:1000px;text-align:center}
+figcaption{font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;color:var(--graphite);
+  max-width:760px;margin:.6em auto 0;line-height:1.5}
+.hero{padding:76px 0 8px;text-align:center}
+.hero .sub{color:var(--graphite);font-size:18px;max-width:640px;margin:0 auto}
+.identity{display:flex;align-items:stretch;max-width:860px;margin:38px auto 8px;
+  border:1px solid #DDE3E8;border-radius:10px;overflow:hidden;background:var(--card)}
+.identity>div{flex:1;padding:22px 10px 18px;text-align:center}
+.identity .left{background:linear-gradient(90deg,rgba(31,78,121,.10),rgba(31,78,121,.02))}
+.identity .right{background:linear-gradient(90deg,rgba(181,68,60,.02),rgba(181,68,60,.10))}
+.identity .lab{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;
+  letter-spacing:.16em;text-transform:uppercase;font-weight:600;margin-bottom:8px}
+.identity .left .lab{color:var(--phy)} .identity .right .lab{color:var(--prb)}
+.identity .formula{font-size:22px}
+.note{background:var(--card);border-left:3px solid var(--gold);padding:12px 18px;border-radius:0 8px 8px 0;
+  font-size:15.5px;max-width:700px;margin:1.4em auto}
+.check{font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;color:var(--graphite);
+  border-top:1px solid #DDE3E8;margin-top:70px;padding-top:18px;max-width:700px;margin-left:auto;margin-right:auto}
+.kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em;
+  background:#EAEEF2;padding:1px 5px;border-radius:4px}
+.fig-svg{width:100%;height:auto;border:1px solid #E2E6EA;border-radius:6px;background:#fff}
+.widget{background:var(--card);border:1px solid #E2E6EA;border-radius:8px;padding:16px 16px 12px;
+  max-width:1000px;margin:1.6em auto}
+.widget .fig-svg{border:none}
+.widget .ctrl{display:flex;align-items:center;gap:14px;margin:8px 6px 2px;
+  font-family:ui-sans-serif,system-ui,sans-serif;font-size:13.5px;color:var(--graphite)}
+.widget input[type=range]{flex:1;accent-color:var(--phy)}
+.readouts{display:flex;flex-wrap:wrap;gap:8px 26px;justify-content:center;margin-top:10px;
+  font-family:ui-sans-serif,system-ui,sans-serif;font-size:13.5px;color:var(--graphite)}
+.readouts b{font-variant-numeric:tabular-nums;color:var(--ink)}
+.readouts .phy b{color:var(--phy)} .readouts .gld b{color:#A88A1F} .readouts .prb b{color:var(--prb)}
+table.pins{border-collapse:collapse;margin:1.6em auto;font-size:15px;max-width:100%}
+table.pins th{font-family:ui-sans-serif,system-ui,sans-serif;font-size:11.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--graphite);font-weight:600}
+table.pins th,table.pins td{border:1px solid #E2E6EA;padding:7px 14px;text-align:left;background:var(--card)}
+table.pins td{font-variant-numeric:tabular-nums}
+.tablewrap{overflow-x:auto;margin:0 -20px;padding:0 20px}
+a{color:var(--phy)}
+mjx-container{max-width:100%}
+mjx-container[display="true"]{display:block;overflow-x:auto;overflow-y:hidden;padding:2px 0}
+/* ---------- update-views additions ---------- */
+.viewchips{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;max-width:1000px;margin:1.6em auto}
+.vchip{background:var(--card);border:1px solid #E2E6EA;border-radius:8px;padding:13px 15px 9px;min-width:0}
+.vchip h3{margin:0 0 4px;font-size:13px;font-family:ui-sans-serif,system-ui,sans-serif;
+  letter-spacing:.12em;text-transform:uppercase;font-weight:700}
+.vchip p{font-size:13.5px;line-height:1.45;margin:.4em 0;color:var(--graphite);font-family:ui-sans-serif,system-ui,sans-serif}
+.vchip.v1{border-top:3px solid var(--graphite)} .vchip.v1 h3{color:var(--graphite)}
+.vchip.v2{border-top:3px solid var(--phy)} .vchip.v2 h3{color:var(--phy)}
+.vchip.v3{border-top:3px solid var(--prb)} .vchip.v3 h3{color:var(--prb)}
+.vchip.v4{border-top:3px solid var(--gold)} .vchip.v4 h3{color:var(--gold)}
+.mcard{background:var(--card);border:1px solid #E2E6EA;border-radius:10px;max-width:1000px;
+  margin:1.7em auto;overflow:hidden}
+.mcard>header{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 22px;
+  padding:14px 20px 12px;background:linear-gradient(90deg,rgba(31,78,121,.06),rgba(201,162,39,.05))}
+.mcard .mname{font-size:19px;font-weight:700;letter-spacing:-0.005em}
+.mcard .mhead{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12.5px;color:var(--graphite);
+  display:flex;flex-wrap:wrap;gap:4px 18px}
+.mcard .mhead b{font-variant-numeric:tabular-nums;color:var(--ink)}
+.panes{display:grid;grid-template-columns:1fr 1fr}
+.pane{padding:12px 20px 10px;border-top:1px solid #EDF0F3;min-width:0}
+.pane:nth-child(odd){border-right:1px solid #EDF0F3}
+.pane .vlab{font-family:ui-sans-serif,system-ui,sans-serif;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;font-weight:700;margin-bottom:2px}
+.pane.v1 .vlab{color:var(--graphite)} .pane.v2 .vlab{color:var(--phy)}
+.pane.v3 .vlab{color:var(--prb)} .pane.v4 .vlab{color:var(--gold)}
+.pane p{font-size:14px;line-height:1.5;margin:.5em 0}
+.pformula{overflow-x:auto;overflow-y:hidden}
+.pane .pformula{font-size:15px;margin:.45em 0;text-align:center}
+.pane b{font-variant-numeric:tabular-nums}
+.mcheck{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;color:var(--graphite);
+  padding:8px 20px;border-top:1px solid #EDF0F3;background:#FAFBFC}
+.mcheck b{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600}
+svg.spec{width:100%;height:auto;display:block;margin:6px 0 2px}
+.controls{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;
+  font-family:ui-sans-serif,system-ui,sans-serif;font-size:13.5px;margin:10px 0 4px;color:var(--graphite)}
+.controls label{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.controls input[type=range]{width:170px;accent-color:var(--phy)}
+.seg{display:inline-flex;border:1px solid #C9D2DA;border-radius:6px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:5px 12px;font:600 13px ui-sans-serif,system-ui,sans-serif;
+  color:var(--graphite);cursor:pointer;border-left:1px solid #E2E6EA}
+.seg button:first-child{border-left:0}
+.seg button.active{background:var(--phy);color:#fff}
+.btn{border:1px solid #C9D2DA;border-radius:6px;background:#fff;padding:5px 14px;
+  font:600 13px ui-sans-serif,system-ui,sans-serif;color:var(--phy);cursor:pointer}
+.btn:hover{background:#F2F6FA}
+.btn:disabled{opacity:.35;cursor:default}
+.btn:disabled:hover{background:#fff}
+.btn.toggled{background:var(--prb);border-color:var(--prb);color:#fff}
+.stbadge{display:inline-block;font:600 12px ui-sans-serif,system-ui,sans-serif;
+  border-radius:12px;padding:3px 11px;margin-left:auto;line-height:1.45;
+  background:#E7F0E7;color:#2F6B3A;border:1px solid #CBDECB}
+.stbadge.fail{background:#F6E4E2;color:#9C332B;border-color:#E5C4C0}
+.wtitle{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;font-family:ui-sans-serif,system-ui,sans-serif;
+  font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:var(--graphite);margin:0 0 8px}
+.wtitle .dot{display:inline-block;width:9px;height:9px;border-radius:50%}
+.dictwrap{overflow-x:auto;max-width:1000px;margin:1.4em auto}
+table.dict{border-collapse:collapse;font-size:13px;font-family:ui-sans-serif,system-ui,sans-serif;
+  background:var(--card);border:1px solid #E2E6EA;min-width:760px;margin:0 auto}
+.dict th,.dict td{padding:8px 12px;border-top:1px solid #EDF0F3;text-align:left;vertical-align:top;line-height:1.45}
+.dict thead th{border-top:0;font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--graphite)}
+.dict td:first-child{font-weight:700;white-space:nowrap}
+.dict thead th:nth-child(2){color:var(--graphite)} .dict thead th:nth-child(3){color:var(--phy)}
+.dict thead th:nth-child(4){color:var(--prb)} .dict thead th:nth-child(5){color:var(--gold)}
+.dict td b{font-variant-numeric:tabular-nums}
+@media(max-width:760px){.viewchips{grid-template-columns:1fr}.identity{flex-direction:column}
+  .panes{grid-template-columns:1fr}.pane:nth-child(odd){border-right:0}
+  .seg{flex-wrap:wrap}.seg button{padding:5px 8px;font-size:12px}
+  .widget .ctrl{flex-wrap:wrap}}
+/* ---------- dual-basis additions ---------- */
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+@media(max-width:760px){.duo{grid-template-columns:1fr}}
+table.pins td.num{text-align:right}
+table.pins tr.hl td{background:#FBF6E3}
+table.pins td.mono,table.frax td{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px}
+table.frax{border-collapse:collapse;margin:1.2em auto;background:var(--card)}
+table.frax th{font-family:ui-sans-serif,system-ui,sans-serif;font-size:11px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--graphite);font-weight:600;border:1px solid #E2E6EA;padding:5px 9px}
+table.frax td{border:1px solid #E2E6EA;padding:5px 9px;text-align:center;font-variant-numeric:tabular-nums}
+table.frax tr.hl td{background:#FBF6E3}
+table.frax td.neg{color:var(--prb)} table.frax td.pos{color:var(--phy)}
+.prose .mcheck{border:1px solid #EDF0F3;border-radius:6px;margin:1.2em 0}
+.spdok{display:inline-block;font:600 12px ui-sans-serif,system-ui,sans-serif;border-radius:12px;
+  padding:2px 10px;background:#E7F0E7;color:#2F6B3A;border:1px solid #CBDECB}
+</style>
+</head>
+<body>
+<main>
+
+<div class="hero prose" style="max-width:880px">
+  <div class="eyebrow ink" style="margin-top:0">n = 32 &nbsp;·&nbsp; h = 1/33 &nbsp;·&nbsp; 33 edges &nbsp;·&nbsp; 39 machine checks, all PASS, 0.04&#8201;s</div>
+  <h1>One Space, Two Bases</h1>
+  <p class="sub">The bridge's precision matrix and its covariance are Gram matrices over the <i>same</i>
+  33 edges: $A$ is the Gram of sparse edge <b>measurements</b>, $A^{-1}$ the Gram of dense edge
+  <b>responses</b>, and the two row families are dual bases — $X^\top B_{\mathrm{inc}} = I$, to
+  $2\times10^{-15}$. Preconditioning is what happens when you make either family <i>slightly wrong</i>
+  on purpose.</p>
+  <div class="identity">
+    <div class="left"><div class="lab">Precision · sparse edge measurements</div>
+      <div class="formula">$A = B_{\mathrm{inc}}^\top B_{\mathrm{inc}}$</div>
+      <div style="font-size:13.5px;color:var(--graphite);margin-top:6px">one row per edge — two spikes, local</div></div>
+    <div class="right"><div class="lab">Covariance · dense edge responses</div>
+      <div class="formula">$A^{-1} = X^\top X$</div>
+      <div style="font-size:13.5px;color:var(--graphite);margin-top:6px">one row per edge — a global dipole field</div></div>
+  </div>
+</div>
+
+<div class="note" style="margin-top:26px"><b>Notation guard, posted before anything else.</b> The suite
+uses the letter $B$ for two unrelated matrices, and this page needs both. <b>$B_{\mathrm{inc}}$</b> is the
+<i>grounded incidence matrix</i> — $(n{+}1)\times n = 33\times32$, one row per edge of the chain
+wall–1, 1–2, …, 32–wall, entries $+1/h$ at the tail and $-1/h$ at the head (Vishnoi's sign convention,
+as in <span class="kbd">mathematica/electrical_networks.wls</span>). <b>$B_{\mathrm{reg}}$</b> is the
+<i>two-sided regression matrix</i> $I - \mathrm{diag}(A)^{-1}A$ of
+<a href="11-regressions-and-multiscale.html">report 11</a> and
+<a href="15-preconditioning-as-prediction.html">report 15</a>, which write it as a bare $B$. A third,
+minor family — the free, <i>ungrounded</i> incidence matrices §3 briefly compares against — appears
+only as $B_{\mathrm{full}}$ and $B_{\mathrm{free}}$. On this page
+no $B$ ever appears without its subscript.</div>
+
+<div class="prose">
+<div class="eyebrow phy">§1 · The two factorizations</div>
+<h2>Same 33 edges, two Grams</h2>
+<p>The arena is the suite's Dirichlet chain: $A = \mathrm{tridiag}(-1,2,-1)/h^2$ from
+<span class="kbd">laplacian_1d</span>, $n=32$ interior nodes, $h=\tfrac1{33}$, both walls pinned,
+$\kappa(A)=440.7$. Its sparse factorization is an old friend by now
+(<a href="09-stiffness-as-precision.html">report 09</a> §4): $A = B_{\mathrm{inc}}^\top B_{\mathrm{inc}}$,
+verified entrywise to $2.1\times10^{-16}$. Read row by row, that says something physical: row $e$ of
+$B_{\mathrm{inc}}$ is a <b>measurement functional</b> — the scaled difference
+$(u_{e-1}-u_e)\times\tfrac1h$ across one edge, two nonzeros for an interior edge, one for the
+two wall edges. The precision matrix is the Gram matrix of these local measurements: $A_{ij}$ is
+nonzero only where measurement supports overlap, which is why $A$ is tridiagonal
+($\mathrm{nnz}=94$) and why the AR/conditional world of
+<a href="12-autoregressive-preconditioning.html">report 12</a> lives on this side.</p>
+<p>The covariance has the mirror-image factorization. Define
+$$X \;=\; B_{\mathrm{inc}}\,A^{-1} \;=\; \big(B_{\mathrm{inc}}^\top\big)^{+},$$
+the Moore–Penrose dual of the measurement matrix (the two definitions agree to $1.2\times10^{-16}$). Then
+$$A^{-1} \;=\; X^\top X,$$
+verified to $1.6\times10^{-15}$: the <b>covariance is also a Gram matrix over the same 33 edges</b> —
+but of dense rows. Row $e$ of $X$ is the <b>response field</b> you get by solving $Av = b_e$ with the
+$e$-th measurement row as the load: inject $+1/h$ at the tail node, extract $1/h$ at the head — a unit
+<i>dipole</i> across edge $e$. All 33 rows match their solves to $3.8\times10^{-17}$.</p>
+<p>And the two families are not just parallel constructions — they are <b>dual bases</b>:
+$$X^\top B_{\mathrm{inc}} \;=\; A^{-1}B_{\mathrm{inc}}^\top B_{\mathrm{inc}} \;=\; I_{32},$$
+to $2.4\times10^{-15}$. Concretely: read any $u$ against the measurements, rebuild it with the responses,
+and you get $u$ back exactly — $u = \sum_e (b_e^\top u)\,v_e$, because that sum <i>is</i>
+$X^\top B_{\mathrm{inc}}\,u = A^{-1}A\,u$. The measurement coefficients of $u$ are its edge differences
+(currents, an electrician would say); the responses are the reconstruction kit that turns currents back
+into voltages. One index set, two reciprocal coordinate systems — hence the title.</p>
+<p>At $n=8$ ($h=\tfrac19$) the whole response basis fits on a business card, in exact rational
+arithmetic: $X_{e,i} = (i - 9\cdot\mathbf 1[i\ge e])/81$, and every identity above closes with <b>zero
+tolerance</b> in <span class="kbd">Fraction</span>s — $A\Sigma = I$ entry by entry, the closed form on
+all $9\times8$ entries, $X^\top B_{\mathrm{inc}} = I_8$ exactly. Each row climbs the ramp $i/81$, then
+drops by $\tfrac19 = h$ as it crosses its own edge:</p>
+</div>
+
+<div class="tablewrap">
+<table class="frax"><thead><tr><th>X (exact)</th><th>node 1</th><th>node 2</th><th>node 3</th><th>node 4</th><th>node 5</th><th>node 6</th><th>node 7</th><th>node 8</th></tr></thead><tbody><tr><th>edge 1</th><td class="neg">&#8722;8/81</td><td class="neg">&#8722;7/81</td><td class="neg">&#8722;2/27</td><td class="neg">&#8722;5/81</td><td class="neg">&#8722;4/81</td><td class="neg">&#8722;1/27</td><td class="neg">&#8722;2/81</td><td class="neg">&#8722;1/81</td></tr><tr><th>edge 2</th><td class="pos">1/81</td><td class="neg">&#8722;7/81</td><td class="neg">&#8722;2/27</td><td class="neg">&#8722;5/81</td><td class="neg">&#8722;4/81</td><td class="neg">&#8722;1/27</td><td class="neg">&#8722;2/81</td><td class="neg">&#8722;1/81</td></tr><tr><th>edge 3</th><td class="pos">1/81</td><td class="pos">2/81</td><td class="neg">&#8722;2/27</td><td class="neg">&#8722;5/81</td><td class="neg">&#8722;4/81</td><td class="neg">&#8722;1/27</td><td class="neg">&#8722;2/81</td><td class="neg">&#8722;1/81</td></tr><tr><th>edge 4</th><td class="pos">1/81</td><td class="pos">2/81</td><td class="pos">1/27</td><td class="neg">&#8722;5/81</td><td class="neg">&#8722;4/81</td><td class="neg">&#8722;1/27</td><td class="neg">&#8722;2/81</td><td class="neg">&#8722;1/81</td></tr><tr class="hl"><th>edge 5</th><td class="pos">1/81</td><td class="pos">2/81</td><td class="pos">1/27</td><td class="pos">4/81</td><td class="neg">&#8722;4/81</td><td class="neg">&#8722;1/27</td><td class="neg">&#8722;2/81</td><td class="neg">&#8722;1/81</td></tr><tr><th>edge 6</th><td class="pos">1/81</td><td class="pos">2/81</td><td class="pos">1/27</td><td class="pos">4/81</td><td class="pos">5/81</td><td class="neg">&#8722;1/27</td><td class="neg">&#8722;2/81</td><td class="neg">&#8722;1/81</td></tr><tr><th>edge 7</th><td class="pos">1/81</td><td class="pos">2/81</td><td class="pos">1/27</td><td class="pos">4/81</td><td class="pos">5/81</td><td class="pos">2/27</td><td class="neg">&#8722;2/81</td><td class="neg">&#8722;1/81</td></tr><tr><th>edge 8</th><td class="pos">1/81</td><td class="pos">2/81</td><td class="pos">1/27</td><td class="pos">4/81</td><td class="pos">5/81</td><td class="pos">2/27</td><td class="pos">7/81</td><td class="neg">&#8722;1/81</td></tr><tr><th>edge 9</th><td class="pos">1/81</td><td class="pos">2/81</td><td class="pos">1/27</td><td class="pos">4/81</td><td class="pos">5/81</td><td class="pos">2/27</td><td class="pos">7/81</td><td class="pos">8/81</td></tr></tbody></table>
+</div>
+<div style="max-width:760px;margin:-6px auto 0;font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;color:var(--graphite);text-align:center">
+<b>The exact response basis at $n=8$</b> — the $9\times8$ matrix $X = B_{\mathrm{inc}}A^{-1}$ in fractions
+(from the checks script's <span class="kbd">Fraction</span> block, zero float error). Every row is the
+closed form $(i-9\cdot\mathbf 1[i\ge e])/81$: blue entries sit left of the row's edge ($+i/81$), red
+entries right of it ($(i-9)/81$). Row 5 (highlighted) is the worked row of §3.
+</div>
+
+<div class="prose">
+<div class="mcheck">machine check — $A = B_{\mathrm{inc}}^\top B_{\mathrm{inc}}$: <b>2.1×10⁻¹⁶</b> ·
+$X = B_{\mathrm{inc}}A^{-1} = \mathrm{pinv}(B_{\mathrm{inc}}^\top)$: <b>1.2×10⁻¹⁶</b> ·
+$A^{-1} = X^\top X$: <b>1.6×10⁻¹⁵</b> · all 33 dipole solves: <b>3.8×10⁻¹⁷</b> ·
+$X^\top B_{\mathrm{inc}} = I$: <b>2.4×10⁻¹⁵</b> · $n=8$ Fractions: <b>exact, zero tolerance</b></div>
+</div>
+
+<div class="prose">
+<div class="eyebrow syn">§2 · Interactive</div>
+<h2>The dual-basis explorer</h2>
+<p>Every number below is the suite's own data — the full $33\times32$ matrices $B_{\mathrm{inc}}$ and
+$X$ are baked into the page from <span class="kbd">results/dual_basis.json</span>, and the widget
+re-verifies the closed form and both Gram identities at load (badge). Click an edge on the chain to see
+its two rows; switch the click target to $f$ to pair different edges in the dot-product readout.</p>
+</div>
+
+<figure class="widget">
+<div class="wtitle"><span class="dot" style="background:var(--phy)"></span> dual-basis explorer — one edge, two rows
+<span class="stbadge" id="db-badge">self-test &hellip;</span></div>
+<svg id="db-chain" viewBox="0 0 960 108" class="fig-svg" role="img" aria-label="Clickable chain of 33 edges"></svg>
+<div class="controls">
+  <span class="seg" id="db-mode"><button data-m="e" class="active">click sets e</button><button data-m="f">click sets f</button></span>
+  <span>edge e = <b id="db-elab" style="color:var(--phy)">17</b> &nbsp;·&nbsp; edge f = <b id="db-flab" style="color:var(--prb)">25</b></span>
+</div>
+<div class="duo">
+  <svg id="db-meas" viewBox="0 0 470 320" class="fig-svg" role="img" aria-label="Measurement row b_e"></svg>
+  <svg id="db-resp" viewBox="0 0 470 320" class="fig-svg" role="img" aria-label="Response row v_e"></svg>
+</div>
+<div class="readouts">
+  <span class="phy">$v_e\cdot b_f$ &nbsp;<b id="db-dot">…</b></span>
+  <span>exact value $\delta_{ef}-\tfrac1{33}$ &nbsp;<b id="db-exp">…</b></span>
+  <span class="gld" id="db-levwrap" style="display:none">e = f: this is $\Pi_{ee}$ = leverage = <b id="db-lev">32/33 = 0.9697</b></span>
+</div>
+<figcaption>Left: the measurement row $b_e$ — two spikes, $+33$ at the tail, $-33$ at the head (wall
+edges keep a single spike). Right: the response row $v_e$ — the global dipole field, dots from the baked
+$X$, gold line the closed form $h(x_i - \mathbf 1[x_i\ge x_e])$ of §3. The dot-product readout is
+$\Pi_{ef} = (XB_{\mathrm{inc}}^\top)_{ef} = \delta_{ef}-\tfrac1{33}$ — the <i>grounded</i> projection,
+one uniform-loop mode short of a Kronecker delta; the exact $\delta_{ij}$ lives in node space as
+$X^\top B_{\mathrm{inc}} = I_{32}$, which the self-test recomputes from the baked rows at load. When
+$e=f$ the readout is the constant diagonal $32/33$: every edge of the grounded chain carries the same
+leverage.</figcaption>
+</figure>
+
+<div class="prose">
+<div class="eyebrow phy">§3 · The physics of the rows</div>
+<h2>Dipole fields, dummy loads, and a matrix engineers built by hand</h2>
+<p><b>The response row is a centered step.</b> Solve the dipole load across edge $e$ and you get, in
+closed form — verified on all $33\times32$ entries to $7.6\times10^{-17}$ —
+$$X_{e,i} \;=\; h\,\big(x_i - \mathbf 1[x_i \ge x_e]\big),\qquad x_e = e\,h,$$
+with the tail-head orientation above (flip the orientation and the row negates). Left of the edge the
+field climbs the ramp $h\,x_i$; crossing the edge it drops by $h$ to the descending ramp $h(x_i-1)$; at
+the walls it vanishes. It is exactly the <b>difference of two adjacent
+<a href="green_tents_explainer.html">Green tents</a></b>: row $e$ equals (tent at $x_{e-1}$ minus tent
+at $x_e$)/$h$ — adjacent columns of $A^{-1}$, wall columns zero — to $1.6\times10^{-16}$. A dipole is a
+source next to a sink, so its field is a difference of two impulse responses; the long flat-ish flanks
+are what "dense row" means physically. In the $n=8$ card above, row 5 reads
+$\tfrac1{81}, \tfrac2{81}, \tfrac1{27}, \tfrac4{81}$, then falls to
+$-\tfrac4{81}, -\tfrac1{27}, -\tfrac2{81}, -\tfrac1{81}$: ramp up, drop by $h=\tfrac19$, ramp out.</p>
+<p><b>The Gram of responses is Maxwell's 1864 unit-load method.</b> Give each edge its own conductance
+$c_e$ (resistance $r_e = 1/c_e$) and the covariance assembles <i>member by member</i>:
+$$\big(A^{-1}\big)_{ij} \;=\; \sum_{e}\, r_e\, I_e^{(i)}\, I_e^{(j)},$$
+where $I_e^{(i)}$ is the current through edge $e$ under a unit injection at node $i$ (grounded walls).
+Verified with random conductances $\sim U(0.5,2)$, seed 42, on all $32\times32$ entries to
+$3.0\times10^{-15}$. Structural engineers know this as the Maxwell–Mohr dummy-load formula, later
+Castigliano's theorem: to find the deflection at $i$ under a load at $j$, thread a <i>dummy</i> unit
+load through the structure at $i$ and sum $r_e I_e^{(i)} I_e^{(j)}$ member by member —
+<b>engineers were assembling covariance matrices member by member before covariance had a name</b>.
+Maxwell–Betti reciprocity ("load here, read there, swap, same number") is nothing but the symmetry of
+this Gram, and it holds to $4.4\times10^{-15}$. At $n=8$ with unit conductances every edge has
+$r_e = h^2 = \tfrac1{81}$, and the entry $(A^{-1})_{3,6}$ closes exactly in fractions: unit injection at
+node 3 drives currents $-\tfrac23$ through the three edges to its left and $+\tfrac13$ through the six
+to its right; injection at 6 drives $-\tfrac13$ / $+\tfrac23$; the nine products
+$r_e I_e^{(3)} I_e^{(6)}$ are $\tfrac2{729},\tfrac2{729},\tfrac2{729},$
+$-\tfrac1{729},-\tfrac1{729},-\tfrac1{729},$ $\tfrac2{729},\tfrac2{729},\tfrac2{729}$, summing to
+$\tfrac9{729} = \tfrac1{81} = (A^{-1})_{3,6}$. <b>Exactly.</b></p>
+<p><b>The cross-Gram is Vishnoi's projection — with one honest asterisk.</b> The remaining product of
+the two row families is $\Pi = X B_{\mathrm{inc}}^\top = B_{\mathrm{inc}}A^{-1}B_{\mathrm{inc}}^\top$,
+a $33\times33$ matrix on <i>edge</i> space: symmetric ($1.9\times10^{-15}$), idempotent
+($2.0\times10^{-15}$), eigenvalues exactly $\{0\ (\times1),\,1\ (\times32)\}$ — an orthogonal projection
+of rank $n=32$, corank one. For a <i>free</i> graph, Vishnoi's Props 4.2–4.4 (coded in
+<span class="kbd">electrical_networks.wls</span>) give $\Pi = B_{\mathrm{free}}L^{+}B_{\mathrm{free}}^\top$
+— $B_{\mathrm{free}}$ the free, ungrounded incidence matrix — with
+$\Pi_{ee} = $ effective resistance and rank $n-1$; and for a free <i>tree</i> like our path, that $\Pi$
+is the identity — no cycles to project out ($B_{\mathrm{full}}L_{\mathrm{full}}^{+}B_{\mathrm{full}}^\top
+= I_{33}$, checked to $5.1\times10^{-15}$). Our chain is <i>grounded</i>, and grounding changes the
+answer by exactly rank one:
+$$\Pi \;=\; I_{33} - \tfrac1{33}\,\mathbf{1}\mathbf{1}^\top\qquad\text{exactly } (1.7\times10^{-15}),$$
+whose null vector is the constant current — the one loop the grounded chain owns, a uniform circulation
+out one wall, through ground, in the other. Equivalently: short both walls together and the 33 edges
+form a cycle $C_{33}$ through the ground node, and $\Pi_{ee} = c_e\,R_{\mathrm{eff}}(e)$ in <i>that</i>
+network, all 33 edges, to $2.0\times10^{-15}$. The diagonal is constant at $\tfrac{32}{33} = 0.9697$:
+in regression language, each edge-measurement is a datapoint and $\Pi$ is its hat matrix, so
+$32/33$ is the <b>leverage score</b> of every edge — the quantity effective-resistance sparsifiers
+sample by — and the diagonal sums to $32 = \mathrm{rank}\,\Pi$, Foster's theorem in grounded form.</p>
+<p><b>The free-path version, gauge and all.</b> Run the same construction on the free path $P_8$:
+$X_{\mathrm{free}} = B_{\mathrm{free}} L^{+} = \mathrm{pinv}(B_{\mathrm{free}}^\top)$ ($1.2\times10^{-15}$),
+$X_{\mathrm{free}}^\top X_{\mathrm{free}} = L^{+}$ ($2.9\times10^{-15}$), and each row is a
+<i>gauge-fixed</i> dipole field — it solves the dipole load and sums to zero, orthogonal to the constant
+mode ($2.3\times10^{-15}$). $\Pi_{\mathrm{free}} = I_7$ with effective resistance exactly $1$ per tree
+edge and Foster sum $7 = $ vertices $-\,1$. But biorthogonality now holds only <i>modulo the gauge</i>:
+$X_{\mathrm{free}}^\top B_{\mathrm{free}} = I - \tfrac18\mathbf{1}\mathbf{1}^\top$ — the centering projector, not the
+identity ($1.4\times10^{-15}$). Grounding is what buys the clean $X^\top B_{\mathrm{inc}} = I$ of §1;
+freedom costs you one direction.</p>
+<div class="mcheck">machine check — continuum step form, 33×32 entries: <b>7.6×10⁻¹⁷</b> ·
+tent-difference identity: <b>1.6×10⁻¹⁶</b> · Maxwell unit-load, random conductances:
+<b>3.0×10⁻¹⁵</b> · Betti = Gram symmetry: <b>4.4×10⁻¹⁵</b> · $\Pi = I-\frac{1}{33}\mathbf{1}\mathbf{1}^\top$:
+<b>1.7×10⁻¹⁵</b> · leverage $32/33$, Foster sum 32: <b>1.4×10⁻¹⁵</b> · $P_8$ gauge story:
+<b>≤ 2.9×10⁻¹⁵</b> · $n=8$ current bookkeeping: <b>exact fractions</b></div>
+</div>
+<div class="prose">
+<div class="eyebrow ink">§4 · Two perfect predictors, one solve</div>
+<h2>Predict conditionally or predict marginally — perfectly, either way</h2>
+<p>Both factorizations are prediction machines, and
+<a href="15-preconditioning-as-prediction.html">report 15</a> (with the notebook's
+<span class="kbd">phiL2R</span>/<span class="kbd">phiR2L</span> pair in
+<span class="kbd">whitening_inverse_transposed.nb</span>) worked out the perfect versions on this exact
+chain. They sit on opposite sides of the dual pair:</p>
+</div>
+
+<div class="mcard">
+<div class="panes">
+  <div class="pane v2"><div class="vlab">Conditional · AR · the whitener</div>
+    <p>Predict each node from its <i>left</i> neighbor, walls known. The exact left-to-right predictor is
+    a <b>nonstationary AR(1)</b> with report 15's closed-form coefficients
+    $$\phi_i = \frac{n+1-i}{\,n+2-i\,} = \frac{\Sigma_{i,i-1}}{\Sigma_{i-1,i-1}},\qquad
+    d_i^2 = h^2\phi_i,\qquad i = 2,\dots,n,$$
+    verified to $6.1\times10^{-15}$ (node 1 has no left neighbor — its predecessor is the wall's
+    deterministic zero, so it carries no coefficient; the $d^2$ formula does extend to $i=1$:
+    $d_1^2 = h^2\cdot\tfrac{32}{33} = \Sigma_{11}$). The
+    coefficients start at $\phi_2 = \tfrac{31}{32}$ and fall to $\phi_{32} = \tfrac12$ at the right wall — the wall is
+    <i>felt</i>, which is exactly what "nonstationary" means here. Perfect whitening rebuilds the
+    precision: $(I-\Phi)^\top D^{-2}(I-\Phi) = A$ to $2.1\times10^{-16}$, and PCG with it converges in
+    <b>1 iteration</b> (<a href="12-autoregressive-preconditioning.html">report 12</a>: perfect AR =
+    exact solve).</p></div>
+  <div class="pane v3"><div class="vlab">Marginal · MA · the colorer</div>
+    <p>Predict each node from <i>both</i> neighbors at once: the two-sided conditional-mean matrix is
+    $$B_{\mathrm{reg}} = I - \mathrm{diag}(A)^{-1}A = \mathrm{tridiag}\big(\tfrac12,0,\tfrac12\big),$$
+    the half-step walk matrix ($1.1\times10^{-16}$), with $\rho(B_{\mathrm{reg}}) = \cos\frac{\pi}{33} =
+    0.995472$. <a href="11-regressions-and-multiscale.html">Report 11</a> §2's path expansion sums walks:
+    $$A^{-1} = \Big(\textstyle\sum_{j\ge0} B_{\mathrm{reg}}^{\,j}\Big)\,D^{-1},$$
+    and the measured convergence rate of the partial sums is $e^{-0.004538}$ — the fitted exponent
+    equals $\ln\rho(B_{\mathrm{reg}})$ to the digit (long walks carry the far field). Summed to the end,
+    it rebuilds the covariance: the perfect colorer is the exact $A^{-1}$.</p></div>
+</div>
+<div class="mcheck">machine check — $\phi_i$ closed form &amp; $d_i^2 = h^2\phi_i$: <b>6.1×10⁻¹⁵</b> ·
+perfect whitener $= A$, PCG 1 iteration: <b>2.1×10⁻¹⁶</b> · $B_{\mathrm{reg}}$ tridiag(½,0,½):
+<b>1.1×10⁻¹⁶</b> · Neumann rate $=\rho$: <b>exact to output precision</b></div>
+</div>
+
+<div class="prose">
+<p>Here is the flip this page exists to state. The <b>precision factorization predicts
+conditionally</b>: sparse rows, each node explained by its neighbors, and applying the model means
+<i>solving</i> (triangular substitution — cheap flops, sequential). The <b>covariance factorization
+predicts marginally</b>: dense rows, each edge's response written out in full, and applying the model
+means <i>multiplying</i> (matvecs — parallel, no solves anywhere). Perfect, the two are the same
+solve. The interesting preconditioners are the <b>imperfect</b> versions — and each family has its own
+natural way of being wrong: the AR side <i>drops conditional structure</i>, the MA side <i>clips
+marginal range</i>. §5 and §6 do one each, honestly.</p>
+</div>
+
+<div class="prose">
+<div class="eyebrow phy">§5 · Imperfect left-to-right</div>
+<h2>The whitener family: freeze the coefficient, pay at the wall</h2>
+<p>The exact $\phi_i$ drift from $\tfrac{31}{32}$ toward $\tfrac12$ because the right wall keeps getting
+closer. The laziest possible approximation is to <b>freeze the coefficient</b>: one stationary $c$ for
+every node,
+$$M_c = (I-\Phi_c)^\top D_c^{-1} (I-\Phi_c),\qquad \Phi_c = c\cdot(\text{subdiagonal shift}),$$
+applied as two unit-triangular bidiagonal solves plus a diagonal scale. The innovation variances $D_c$
+must be chosen honestly, and the sweep runs both defensible choices: <b>const-D</b>, the single scalar
+$d_c^2 = h^2(1+c^2)/2$, chosen so the interior diagonal of $M_c$ matches $\mathrm{diag}(A) = 2/h^2$
+(<i>not</i> a stationary AR(1) innovation variance — that would be $\sigma^2(1-c^2)$ — and any
+scalar here is provably cosmetic: $\kappa$, PCG counts, and $\rho_{\mathrm{opt}}$ are invariant under
+$D\to7D$, checked at $c=0.8$ to $1.2\times10^{-13}$); and <b>matched-D</b>, the true residual variance
+of the imperfect predictor on the true bridge, $D_{ii} = \Sigma_{ii} - 2c\,\Sigma_{i,i-1} +
+c^2\,\Sigma_{i-1,i-1}$, which is what a statistician would fit.</p>
+</div>
+
+<div class="tablewrap">
+<table class="pins"><thead><tr><th rowspan="2">c</th><th colspan="6">const-D &nbsp;(d&#178; = h&#178;(1+c&#178;)/2)</th><th colspan="2">matched-D</th></tr><tr><th>&#955;min</th><th>&#955;max</th><th>&#954;</th><th>&#961; opt</th><th>&#961; plain</th><th>PCG its</th><th>&#954;</th><th>PCG its</th></tr></thead><tbody><tr><td class="num"><b>0</b></td><td class="num">0.004528</td><td class="num">1.995</td><td class="num">440.69</td><td class="num">0.9955</td><td class="num">0.9955</td><td class="num">32</td><td class="num">528.00</td><td class="num">36</td></tr><tr><td class="num"><b>0.5</b></td><td class="num">0.02225</td><td class="num">1.25</td><td class="num">56.18</td><td class="num">0.9650</td><td class="num">0.9778</td><td class="num">21</td><td class="num">57.09</td><td class="num">30</td></tr><tr><td class="num"><b>0.8</b></td><td class="num">0.1582</td><td class="num">2.562</td><td class="num">16.20</td><td class="num">0.8837</td><td class="num">1.562</td><td class="num">12</td><td class="num">10.88</td><td class="num">15</td></tr><tr><td class="num"><b>0.9</b></td><td class="num">0.4581</td><td class="num">5.025</td><td class="num">10.97</td><td class="num">0.8329</td><td class="num">4.025</td><td class="num">9</td><td class="num">9.69</td><td class="num">11</td></tr><tr><td class="num"><b>0.95</b></td><td class="num">0.784</td><td class="num">9.717</td><td class="num">12.39</td><td class="num">0.8507</td><td class="num">8.717</td><td class="num">7</td><td class="num">11.98</td><td class="num">10</td></tr><tr><td class="num"><b>0.99</b></td><td class="num">0.9897</td><td class="num">24.34</td><td class="num">24.59</td><td class="num">0.9219</td><td class="num">23.34</td><td class="num">5</td><td class="num">24.63</td><td class="num">7</td></tr><tr><td class="num"><b>1</b></td><td class="num">1</td><td class="num">33</td><td class="num">33.00</td><td class="num">0.9412</td><td class="num">32</td><td class="num">2</td><td class="num">33.00</td><td class="num">2</td></tr></tbody></table>
+</div>
+
+<div class="prose">
+<p>Three things the table is saying. <b>First, the sweet spot is high but strictly inside.</b> On the
+fine grid the optimum sits at $c^\ast=0.915$ ($\kappa=10.83$, const-D) and $c^\ast=0.895$ ($\kappa=9.68$,
+matched-D) — a $\sim$40× improvement over Jacobi ($c=0$, $\kappa=440.7$, the raw $\kappa(A)$), from a
+preconditioner that stores <i>one scalar</i>. <b>Second, $c=1$ — the pure random-walk prior — fails at
+the wall, and fails by exactly rank one.</b> With $d^2=h^2$ the frozen whitener misses the true $A$ by
+a single dyad: $M_1 = A - e_n e_n^\top/h^2$, to $2.1\times10^{-13}$ — a left-to-right recursion that
+never learns there is a <i>right</i> wall. The spectrum of $M_1^{-1}A$ is $\{1\ (\times31),\ 33\}$: one
+bad direction. Plain Richardson, which must contract every mode, <b>diverges</b> ($\rho = 32$); PCG,
+which needs one Krylov step per outlier, shrugs it off in <b>2 iterations</b>. Same preconditioner,
+opposite verdicts — the sharpest small example the suite owns of <i>why</i> Krylov wraps
+preconditioners. <b>Third, the two $D$ choices barely disagree</b> except at the silly end ($c=0$,
+where matched-D is Jacobi-with-variances, $\kappa=528$): the coefficient, not the variance model, is
+what matters.</p>
+<p>A second imperfection flavor, same family: keep the <i>exact</i> nonstationary $\phi_i$ but round
+each coefficient to $b$ bits (matched variances). Conditioning collapses monotonically as precision
+grows — quantization error behaves like a small, well-spread model error, nothing like the structured
+wall defect:</p>
+</div>
+
+<div class="tablewrap">
+<table class="pins"><thead><tr><th>bits</th><th>&#955;min</th><th>&#955;max</th><th>&#954;</th><th>&#961; opt</th><th>&#961; plain</th><th>PCG its</th></tr></thead><tbody><tr><td class="num"><b>1</b></td><td class="num">0.9697</td><td class="num">12</td><td class="num">12.3778</td><td class="num">0.8505</td><td class="num">11</td><td class="num">4</td></tr><tr><td class="num"><b>2</b></td><td class="num">0.7835</td><td class="num">5.19</td><td class="num">6.6240</td><td class="num">0.7377</td><td class="num">4.19</td><td class="num">8</td></tr><tr><td class="num"><b>3</b></td><td class="num">0.7486</td><td class="num">2.393</td><td class="num">3.1960</td><td class="num">0.5234</td><td class="num">1.393</td><td class="num">9</td></tr><tr><td class="num"><b>4</b></td><td class="num">0.7793</td><td class="num">1.177</td><td class="num">1.5100</td><td class="num">0.2032</td><td class="num">0.2207</td><td class="num">8</td></tr><tr><td class="num"><b>6</b></td><td class="num">0.9563</td><td class="num">1.053</td><td class="num">1.1015</td><td class="num">0.0483</td><td class="num">0.05335</td><td class="num">6</td></tr><tr><td class="num"><b>8</b></td><td class="num">0.9896</td><td class="num">1.013</td><td class="num">1.0241</td><td class="num">0.0119</td><td class="num">0.01336</td><td class="num">5</td></tr></tbody></table>
+</div>
+
+<div class="prose">
+<p>This is the 1-D shadow of a move the suite makes in earnest elsewhere: incomplete Cholesky and
+Vecchia approximations (<a href="11-regressions-and-multiscale.html">report 11</a>,
+<a href="15-preconditioning-as-prediction.html">report 15</a>) are exactly "keep a cheap sparse
+conditional model, let PCG mop up the dropped structure" — there the dropped structure is 2-D fill-in,
+here it is one wall.</p>
+</div>
+
+<figure class="widget">
+<div class="wtitle"><span class="dot" style="background:var(--phy)"></span> the stationary whitener — sweep c
+<span class="stbadge" id="ar-badge">self-test &hellip;</span></div>
+<svg id="ar-curve" viewBox="0 0 960 330" class="fig-svg" role="img" aria-label="Condition number versus frozen coefficient c"></svg>
+<div class="controls">
+  <span class="seg" id="ar-dsel"><button data-d="const" class="active">const-D</button><button data-d="matched">matched-D</button></span>
+  <label>c <input id="ar-slider" type="range" min="0" max="200" step="1" value="180" style="width:260px"></label>
+  <span>c = <b id="ar-cval">0.900</b></span>
+</div>
+<svg id="ar-spec" viewBox="0 0 960 86" class="fig-svg" role="img" aria-label="Spectrum of the preconditioned matrix"></svg>
+<div class="readouts">
+  <span class="phy">κ const-D &nbsp;<b id="ar-kc">…</b></span>
+  <span class="prb">κ matched-D &nbsp;<b id="ar-km">…</b></span>
+  <span>PCG iterations &nbsp;<b id="ar-its">…</b></span>
+  <span class="gld">spectrum shown at &nbsp;<b id="ar-spat">…</b></span>
+</div>
+<figcaption>The κ(c) curves are the 201-point sweep from the JSON, drawn point for point — the slider
+snaps to that grid and reads the array, no interpolation. PCG iteration counts and full spectra were
+measured only at the seven sweep points $c\in\{0, 0.5, 0.8, 0.9, 0.95, 0.99, 1\}$, so those readouts
+snap to the <i>nearest measured</i> $c$ and say which one they are showing. Gold markers: the two
+optima ($c^\ast=0.915$ const, $0.895$ matched); red marker: the $c=1$ wall failure, whose spectrum is 31
+ones and a single 33 — and whose PCG count is 2. Log scale on both axes of the strip.</figcaption>
+</figure>
+
+<div class="prose">
+<div class="eyebrow prb">§6 · Imperfect symmetric</div>
+<h2>The colorer family: approximate $A^{-1}$ itself, matvecs only</h2>
+<p>Now be wrong on the other side of the duality: build $M^{-1} \approx A^{-1}$ directly, so applying
+the preconditioner is a multiplication — no substitutions, no sequential chain. Two constructions, which
+the checks confirm are siblings in disguise:</p>
+</div>
+
+<div class="mcard">
+<div class="panes">
+  <div class="pane v3"><div class="vlab">Truncated walks · Neumann series cut at k</div>
+    <p>Cut <a href="11-regressions-and-multiscale.html">11</a>&nbsp;§2's path expansion at walk length
+    $k$: $$M_k^{-1} = D^{-1}\textstyle\sum_{j=0}^{k} B_{\mathrm{reg}}^{\,j}$$ (scalar $D = $
+    diag($A$) makes 11's two orderings equal). A polynomial preconditioner: $k$ matvecs with
+    tridiag(½,0,½). <b>SPD honesty:</b> the textbook rule "truncate at even $k$ to stay definite" turns
+    out unnecessary on this chain — $M_k^{-1}$ is SPD at <i>every</i> tested $k$ including odd (min eig
+    over the grid $2.1\times10^{-6} > 0$), because eigenvalues of $M_k^{-1}A$ are $1-\mu^{k+1}$ with
+    $|\mu| \le \rho = 0.995472 < 1$. But parity is far from irrelevant: odd $k$ caps $\lambda_{\max}$
+    at $1$ (even powers $\mu^{k+1}\ge0$), even $k$ lets it ride to $2$ — which is why $k=1$ beats
+    $k=2$ in the table below.</p></div>
+  <div class="pane v4"><div class="vlab">Clipped responses · finite-range marginal model</div>
+    <p>Take the <i>exact</i> dual basis of §1 and clip each dipole-response row of $X$ to a window of
+    $w$ nodes beyond its edge's endpoints: $$M_w^{-1} = X_w^\top X_w,$$ a sparse approximate inverse
+    that is <b>SPD by construction</b> — a Gram matrix cannot fail you — and nonsingular even at $w=0$
+    (min eig $5.4\times10^{-5} > 0$, endpoints only). $w=31$ keeps every entry and recovers the exact
+    colorer: $\kappa = 1.0$, PCG in <b>1 iteration</b>. Applying $M_w^{-1}$ is two sparse matvecs,
+    $X_w$ then $X_w^\top$.</p></div>
+</div>
+<div class="mcheck">machine check — SPD at every k, min eig <b>2.1×10⁻⁶</b> · SPD by construction at every w,
+min eig at w=0 <b>5.4×10⁻⁵</b> · bandwidth($M_k^{-1}$) = min(k, 31) · bandwidth($M_w^{-1}$) = min(2w+1, 31)
+· w = 31: κ = <b>1.0</b>, PCG <b>1</b></div>
+</div>
+
+<div class="prose">
+<p>The sibling relation is the bandwidth bookkeeping: <b>the walk length is the range of the covariance
+model.</b> $M_k^{-1}$ has bandwidth exactly $\min(k, 31)$ — a $k$-step walk reaches $k$ nodes — and
+$M_w^{-1}$ has bandwidth exactly $\min(2w{+}1, 31)$ — two windows of $w$ overlapping through an edge.
+Both families are finite-range marginal models of a process whose true marginal structure
+(the bridge, <a href="bridge_explainer.html">its explainer</a>) has range the <i>whole rod</i>. The
+sweeps, in full:</p>
+</div>
+
+<div class="tablewrap">
+<table class="pins"><thead><tr><th>walks k</th><th>band</th><th>min eig M&#8315;&#185;</th><th>&#955;min</th><th>&#955;max</th><th>&#954;</th><th>PCG its</th><th>flops/apply</th><th>flops/iter</th><th>flops total</th><th>span</th></tr></thead><tbody><tr><td class="num"><b>0</b></td><td class="num">0</td><td class="num">4.6e-04</td><td class="num">0.004528</td><td class="num">1.995</td><td class="num">440.69</td><td class="num">32</td><td class="num">64</td><td class="num">636</td><td class="num">20,544</td><td class="num">1</td></tr><tr><td class="num"><b>1</b></td><td class="num">1</td><td class="num">2.1e-06</td><td class="num">0.009036</td><td class="num">0.9977</td><td class="num">110.42</td><td class="num">16</td><td class="num">252</td><td class="num">824</td><td class="num">13,564</td><td class="num">4</td></tr><tr><td class="num"><b>2</b></td><td class="num">2</td><td class="num">3.4e-04</td><td class="num">0.01352</td><td class="num">1.986</td><td class="num">146.90</td><td class="num">27</td><td class="num">440</td><td class="num">1,012</td><td class="num">27,892</td><td class="num">7</td></tr><tr><td class="num"><b>3</b></td><td class="num">3</td><td class="num">4.1e-06</td><td class="num">0.01799</td><td class="num">1</td><td class="num">55.59</td><td class="num">16</td><td class="num">628</td><td class="num">1,200</td><td class="num">19,956</td><td class="num">10</td></tr><tr><td class="num"><b>4</b></td><td class="num">4</td><td class="num">3.1e-04</td><td class="num">0.02244</td><td class="num">1.978</td><td class="num">88.14</td><td class="num">23</td><td class="num">816</td><td class="num">1,388</td><td class="num">32,868</td><td class="num">13</td></tr><tr><td class="num"><b>8</b></td><td class="num">8</td><td class="num">2.8e-04</td><td class="num">0.04002</td><td class="num">1.96</td><td class="num">48.97</td><td class="num">19</td><td class="num">1,568</td><td class="num">2,140</td><td class="num">42,356</td><td class="num">25</td></tr><tr><td class="num"><b>16</b></td><td class="num">16</td><td class="num">2.6e-04</td><td class="num">0.07425</td><td class="num">1.926</td><td class="num">25.94</td><td class="num">15</td><td class="num">3,072</td><td class="num">3,644</td><td class="num">57,860</td><td class="num">49</td></tr><tr><td class="num"><b>32</b></td><td class="num">31</td><td class="num">2.5e-04</td><td class="num">0.1391</td><td class="num">1.861</td><td class="num">13.38</td><td class="num">12</td><td class="num">6,080</td><td class="num">6,652</td><td class="num">86,032</td><td class="num">97</td></tr><tr><td class="num"><b>64</b></td><td class="num">31</td><td class="num">2.4e-04</td><td class="num">0.2555</td><td class="num">1.745</td><td class="num">6.83</td><td class="num">9</td><td class="num">12,096</td><td class="num">12,668</td><td class="num">126,236</td><td class="num">193</td></tr></tbody></table>
+</div>
+<div class="tablewrap">
+<table class="pins"><thead><tr><th>window w</th><th>band</th><th>nnz X<sub>w</sub></th><th>min eig M&#8315;&#185;</th><th>&#955;min</th><th>&#955;max</th><th>&#954;</th><th>PCG its</th><th>flops/apply</th><th>flops/iter</th><th>flops total</th><th>span</th></tr></thead><tbody><tr><td class="num"><b>0</b></td><td class="num">1</td><td class="num">64</td><td class="num">5.4e-05</td><td class="num">0.0007706</td><td class="num">3.867</td><td class="num">5017.69</td><td class="num">37</td><td class="num">256</td><td class="num">828</td><td class="num">31,020</td><td class="num">4</td></tr><tr><td class="num"><b>1</b></td><td class="num">3</td><td class="num">126</td><td class="num">2.3e-06</td><td class="num">0.004945</td><td class="num">3.72</td><td class="num">752.19</td><td class="num">35</td><td class="num">504</td><td class="num">1,076</td><td class="num">38,292</td><td class="num">6</td></tr><tr><td class="num"><b>2</b></td><td class="num">5</td><td class="num">186</td><td class="num">7.1e-06</td><td class="num">0.01466</td><td class="num">3.561</td><td class="num">242.84</td><td class="num">33</td><td class="num">744</td><td class="num">1,316</td><td class="num">44,300</td><td class="num">8</td></tr><tr><td class="num"><b>4</b></td><td class="num">9</td><td class="num">300</td><td class="num">1.7e-05</td><td class="num">0.05602</td><td class="num">3.249</td><td class="num">58.00</td><td class="num">32</td><td class="num">1,200</td><td class="num">1,772</td><td class="num">58,032</td><td class="num">10</td></tr><tr><td class="num"><b>8</b></td><td class="num">17</td><td class="num">504</td><td class="num">5.0e-05</td><td class="num">0.1926</td><td class="num">2.652</td><td class="num">13.77</td><td class="num">28</td><td class="num">2,016</td><td class="num">2,588</td><td class="num">74,608</td><td class="num">12</td></tr><tr><td class="num"><b>16</b></td><td class="num">31</td><td class="num">816</td><td class="num">1.3e-04</td><td class="num">0.4942</td><td class="num">1.662</td><td class="num">3.36</td><td class="num">14</td><td class="num">3,264</td><td class="num">3,836</td><td class="num">57,096</td><td class="num">14</td></tr><tr><td class="num"><b>24</b></td><td class="num">31</td><td class="num">1,000</td><td class="num">1.8e-04</td><td class="num">0.7192</td><td class="num">1.319</td><td class="num">1.83</td><td class="num">10</td><td class="num">4,000</td><td class="num">4,572</td><td class="num">49,848</td><td class="num">14</td></tr><tr><td class="num"><b>31</b></td><td class="num">31</td><td class="num">1,056</td><td class="num">2.3e-04</td><td class="num">1</td><td class="num">1</td><td class="num">1.00</td><td class="num">1</td><td class="num">4,224</td><td class="num">4,796</td><td class="num">9,148</td><td class="num">14</td></tr></tbody></table>
+</div>
+
+<div class="prose">
+<p>Two honest readings before the punchline. The odd/even zigzag in the $k$-table is the parity fact
+from the card above, live in the numbers: $\lambda_{\max}$ alternates between $\approx1$ (odd $k$) and
+$\approx2$ (even $k$), so $k=1$ ($\kappa=110.4$) genuinely beats $k=2$ ($\kappa=146.9$). And comparing
+across families at matched $\kappa$: truncated walks at $k=32$ ($\kappa=13.4$) take <b>12</b> PCG
+iterations while clipped responses at $w=8$ ($\kappa=13.8$) take <b>28</b> — condition number is not
+destiny; the walk family's spectrum comes clustered while the clipped family's is spread (the widget
+shows both strips), and PCG pays for spread, not just for width.</p>
+</div>
+
+<figure>
+<svg viewBox="0 0 760 420" xmlns="http://www.w3.org/2000/svg" class="fig-svg" role="img" aria-label="Condition number versus clipping window, log-log">
+<line x1="84" y1="372.0" x2="700" y2="372.0" stroke="#EDF0F3"/>
+<text x="75" y="376.0" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12.5" fill="#5A6773" text-anchor="end">&#954; = 1</text>
+<line x1="84" y1="262.7" x2="700" y2="262.7" stroke="#EDF0F3"/>
+<text x="75" y="266.7" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12.5" fill="#5A6773" text-anchor="end">&#954; = 10</text>
+<line x1="84" y1="153.3" x2="700" y2="153.3" stroke="#EDF0F3"/>
+<text x="75" y="157.3" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12.5" fill="#5A6773" text-anchor="end">&#954; = 100</text>
+<line x1="84" y1="44.0" x2="700" y2="44.0" stroke="#EDF0F3"/>
+<text x="75" y="48.0" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12.5" fill="#5A6773" text-anchor="end">&#954; = 1000</text>
+<line x1="84.0" y1="372" x2="84.0" y2="377" stroke="#5A6773"/>
+<text x="84.0" y="393" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12.5" fill="#5A6773" text-anchor="middle">w = 1</text>
+<line x1="208.3" y1="372" x2="208.3" y2="377" stroke="#5A6773"/>
+<text x="208.3" y="393" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12.5" fill="#5A6773" text-anchor="middle">w = 2</text>
+<line x1="332.7" y1="372" x2="332.7" y2="377" stroke="#5A6773"/>
+<text x="332.7" y="393" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12.5" fill="#5A6773" text-anchor="middle">w = 4</text>
+<line x1="457.0" y1="372" x2="457.0" y2="377" stroke="#5A6773"/>
+<text x="457.0" y="393" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12.5" fill="#5A6773" text-anchor="middle">w = 8</text>
+<line x1="581.4" y1="372" x2="581.4" y2="377" stroke="#5A6773"/>
+<text x="581.4" y="393" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12.5" fill="#5A6773" text-anchor="middle">w = 16</text>
+<line x1="700.0" y1="372" x2="700.0" y2="377" stroke="#5A6773"/>
+<text x="700.0" y="393" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12.5" fill="#5A6773" text-anchor="middle">w = 31</text>
+<line x1="84" y1="372" x2="700" y2="372" stroke="#5A6773"/>
+<polyline points="84.0,52.0 141.1,81.8 184.4,104.4 219.2,122.6 248.4,137.9 273.4,151.0 295.4,162.5 315.0,172.7 332.7,182.0 348.8,190.4 363.5,198.1 377.1,205.2 389.8,211.8 401.6,218.0 412.7,223.8 423.2,229.3 433.1,234.4 442.4,239.3 451.3,244.0 459.8,248.4 467.9,252.7 475.6,256.7 483.1,260.6 490.2,264.3 497.0,267.9 503.6,271.3 510.0,274.7 516.2,277.9 522.1,281.0 527.9,284.0 533.4,286.9 538.9,289.8 544.1,292.5 549.2,295.2 554.2,297.8 559.0,300.3 563.7,302.7 568.3,305.1 572.7,307.5 577.1,309.7 581.4,312.0" fill="none" stroke="#C9A227" stroke-width="2.4"/>
+<polyline points="581.4,312.0 589.6,316.3 597.4,320.4 605.0,324.3 612.2,328.1 619.1,331.7 625.8,335.2 632.3,338.6 638.5,341.8 644.5,345.0 650.3,348.0 655.9,351.0 661.4,353.8 666.7,356.6 671.9,359.3 676.9,361.9 681.7,364.5 686.5,366.9 691.1,369.3 695.6,371.7 700.0,374.0" fill="none" stroke="#C9A227" stroke-width="1.6" stroke-dasharray="6 5" opacity="0.7"/>
+<circle cx="84.0" cy="57.5" r="4.5" fill="#1F4E79" stroke="#fff" stroke-width="1"/>
+<text x="94.0" y="49.5" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" fill="#1B2733" text-anchor="start" stroke="#fff" stroke-width="3.5" paint-order="stroke">&#954; = 752.19</text>
+<circle cx="208.3" cy="111.2" r="4.5" fill="#1F4E79" stroke="#fff" stroke-width="1"/>
+<text x="218.3" y="103.2" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" fill="#1B2733" text-anchor="start" stroke="#fff" stroke-width="3.5" paint-order="stroke">&#954; = 242.84</text>
+<circle cx="332.7" cy="179.2" r="4.5" fill="#1F4E79" stroke="#fff" stroke-width="1"/>
+<text x="342.7" y="171.2" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" fill="#1B2733" text-anchor="start" stroke="#fff" stroke-width="3.5" paint-order="stroke">&#954; = 58.00</text>
+<circle cx="457.0" cy="247.5" r="4.5" fill="#1F4E79" stroke="#fff" stroke-width="1"/>
+<text x="467.0" y="239.5" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" fill="#1B2733" text-anchor="start" stroke="#fff" stroke-width="3.5" paint-order="stroke">&#954; = 13.77</text>
+<circle cx="581.4" cy="314.4" r="4.5" fill="#1F4E79" stroke="#fff" stroke-width="1"/>
+<text x="591.4" y="306.4" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" fill="#1B2733" text-anchor="start" stroke="#fff" stroke-width="3.5" paint-order="stroke">&#954; = 3.36</text>
+<circle cx="654.1" cy="343.2" r="4.5" fill="#1F4E79" stroke="#fff" stroke-width="1"/>
+<text x="664.1" y="335.2" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" fill="#1B2733" text-anchor="start" stroke="#fff" stroke-width="3.5" paint-order="stroke">&#954; = 1.83</text>
+<circle cx="700.0" cy="372.0" r="4.5" fill="#1F4E79" stroke="#fff" stroke-width="1"/>
+<text x="690.0" y="364.0" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12" fill="#1B2733" text-anchor="end" stroke="#fff" stroke-width="3.5" paint-order="stroke">&#954; = 1.00</text>
+<text x="106" y="229.8" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13.5" fill="#A88A1F" font-weight="600" stroke="#fff" stroke-width="3.5" paint-order="stroke">fit over w &#8712; [1,16]: &#954; &#8764; w<tspan baseline-shift="super" font-size="10">&#8722;1.98</tspan> &#8212; slope &#8776; &#8722;2</text>
+<text x="106" y="251.8" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12.5" fill="#5A6773" stroke="#fff" stroke-width="3.5" paint-order="stroke">halve the clipping radius, quadruple the debt</text>
+<text x="700" y="50" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12.5" fill="#5A6773" text-anchor="end" stroke="#fff" stroke-width="3.5" paint-order="stroke">w = 0 (endpoints only): &#954; = 5017.7, above this chart</text>
+<text x="392" y="410" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" fill="#1B2733" text-anchor="middle" font-weight="600">clipping window w (log) &#8594; covariance range 2w+1</text>
+</svg>
+<figcaption><b>The punchline: finite range cannot model the bridge.</b> Over $w\in[1,16]$ the fit gives
+$\kappa(M_w^{-1}A) \sim w^{-1.98}$ — slope $\approx-2$ on the log–log axes: <b>halve the clipping
+radius, quadruple the conditioning debt.</b> ($w=0$, endpoints only, sits at $\kappa = 5017.7$, above
+this chart.) This is <a href="14-hierarchical-inverse.html">report 14</a>'s separator lesson read from
+the covariance side: there, conditioning on a separator showed the inverse's off-diagonal blocks are
+low-rank but emphatically <i>not zero</i>; here, forcing them to zero beyond range $w$ charges you
+$w^{-2}$ in $\kappa$. The bridge's long memory is rank-cheap and range-expensive.</figcaption>
+</figure>
+
+<figure class="widget">
+<div class="wtitle"><span class="dot" style="background:var(--prb)"></span> the colorer family — walks k / window w
+<span class="stbadge" id="ma-badge">self-test &hellip;</span></div>
+<div class="controls">
+  <span class="seg" id="ma-fam"><button data-f="k" class="active">truncated walks k</button><button data-f="w">clipped responses w</button></span>
+  <label><span id="ma-parlab">k</span> <input id="ma-slider" type="range" min="0" max="8" step="1" value="5" style="width:260px"></label>
+  <span><span id="ma-parlab2">k</span> = <b id="ma-pval">8</b></span>
+  <span id="ma-spd" class="spdok">SPD ✓</span>
+</div>
+<div class="duo">
+  <svg id="ma-mat" viewBox="0 0 380 380" class="fig-svg" role="img" aria-label="Bandwidth of the approximate inverse"></svg>
+  <svg id="ma-spec" viewBox="0 0 560 380" class="fig-svg" role="img" aria-label="Spectrum of the preconditioned matrix"></svg>
+</div>
+<div class="readouts">
+  <span>bandwidth of $M^{-1}$ &nbsp;<b id="ma-bw">…</b></span>
+  <span class="phy">κ &nbsp;<b id="ma-kappa">…</b></span>
+  <span class="prb">PCG iterations &nbsp;<b id="ma-its">…</b></span>
+  <span>flops / apply &nbsp;<b id="ma-fap">…</b></span>
+  <span>flops / PCG iter &nbsp;<b id="ma-fit">…</b></span>
+  <span>total to 10⁻¹⁰ &nbsp;<b id="ma-ftot">…</b></span>
+  <span class="gld">span / apply &nbsp;<b id="ma-span">…</b></span>
+</div>
+<figcaption>Left: the $32\times32$ footprint of $M^{-1}$ — the band widens as the model's range grows
+(walk length $k$, or covariance range $2w{+}1$), until it fills at 31. Right: the spectrum of
+$M^{-1}A$ on a log axis, with the κ bracket; note the walk family's clusters versus the clipped
+family's spread at matched κ. The SPD chip reports the measured smallest eigenvalue of $M^{-1}$
+itself. Every value is read from the baked sweep grids ($k \in \{0,1,2,3,4,8,16,32,64\}$,
+$w \in \{0,1,2,4,8,16,24,31\}$); the slider moves through grid stops only.</figcaption>
+</figure>
+
+<div class="prose">
+<div class="eyebrow syn">§7 · The ledger</div>
+<h2>Whiteners vs colorers, priced in report 11's flops</h2>
+<p>Both families buy iterations with structure, but they pay in different currencies. In the suite's
+standing convention (1 MAC = 2 flops, matvec = 2 nnz, vector op = $2N$; PCG spends $12N$ + one
+$A$-matvec + one $M$-apply per iteration, $4N$ + one apply on setup):</p>
+</div>
+
+<div class="tablewrap">
+<table class="pins"><thead><tr><th>family</th><th>approximates</th><th>one apply =</th><th>flops/apply</th><th>span/apply</th><th>flops/PCG iter</th><th>measured at</th><th>&#954;</th><th>PCG its</th><th>flops to 10&#8315;&#185;&#8304;</th></tr></thead><tbody><tr><td><b>AR whitener (frozen c)</b></td><td>A</td><td>two bidiagonal solves + diagonal scale</td><td class="num">316</td><td class="num">63</td><td class="num">888</td><td>c = 0.9, const-D</td><td class="num">10.97</td><td class="num">9</td><td class="num">8,436*</td></tr><tr><td><b>MA walks, k = 8</b></td><td>A&#8315;&#185;</td><td>8 matvecs with tridiag(&#189;, 0, &#189;)</td><td class="num">1,568</td><td class="num">25</td><td class="num">2,140</td><td>k = 8</td><td class="num">48.97</td><td class="num">19</td><td class="num">42,356</td></tr><tr><td><b>MA walks, k = 32</b></td><td>A&#8315;&#185;</td><td>32 matvecs with tridiag(&#189;, 0, &#189;)</td><td class="num">6,080</td><td class="num">97</td><td class="num">6,652</td><td>k = 32</td><td class="num">13.38</td><td class="num">12</td><td class="num">86,032</td></tr><tr><td><b>MA clipped, w = 8</b></td><td>A&#8315;&#185;</td><td>two sparse matvecs X<sub>w</sub>, X<sub>w</sub><sup>T</sup></td><td class="num">2,016</td><td class="num">12</td><td class="num">2,588</td><td>w = 8</td><td class="num">13.77</td><td class="num">28</td><td class="num">74,608</td></tr><tr><td><b>MA clipped, w = 16</b></td><td>A&#8315;&#185;</td><td>two sparse matvecs X<sub>w</sub>, X<sub>w</sub><sup>T</sup></td><td class="num">3,264</td><td class="num">14</td><td class="num">3,836</td><td>w = 16</td><td class="num">3.36</td><td class="num">14</td><td class="num">57,096</td></tr></tbody></table><div style="max-width:1000px;margin:.4em auto 0;font-family:ui-sans-serif,system-ui,sans-serif;font-size:12.5px;color:var(--graphite)">*AR total assembled from the same convention (setup 4N + one apply = 444, plus 9 &#215; 888); the MA totals are exported directly by the checks script. X<sub>w</sub> is §6's clipped response matrix: X with each dipole-response row zeroed beyond a window of w nodes past its edge's endpoints.</div>
+</div>
+
+<div class="prose">
+<p>The flop column flatters the whitener: 316 flops per apply is the cheapest preconditioner on the
+page. The <b>span</b> column tells the other half — those two bidiagonal solves are a chain of 63
+sequential dependencies, the full <a href="update_views_explainer.html">update-views</a> lesson (its
+§Gauss–Seidel: "flop-cheap, depth-expensive"). The walk family's $3k{+}1$ rounds are each embarrassingly
+parallel; the clipped family is two sparse matvecs at essentially constant depth
+($2(1+\lceil\log_2(2w{+}2)\rceil)$, never more than 14 here) — the closest thing on this page to a
+free lunch on a GPU, which is precisely the niche sparse-approximate-inverse methods occupy in the
+wild. When the machine is serial, take the AR side: best κ per flop by an order of magnitude. When the
+machine is wide, the MA side's matvecs win even while spending more flops.</p>
+<p>And the honest closing note: on <i>this</i> chain, none of it is necessary — a tridiagonal solve is
+$O(n)$ and exact, and every preconditioner above is a toy next to it. The families earn their keep off
+the chain, in 2-D and 3-D, where exact factors fill in and the same two options reappear at scale:
+drop conditional structure (incomplete Cholesky, Vecchia — <a href="11-regressions-and-multiscale.html">11</a>,
+<a href="15-preconditioning-as-prediction.html">15</a>) or clip marginal range (polynomial /
+sparse-approximate-inverse — this page's $k$ and $w$), with
+<a href="14-hierarchical-inverse.html">14</a>'s separators explaining why the second is hard and
+hierarchy is the way out.</p>
+</div>
+
+<div class="prose">
+<div class="eyebrow syn">§8 · Suite crossings</div>
+<h2>Where the suite has already met these two bases</h2>
+<p><b>As stiffness and precision</b> — <a href="09-stiffness-as-precision.html">report 09</a> §4:
+$A = D^\top D$ is the same Gram-of-measurements statement in difference-operator clothing; this page's
+$B_{\mathrm{inc}}$ is that $D$ with Vishnoi's signs and the walls made explicit.</p>
+<p><b>As tents</b> — the <a href="green_tents_explainer.html">green-tents explainer</a>: columns of
+$A^{-1}$ are impulse responses; this page's response rows are their first differences, dipole fields,
+and the two pages share the identity row$_e$ = (tent$_{e-1}$ − tent$_e$)/$h$.</p>
+<p><b>As regression</b> — <a href="11-regressions-and-multiscale.html">report 11</a> §2: the walk
+expansion truncated here at $k$ is the same series that report ran to convergence; the leverage $32/33$
+is the hat-matrix diagonal of the edge-datapoint regression.</p>
+<p><b>As prediction</b> — <a href="12-autoregressive-preconditioning.html">report 12</a> and
+<a href="15-preconditioning-as-prediction.html">report 15</a>: perfect AR = exact solve; §5 is what
+happens to 15's closed-form $\phi_i$ under the cheapest possible lobotomy.</p>
+<p><b>As separators</b> — <a href="14-hierarchical-inverse.html">report 14</a>: the inverse's
+off-diagonal blocks are low-rank, not zero; §6's $w^{-1.98}$ law is the price of pretending
+otherwise.</p>
+<p><b>As spectra</b> — <a href="update_views_explainer.html">update views</a> (the SPD-vs-sweep
+dichotomy and the span lesson priced in §7) and the
+<a href="probabilistic_cg_explainer.html">probabilistic-CG explainer</a> (what conditioning means to
+CG, and why the $c=1$ spectrum $\{1\times31,\,33\}$ costs two iterations, not thirty).</p>
+</div>
+
+<div class="check">
+<b>Everything above is machine-verified</b>
+(<span class="kbd">python/experiments/dual_basis_checks.py</span>, <b>39 checks, all PASS</b>,
+deterministic, 0.04&#8201;s; every quoted number, curve, spectrum, and matrix exported to
+<span class="kbd">results/dual_basis.json</span>, 117&#8201;KB; PCG right-hand side: standard normal,
+seed 2026, tol 10⁻¹⁰; reuses <span class="kbd">poisson.laplacian_1d</span> and
+<span class="kbd">pcg.pcg</span>): the four Gram/dual identities of §1 (≤ 2.4×10⁻¹⁵) with all 33
+dipole solves (3.8×10⁻¹⁷); the continuum step form on all 33×32 entries (7.6×10⁻¹⁷) and the
+tent-difference identity (1.6×10⁻¹⁶); the $n=8$ Fraction block — $A\Sigma = I$, the closed form
+$(i-9\cdot\mathbf 1[i\ge e])/81$, $X^\top B_{\mathrm{inc}} = I_8$, and the $(A^{-1})_{3,6} = 1/81$
+current bookkeeping — all with zero tolerance; Maxwell's unit-load assembly under random conductances
+(3.0×10⁻¹⁵) and Betti reciprocity (4.4×10⁻¹⁵); the grounded $\Pi$ story — symmetric, idempotent,
+spectrum {0×1, 1×32}, $I-\frac{1}{33}\mathbf{1}\mathbf{1}^\top$ exactly, leverage 32/33 with Foster sum 32, the
+$C_{33}$-through-ground reading, and the free-tree contrast
+$B_{\mathrm{full}}L_{\mathrm{full}}^+B_{\mathrm{full}}^\top = I_{33}$ (≤ 6.5×10⁻¹⁵); the
+$P_8$ gauge quartet (≤ 2.9×10⁻¹⁵); report 15's $\phi_i$ and $d_i^2$ closed forms (6.1×10⁻¹⁵) with the
+1-iteration perfect whitener; the const-D invariance (1.2×10⁻¹³); the rank-one $c=1$ identity
+$M_1 = A - e_ne_n^\top/h^2$ with spectrum {1×31, 33}, PCG 2, Richardson ρ = 32 (2.1×10⁻¹³); the
+201-point c-sweep with optima (0.915, κ 10.83) / (0.895, κ 9.68); the quantized-φ flavor (κ 12.38 →
+1.024 over 1→8 bits, monotone); $B_{\mathrm{reg}}$ = tridiag(½,0,½) with ρ = cos(π/33) (1.1×10⁻¹⁶) and
+the Neumann rate fit equal to ln ρ; SPD of every truncated-walk $M_k^{-1}$ (min eig 2.1×10⁻⁶) and every
+clipped-response $M_w^{-1}$ (5.4×10⁻⁵ at w = 0); both bandwidth laws; the w = 31 recovery (κ = 1,
+PCG 1); the κ ∼ w⁻¹·⁹⁸ fit over w ∈ [1,16]; and the full flops/span ledger in report 11 §5.2's
+convention. The three widgets re-verify their baked data at load (green badges).
+Companion pages:
+<a href="09-stiffness-as-precision.html">09 · stiffness as precision</a> ·
+<a href="11-regressions-and-multiscale.html">11 · regressions and multiscale</a> ·
+<a href="12-autoregressive-preconditioning.html">12 · autoregressive preconditioning</a> ·
+<a href="14-hierarchical-inverse.html">14 · the hierarchical inverse</a> ·
+<a href="15-preconditioning-as-prediction.html">15 · preconditioning as prediction</a> ·
+<a href="bridge_explainer.html">the bridge explainer</a> ·
+<a href="green_tents_explainer.html">the green tents</a> ·
+<a href="update_views_explainer.html">one update, four languages</a> ·
+<a href="probabilistic_cg_explainer.html">the probabilistic-CG explainer</a>.
+</div>
+
+</main>
+<script>
+/*__DBDATA__*/
+const DB = {"n":32,"h":0.030303030303030304,"X":[[-0.029384756657483944,-0.02846648301193758,-0.027548209366391227,-0.02662993572084485,-0.025711662075298472,-0.024793388429752112,-0.023875114784205745,-0.022956841138659364,-0.022038567493112976,-0.0211202938475666,-0.020202020202020228,-0.019283746556473847,-0.018365472910927473,-0.017447199265381096,-0.016528925619834718,-0.015610651974288351,-0.01469237832874198,-0.013774104683195605,-0.012855831037649227,-0.011937557392102862,-0.011019283746556483,-0.010101010101010114,-0.009182736455463737,-0.008264462809917363,-0.0073461891643709885,-0.006427915518824614,-0.005509641873278244,-0.004591368227731867,-0.0036730945821854943,-0.0027548209366391207,-0.0018365472910927458,-0.0009182736455463729],[0.0009182736455463623,-0.028466483011937584,-0.027548209366391227,-0.02662993572084485,-0.025711662075298472,-0.02479338842975211,-0.023875114784205745,-0.022956841138659357,-0.022038567493112976,-0.021120293847566602,-0.020202020202020225,-0.019283746556473847,-0.018365472910927473,-0.0174471992653811,-0.016528925619834715,-0.015610651974288353,-0.01469237832874198,-0.013774104683195603,-0.012855831037649227,-0.011937557392102857,-0.011019283746556483,-0.010101010101010112,-0.009182736455463737,-0.00826446280991736,-0.0073461891643709885,-0.006427915518824614,-0.005509641873278244,-0.004591368227731867,-0.0036730945821854943,-0.0027548209366391207,-0.0018365472910927458,-0.0009182736455463729],[0.0009182736455463647,0.0018365472910927294,-0.027548209366391213,-0.02662993572084485,-0.025711662075298472,-0.0247933884297521,-0.02387511478420573,-0.02295684113865935,-0.02203856749311297,-0.02112029384756659,-0.02020202020202022,-0.019283746556473844,-0.018365472910927463,-0.017447199265381092,-0.016528925619834704,-0.015610651974288346,-0.014692378328741977,-0.013774104683195603,-0.012855831037649224,-0.011937557392102853,-0.011019283746556481,-0.01010101010101011,-0.009182736455463731,-0.008264462809917357,-0.007346189164370985,-0.006427915518824612,-0.005509641873278242,-0.004591368227731866,-0.0036730945821854925,-0.0027548209366391203,-0.0018365472910927445,-0.0009182736455463723],[0.0009182736455463706,0.0018365472910927413,0.0027548209366391042,-0.026629935720844836,-0.02571166207529846,-0.0247933884297521,-0.023875114784205714,-0.022956841138659353,-0.022038567493112966,-0.021120293847566574,-0.020202020202020214,-0.019283746556473833,-0.018365472910927452,-0.017447199265381092,-0.01652892561983471,-0.015610651974288337,-0.01469237832874197,-0.013774104683195596,-0.012855831037649215,-0.011937557392102848,-0.011019283746556467,-0.010101010101010107,-0.009182736455463726,-0.008264462809917359,-0.007346189164370982,-0.006427915518824608,-0.005509641873278237,-0.004591368227731861,-0.003673094582185491,-0.002754820936639117,-0.0018365472910927443,-0.0009182736455463722],[0.0009182736455463697,0.0018365472910927393,0.002754820936639119,0.0036730945821854787,-0.02571166207529845,-0.02479338842975208,-0.0238751147842057,-0.022956841138659343,-0.02203856749311296,-0.021120293847566588,-0.020202020202020204,-0.019283746556473833,-0.01836547291092745,-0.017447199265381078,-0.016528925619834708,-0.015610651974288327,-0.014692378328741956,-0.013774104683195587,-0.012855831037649217,-0.011937557392102841,-0.01101928374655647,-0.010101010101010102,-0.009182736455463724,-0.008264462809917356,-0.007346189164370975,-0.0064279155188246085,-0.005509641873278235,-0.004591368227731859,-0.0036730945821854873,-0.0027548209366391177,-0.0018365472910927434,-0.0009182736455463717],[0.0009182736455463687,0.0018365472910927374,0.0027548209366391055,0.0036730945821854748,0.004591368227731816,-0.024793388429752105,-0.02387511478420571,-0.022956841138659347,-0.022038567493112966,-0.0211202938475666,-0.020202020202020207,-0.019283746556473854,-0.01836547291092746,-0.017447199265381096,-0.016528925619834715,-0.01561065197428835,-0.01469237832874197,-0.013774104683195591,-0.012855831037649212,-0.011937557392102853,-0.011019283746556481,-0.010101010101010104,-0.009182736455463737,-0.008264462809917357,-0.007346189164370985,-0.006427915518824606,-0.0055096418732782405,-0.004591368227731865,-0.0036730945821854925,-0.0027548209366391203,-0.001836547291092746,-0.000918273645546373],[0.0009182736455463748,0.0018365472910927495,0.0027548209366391203,0.003673094582185499,0.00459136822773185,0.005509641873278242,-0.023875114784205696,-0.02295684113865932,-0.022038567493112945,-0.02112029384756654,-0.020202020202020207,-0.019283746556473816,-0.018365472910927442,-0.01744719926538108,-0.01652892561983469,-0.01561065197428833,-0.014692378328741956,-0.013774104683195596,-0.012855831037649191,-0.011937557392102846,-0.011019283746556457,-0.010101010101010104,-0.009182736455463728,-0.008264462809917352,-0.007346189164370978,-0.0064279155188245955,-0.005509641873278228,-0.004591368227731864,-0.003673094582185489,-0.002754820936639114,-0.0018365472910927443,-0.0009182736455463722],[0.0009182736455463775,0.001836547291092755,0.0027548209366391354,0.00367309458218551,0.004591368227731899,0.005509641873278273,0.006427915518824648,-0.02295684113865931,-0.02203856749311292,-0.021120293847566564,-0.02020202020202018,-0.019283746556473767,-0.01836547291092744,-0.017447199265381054,-0.016528925619834666,-0.015610651974288297,-0.014692378328741942,-0.013774104683195572,-0.0128558310376492,-0.011937557392102817,-0.011019283746556445,-0.01010101010101009,-0.009182736455463705,-0.008264462809917342,-0.007346189164370963,-0.0064279155188246,-0.005509641873278223,-0.004591368227731852,-0.0036730945821854817,-0.002754820936639111,-0.0018365472910927424,-0.0009182736455463712],[0.0009182736455463767,0.0018365472910927534,0.0027548209366391367,0.003673094582185507,0.004591368227731892,0.005509641873278275,0.006427915518824633,0.007346189164371017,-0.022038567493112927,-0.02112029384756656,-0.020202020202020166,-0.0192837465564738,-0.01836547291092743,-0.017447199265381037,-0.016528925619834697,-0.01561065197428832,-0.01469237832874194,-0.013774104683195561,-0.012855831037649193,-0.011937557392102843,-0.011019283746556462,-0.010101010101010083,-0.009182736455463716,-0.00826446280991735,-0.0073461891643709625,-0.006427915518824596,-0.005509641873278232,-0.004591368227731858,-0.0036730945821854813,-0.0027548209366391155,-0.0018365472910927406,-0.0009182736455463703],[0.000918273645546376,0.001836547291092752,0.002754820936639138,0.003673094582185504,0.004591368227731884,0.005509641873278278,0.006427915518824645,0.0073461891643709825,0.00826446280991738,-0.02112029384756653,-0.02020202020202015,-0.019283746556473805,-0.0183654729109274,-0.01744719926538105,-0.016528925619834645,-0.0156106519742883,-0.014692378328741953,-0.013774104683195565,-0.012855831037649187,-0.011937557392102827,-0.01101928374655645,-0.010101010101010076,-0.009182736455463714,-0.008264462809917338,-0.007346189164370976,-0.006427915518824594,-0.005509641873278233,-0.004591368227731849,-0.003673094582185488,-0.0027548209366391125,-0.0018365472910927439,-0.0009182736455463719],[0.0009182736455463788,0.0018365472910927575,0.0027548209366391394,0.003673094582185515,0.004591368227731891,0.0055096418732782666,0.006427915518824629,0.007346189164371004,0.008264462809917383,0.00918273645546376,-0.02020202020202017,-0.01928374655647378,-0.018365472910927425,-0.017447199265381037,-0.016528925619834677,-0.015610651974288323,-0.014692378328741939,-0.013774104683195582,-0.012855831037649194,-0.011937557392102826,-0.011019283746556453,-0.010101010101010085,-0.009182736455463712,-0.008264462809917326,-0.007346189164370969,-0.006427915518824597,-0.0055096418732782345,-0.004591368227731855,-0.0036730945821854843,-0.0027548209366391133,-0.0018365472910927385,-0.0009182736455463692],[0.000918273645546378,0.001836547291092756,0.0027548209366391263,0.003673094582185512,0.004591368227731884,0.005509641873278268,0.006427915518824641,0.007346189164371026,0.008264462809917387,0.009182736455463775,0.010101010101010159,-0.019283746556473816,-0.018365472910927418,-0.01744719926538105,-0.016528925619834656,-0.015610651974288289,-0.014692378328741953,-0.013774104683195558,-0.012855831037649187,-0.011937557392102824,-0.011019283746556457,-0.010101010101010078,-0.00918273645546371,-0.008264462809917342,-0.007346189164370975,-0.006427915518824594,-0.0055096418732782215,-0.004591368227731854,-0.0036730945821854873,-0.002754820936639114,-0.00183654729109274,-0.00091827364554637],[0.0009182736455463808,0.0018365472910927617,0.002754820936639149,0.0036730945821855233,0.004591368227731891,0.005509641873278286,0.006427915518824668,0.007346189164371048,0.008264462809917418,0.009182736455463789,0.010101010101010156,0.011019283746556523,-0.01836547291092741,-0.017447199265381005,-0.016528925619834656,-0.015610651974288283,-0.014692378328741908,-0.013774104683195532,-0.012855831037649153,-0.011937557392102779,-0.011019283746556459,-0.010101010101010055,-0.009182736455463693,-0.008264462809917316,-0.007346189164370954,-0.006427915518824576,-0.00550964187327823,-0.004591368227731853,-0.003673094582185477,-0.0027548209366391146,-0.001836547291092738,-0.000918273645546369],[0.0009182736455463802,0.0018365472910927604,0.0027548209366391367,0.0036730945821855207,0.004591368227731898,0.0055096418732782605,0.006427915518824638,0.0073461891643710146,0.008264462809917394,0.009182736455463773,0.010101010101010121,0.011019283746556498,0.011937557392102878,-0.017447199265381047,-0.016528925619834663,-0.015610651974288278,-0.01469237832874195,-0.013774104683195563,-0.012855831037649203,-0.01193755739210282,-0.01101928374655649,-0.010101010101010076,-0.00918273645546372,-0.008264462809917345,-0.007346189164370974,-0.0064279155188246015,-0.005509641873278218,-0.004591368227731852,-0.003673094582185487,-0.0027548209366391224,-0.0018365472910927395,-0.0009182736455463698],[0.000918273645546376,0.001836547291092752,0.0027548209366391237,0.003673094582185504,0.004591368227731877,0.005509641873278249,0.0064279155188246215,0.0073461891643710085,0.00826446280991737,0.009182736455463757,0.010101010101010145,0.011019283746556504,0.011937557392102862,0.012855831037649222,-0.01652892561983472,-0.015610651974288327,-0.014692378328741935,-0.013774104683195596,-0.012855831037649198,-0.01193755739210286,-0.011019283746556465,-0.010101010101010098,-0.00918273645546373,-0.008264462809917363,-0.007346189164370966,-0.006427915518824599,-0.005509641873278234,-0.004591368227731865,-0.003673094582185483,-0.002754820936639109,-0.001836547291092741,-0.0009182736455463705],[0.0009182736455463716,0.0018365472910927432,0.0027548209366391177,0.0036730945821854865,0.004591368227731868,0.005509641873278222,0.006427915518824606,0.007346189164370974,0.008264462809917371,0.009182736455463714,0.010101010101010083,0.01101928374655648,0.011937557392102848,0.012855831037649187,0.013774104683195586,-0.015610651974288379,-0.014692378328742005,-0.013774104683195627,-0.012855831037649248,-0.011937557392102874,-0.011019283746556498,-0.010101010101010093,-0.009182736455463771,-0.008264462809917366,-0.0073461891643710015,-0.006427915518824624,-0.005509641873278249,-0.004591368227731885,-0.0036730945821855008,-0.002754820936639124,-0.00183654729109275,-0.000918273645546375],[0.0009182736455463707,0.0018365472910927415,0.0027548209366391185,0.003673094582185483,0.004591368227731847,0.005509641873278223,0.006427915518824602,0.007346189164370966,0.008264462809917317,0.009182736455463698,0.010101010101010104,0.011019283746556453,0.011937557392102833,0.012855831037649182,0.013774104683195591,0.014692378328741937,-0.014692378328741991,-0.013774104683195634,-0.012855831037649243,-0.011937557392102888,-0.011019283746556502,-0.010101010101010142,-0.009182736455463757,-0.008264462809917397,-0.0073461891643709955,-0.0064279155188246215,-0.005509641873278251,-0.004591368227731863,-0.0036730945821854977,-0.0027548209366391255,-0.001836547291092752,-0.000918273645546376],[0.0009182736455463715,0.001836547291092743,0.0027548209366391194,0.003673094582185486,0.0045913682277318665,0.005509641873278239,0.006427915518824599,0.007346189164370987,0.008264462809917349,0.009182736455463709,0.010101010101010097,0.011019283746556457,0.011937557392102817,0.012855831037649205,0.013774104683195567,0.014692378328741979,0.015610651974288306,-0.01377410468319561,-0.01285583103764924,-0.011937557392102874,-0.011019283746556505,-0.010101010101010109,-0.00918273645546377,-0.0082644628099174,-0.007346189164371002,-0.00642791551882462,-0.0055096418732782535,-0.004591368227731884,-0.003673094582185501,-0.0027548209366391263,-0.0018365472910927467,-0.0009182736455463734],[0.0009182736455463705,0.001836547291092741,0.0027548209366391133,0.003673094582185482,0.004591368227731866,0.005509641873278227,0.006427915518824596,0.007346189164370952,0.00826446280991735,0.009182736455463691,0.010101010101010062,0.01101928374655646,0.0119375573921028,0.01285583103764917,0.01377410468319554,0.014692378328741908,0.015610651974288273,0.016528925619834697,-0.012855831037649264,-0.011937557392102918,-0.01101928374655651,-0.010101010101010131,-0.009182736455463754,-0.008264462809917376,-0.007346189164371024,-0.006427915518824632,-0.005509641873278256,-0.004591368227731876,-0.003673094582185512,-0.002754820936639127,-0.0018365472910927556,-0.0009182736455463778],[0.0009182736455463714,0.0018365472910927428,0.002754820936639121,0.0036730945821854856,0.004591368227731857,0.005509641873278242,0.006427915518824594,0.007346189164370972,0.008264462809917324,0.009182736455463704,0.010101010101010083,0.011019283746556433,0.011937557392102813,0.012855831037649191,0.013774104683195544,0.01469237832874192,0.015610651974288323,0.016528925619834645,0.017447199265381026,-0.011937557392102876,-0.011019283746556516,-0.010101010101010126,-0.009182736455463768,-0.00826446280991738,-0.007346189164371018,-0.006427915518824629,-0.005509641873278272,-0.004591368227731882,-0.003673094582185509,-0.0027548209366391285,-0.001836547291092754,-0.000918273645546377],[0.000918273645546374,0.001836547291092748,0.002754820936639122,0.003673094582185496,0.004591368227731856,0.005509641873278244,0.006427915518824618,0.007346189164370979,0.00826446280991734,0.009182736455463716,0.010101010101010091,0.011019283746556464,0.011937557392102824,0.012855831037649213,0.013774104683195603,0.014692378328741961,0.015610651974288348,0.016528925619834708,0.017447199265381096,0.018365472910927452,-0.011019283746556491,-0.010101010101010093,-0.009182736455463724,-0.008264462809917354,-0.007346189164370983,-0.006427915518824613,-0.005509641873278232,-0.004591368227731861,-0.0036730945821854917,-0.0027548209366391224,-0.0018365472910927454,-0.0009182736455463727],[0.0009182736455463731,0.0018365472910927463,0.002754820936639123,0.0036730945821854925,0.004591368227731862,0.005509641873278246,0.006427915518824616,0.007346189164370986,0.008264462809917356,0.009182736455463712,0.010101010101010085,0.011019283746556483,0.011937557392102838,0.012855831037649236,0.013774104683195579,0.014692378328741946,0.015610651974288342,0.01652892561983471,0.01744719926538108,0.01836547291092745,0.019283746556473847,-0.010101010101010114,-0.009182736455463737,-0.008264462809917356,-0.007346189164370976,-0.006427915518824624,-0.00550964187327822,-0.0045913682277318665,-0.003673094582185488,-0.0027548209366391164,-0.0018365472910927437,-0.0009182736455463718],[0.0009182736455463723,0.0018365472910927445,0.0027548209366391203,0.003673094582185489,0.004591368227731868,0.005509641873278234,0.006427915518824606,0.007346189164370979,0.008264462809917345,0.00918273645546371,0.010101010101010091,0.011019283746556443,0.011937557392102852,0.01285583103764923,0.013774104683195555,0.014692378328741932,0.015610651974288337,0.016528925619834718,0.017447199265381068,0.018365472910927473,0.019283746556473826,0.020202020202020207,-0.009182736455463721,-0.008264462809917359,-0.007346189164371026,-0.006427915518824636,-0.005509641873278235,-0.00459136822773186,-0.0036730945821854986,-0.0027548209366391172,-0.0018365472910927489,-0.0009182736455463744],[0.0009182736455463731,0.0018365472910927463,0.002754820936639121,0.0036730945821854925,0.004591368227731867,0.005509641873278249,0.00642791551882461,0.007346189164370986,0.008264462809917347,0.009182736455463737,0.010101010101010086,0.011019283746556474,0.01193755739210282,0.012855831037649212,0.013774104683195558,0.014692378328741974,0.015610651974288334,0.016528925619834694,0.017447199265381085,0.01836547291092747,0.01928374655647383,0.02020202020202022,0.02112029384756658,-0.008264462809917363,-0.007346189164370991,-0.00642791551882462,-0.005509641873278251,-0.004591368227731865,-0.003673094582185481,-0.002754820936639125,-0.0018365472910927471,-0.0009182736455463736],[0.000918273645546374,0.001836547291092748,0.0027548209366391185,0.003673094582185496,0.0045913682277318665,0.005509641873278237,0.0064279155188246145,0.007346189164370979,0.008264462809917363,0.009182736455463721,0.010101010101010093,0.011019283746556464,0.011937557392102834,0.012855831037649191,0.013774104683195561,0.014692378328741946,0.015610651974288358,0.016528925619834725,0.01744719926538107,0.018365472910927466,0.019283746556473837,0.020202020202020207,0.021120293847566578,0.02203856749311295,-0.007346189164370984,-0.006427915518824603,-0.005509641873278225,-0.004591368227731872,-0.0036730945821854912,-0.002754820936639126,-0.0018365472910927454,-0.0009182736455463727],[0.0009182736455463731,0.0018365472910927463,0.002754820936639123,0.0036730945821854925,0.004591368227731866,0.005509641873278239,0.006427915518824619,0.007346189164370986,0.008264462809917359,0.00918273645546374,0.010101010101010086,0.011019283746556467,0.011937557392102846,0.012855831037649213,0.01377410468319558,0.014692378328741974,0.015610651974288325,0.016528925619834704,0.0174471992653811,0.018365472910927463,0.019283746556473844,0.020202020202020197,0.021120293847566605,0.022038567493112955,0.022956841138659336,-0.0064279155188246145,-0.005509641873278227,-0.004591368227731849,-0.0036730945821854878,-0.002754820936639113,-0.0018365472910927365,-0.0009182736455463683],[0.000918273645546374,0.001836547291092748,0.0027548209366391203,0.003673094582185496,0.004591368227731868,0.0055096418732782475,0.006427915518824609,0.007346189164370986,0.008264462809917356,0.009182736455463724,0.010101010101010107,0.01101928374655647,0.011937557392102846,0.012855831037649208,0.013774104683195584,0.014692378328741974,0.015610651974288348,0.01652892561983471,0.01744719926538107,0.018365472910927473,0.01928374655647388,0.020202020202020228,0.021120293847566588,0.02203856749311299,0.022956841138659326,0.02387511478420569,-0.0055096418732782,-0.004591368227731854,-0.003673094582185498,-0.0027548209366390995,-0.0018365472910927415,-0.0009182736455463707],[0.000918273645546374,0.001836547291092748,0.002754820936639121,0.003673094582185496,0.004591368227731867,0.005509641873278242,0.006427915518824614,0.007346189164370986,0.008264462809917357,0.00918273645546373,0.010101010101010095,0.011019283746556474,0.01193755739210283,0.012855831037649224,0.013774104683195587,0.01469237832874196,0.015610651974288344,0.016528925619834715,0.01744719926538109,0.018365472910927456,0.01928374655647383,0.020202020202020214,0.021120293847566585,0.02203856749311296,0.02295684113865937,0.023875114784205727,0.024793388429752112,-0.004591368227731847,-0.0036730945821854804,-0.0027548209366391,-0.0018365472910927467,-0.0009182736455463734],[0.0009182736455463731,0.0018365472910927463,0.002754820936639122,0.0036730945821854925,0.0045913682277318665,0.005509641873278237,0.0064279155188246145,0.007346189164370986,0.008264462809917352,0.009182736455463721,0.010101010101010088,0.011019283746556462,0.011937557392102836,0.012855831037649212,0.013774104683195579,0.014692378328741958,0.015610651974288332,0.016528925619834718,0.017447199265381075,0.018365472910927466,0.019283746556473837,0.020202020202020186,0.02112029384756658,0.022038567493112934,0.022956841138659333,0.023875114784205682,0.024793388429752063,0.025711662075298434,-0.003673094582185491,-0.0027548209366391146,-0.001836547291092745,-0.0009182736455463725],[0.0009182736455463731,0.0018365472910927463,0.002754820936639121,0.0036730945821854925,0.004591368227731866,0.005509641873278235,0.006427915518824612,0.007346189164370979,0.008264462809917352,0.009182736455463723,0.010101010101010088,0.011019283746556465,0.011937557392102834,0.012855831037649212,0.013774104683195582,0.014692378328741958,0.015610651974288334,0.016528925619834704,0.017447199265381068,0.018365472910927463,0.019283746556473826,0.020202020202020197,0.02112029384756658,0.02203856749311294,0.022956841138659333,0.023875114784205682,0.024793388429752074,0.025711662075298437,0.026629935720844825,-0.0027548209366391155,-0.0018365472910927432,-0.0009182736455463716],[0.0009182736455463727,0.0018365472910927454,0.0027548209366391203,0.003673094582185491,0.004591368227731861,0.005509641873278234,0.006427915518824609,0.007346189164370978,0.00826446280991735,0.009182736455463717,0.01010101010101009,0.011019283746556459,0.01193755739210283,0.012855831037649196,0.013774104683195579,0.014692378328741955,0.015610651974288323,0.0165289256198347,0.017447199265381075,0.018365472910927445,0.01928374655647382,0.020202020202020197,0.021120293847566564,0.02203856749311294,0.0229568411386593,0.0238751147842057,0.024793388429752067,0.025711662075298437,0.026629935720844804,0.02754820936639119,-0.0018365472910927627,-0.0009182736455463814],[0.0009182736455463725,0.001836547291092745,0.0027548209366391194,0.00367309458218549,0.004591368227731865,0.005509641873278235,0.0064279155188246085,0.007346189164370978,0.008264462809917349,0.009182736455463716,0.010101010101010086,0.011019283746556459,0.011937557392102833,0.012855831037649201,0.013774104683195572,0.014692378328741951,0.015610651974288325,0.016528925619834697,0.01744719926538107,0.018365472910927452,0.019283746556473826,0.02020202020202019,0.02112029384756657,0.02203856749311294,0.022956841138659312,0.023875114784205682,0.024793388429752063,0.025711662075298427,0.026629935720844804,0.02754820936639118,0.028466483011937552,-0.0009182736455463771],[0.0009182736455463725,0.001836547291092745,0.0027548209366391194,0.00367309458218549,0.004591368227731863,0.005509641873278235,0.0064279155188246085,0.007346189164370978,0.008264462809917349,0.009182736455463716,0.010101010101010086,0.011019283746556459,0.011937557392102829,0.012855831037649201,0.013774104683195572,0.014692378328741951,0.015610651974288325,0.016528925619834697,0.01744719926538107,0.018365472910927445,0.01928374655647382,0.02020202020202019,0.021120293847566564,0.022038567493112934,0.022956841138659312,0.023875114784205682,0.024793388429752056,0.025711662075298427,0.026629935720844804,0.02754820936639117,0.028466483011937552,0.02938475665748393]],"B":[[-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0,-33.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,33.0]],"piDiag":[0.9696969696969702,0.9696969696969702,0.9696969696969701,0.9696969696969701,0.9696969696969697,0.9696969696969694,0.96969696969697,0.9696969696969706,0.9696969696969702,0.9696969696969691,0.9696969696969697,0.9696969696969712,0.9696969696969698,0.9696969696969695,0.9696969696969702,0.9696969696969708,0.9696969696969696,0.9696969696969693,0.9696969696969707,0.9696969696969688,0.9696969696969702,0.9696969696969707,0.9696969696969696,0.9696969696969701,0.9696969696969697,0.9696969696969704,0.9696969696969683,0.9696969696969706,0.9696969696969695,0.9696969696969701,0.9696969696969705,0.9696969696969697,0.9696969696969697],"ar":{"cFine":[0.0,0.005,0.01,0.015,0.02,0.025,0.03,0.035,0.04,0.045,0.05,0.055,0.06,0.065,0.07,0.075,0.08,0.085,0.09,0.095,0.1,0.105,0.11,0.115,0.12,0.125,0.13,0.135,0.14,0.145,0.15,0.155,0.16,0.165,0.17,0.17500000000000002,0.18,0.185,0.19,0.195,0.2,0.20500000000000002,0.21,0.215,0.22,0.225,0.23,0.23500000000000001,0.24,0.245,0.25,0.255,0.26,0.265,0.27,0.275,0.28,0.28500000000000003,0.29,0.295,0.3,0.305,0.31,0.315,0.32,0.325,0.33,0.335,0.34,0.34500000000000003,0.35000000000000003,0.355,0.36,0.365,0.37,0.375,0.38,0.385,0.39,0.395,0.4,0.405,0.41000000000000003,0.41500000000000004,0.42,0.425,0.43,0.435,0.44,0.445,0.45,0.455,0.46,0.465,0.47000000000000003,0.47500000000000003,0.48,0.485,0.49,0.495,0.5,0.505,0.51,0.515,0.52,0.525,0.53,0.535,0.54,0.545,0.55,0.555,0.56,0.5650000000000001,0.5700000000000001,0.5750000000000001,0.58,0.585,0.59,0.595,0.6,0.605,0.61,0.615,0.62,0.625,0.63,0.635,0.64,0.645,0.65,0.655,0.66,0.665,0.67,0.675,0.68,0.685,0.6900000000000001,0.6950000000000001,0.7000000000000001,0.705,0.71,0.715,0.72,0.725,0.73,0.735,0.74,0.745,0.75,0.755,0.76,0.765,0.77,0.775,0.78,0.785,0.79,0.795,0.8,0.805,0.81,0.8150000000000001,0.8200000000000001,0.8250000000000001,0.8300000000000001,0.835,0.84,0.845,0.85,0.855,0.86,0.865,0.87,0.875,0.88,0.885,0.89,0.895,0.9,0.905,0.91,0.915,0.92,0.925,0.93,0.935,0.9400000000000001,0.9450000000000001,0.9500000000000001,0.9550000000000001,0.96,0.965,0.97,0.975,0.98,0.985,0.99,0.995,1.0],"kConst":[440.6885603836612,432.0013939776505,423.4850681314875,415.13583204476953,406.9500317863899,398.92410738463263,391.0545900171762,383.33809929726056,375.77134065248123,368.35110279207794,361.0742552599772,353.93774607035846,346.9385994214225,340.07391348675657,333.3408582784663,326.73667358210565,320.258666958876,313.9042118135006,307.67074552531005,301.5557676395866,295.55683811809706,289.67157564545073,283.89765599014544,278.2328104180903,272.67482415648595,267.2215349067338,261.8708314043069,256.62065202395894,251.46898342915878,246.41385926342886,241.45335888312067,236.58560612947863,231.80876813902765,227.12105419128008,222.52071459215216,218.00603959229863,213.57535833941606,209.22703786338423,204.95948209372204,200.77113090839507,196.66045921358835,192.6259760541106,188.66622375402207,184.77977708794634,180.96524248316493,177.22125725378942,173.54648886830378,169.939634253352,166.39941913749553,162.92459744067804,159.5139507184018,156.16628767311806,152.8804437531012,149.65528086816303,146.48968726972623,143.38257766947908,140.3328937188284,137.3396050542343,134.40171126470497,131.5182454238694,128.6882803944015,125.91094028401383,123.18542198784131,120.51103762263638,117.88730272677375,115.31412892917007,112.79224989337314,110.3240438673941,107.91425631948763,105.56819637883028,103.28780820633246,101.07166532583527,98.9173026180627,96.82220757003235,94.78398481817753,92.8003654625811,90.86920011199118,88.9884512197969,87.15618592736227,85.37056944657472,83.62985893890354,81.93239784826363,80.2766106490066,78.66099797400761,77.084132091263,75.54465270029058,74.04126302232619,72.57272616073212,71.13786171016889,69.73554259494871,68.36469211885046,67.02428121012261,65.71332584690198,64.43088464948434,63.1760566270905,61.94797906781534,60.745825561329,59.56880414485347,58.41615556366339,57.28715163807251,56.18109372953405,55.09731129907881,54.03516055181241,52.99402316173221,51.97330507157219,50.97243536273397,49.99086519084945,49.02806678275231,48.0835324910449,47.15677390268625,46.24732099833256,45.3547213593878,44.47853941995904,43.61835576115471,42.77376644530049,41.94438238792009,41.12982876540497,40.32974445655918,39.54378151626694,38.77160467974774,38.01289089595306,37.26732888881299,36.534618745162454,35.81447152829056,35.10660891618171,34.41076286362903,33.72667528750362,33.05409777460464,32.39279131159587,31.74252603666566,31.103081012663598,30.474244021597396,29.855811380487356,29.247587778720145,28.649386137192007,28.061027489690467,27.48234088711704,26.913163325378722,26.353339697944342,25.802722774327815,25.261173206006735,24.72855956158284,24.204758393342285,23.689654337736588,23.183140252773445,22.685117395799917,22.195495645758516,21.714193774697005,21.24113977409238,20.776271242522295,20.319535842300517,19.870891834016827,19.430308699463172,18.997767865271218,18.573263541778555,18.15680369425913,17.748411166801727,17.34812498290097,16.95600185137442,16.57211791174633,16.196570759910554,15.829481802994685,15.470999002240257,15.12130007474036,14.780596239602252,14.449136612098636,14.127213371448331,13.81516785496127,13.513397764644274,13.222365713495645,12.942609389624714,12.674753679503391,12.41952517042415,12.177769550877874,11.950472551831595,11.73878522938536,11.544054590319389,11.367860820537853,11.212062711330276,11.078853315682627,10.970828442154565,10.891071356020948,10.843258073693544,10.83178899924849,10.861954487777545,10.940144402213694,11.074115093625213,11.273331798564596,11.549410641132315,11.916692830993775,12.39299504051028,13.000595374367512,13.76753523502332,14.729345671038633,15.931345114839887,17.431707385398774,19.30556938358929,21.65054375187328,24.59413198016051,28.3037102371139,33.000000000000384],"kMatched":[528.0000000000047,517.5895119389144,507.38040616955794,497.3683632373297,487.5491731648606,477.9187322239653,468.4730398169889,459.20819546236623,450.12039588175827,441.2059321836626,432.4611871407358,423.88263255680107,415.4668267206179,407.2104119426325,399.110112172197,391.1627306919026,383.36514788645025,375.71431908300536,368.2072724608961,360.84110702760967,353.6129906592126,346.5201582024124,339.5599096363111,332.72960829187826,326.02667912650065,319.44860705238165,312.99293531634186,306.657263929558,300.43924814525803,294.3365969828716,288.34707179691947,282.46848488915856,276.69869816244915,271.03562181498495,265.4772130733941,260.0214749635092,254.66645511744488,249.41024461590948,244.25097686424533,239.18682650154506,234.2160083412858,229.3367763427295,224.5474226120147,219.84627643189754,215.23170331927204,210.70210410953527,206.25591406701804,201.89160202050832,197.60766952313713,193.40265003594325,189.27510813416538,185.2236387357505,181.24686635127662,177.34344435461855,173.51205427380037,169.751405101353,166.06023262353338,162.4372987680132,158.88139096924135,155.39132155114768,151.96592712656533,148.60406801292237,145.30462766370067,142.06651211517857,138.88864944811374,135.7699892637623,132.70950217396725,129.70617930487708,126.7590318138134,123.86709041902007,121.02940494189636,118.2450438612795,115.51309387956044,112.83265950017798,110.20286261622222,107.62284210983358,105.09175346203433,102.60876837274753,100.17307439067363,97.78387455272728,95.44038703280742,93.14184479953053,90.88749528273644,88.676600048474,86.50843448219644,84.38228747992429,82.29746114712918,80.25327050507182,78.24904320439116,76.2841192456837,74.3578507068367,72.4696014769386,70.61874699645777,68.80467400360428,67.0267802865148,65.2844744411853,63.57717563488602,61.90431337486703,60.26532728219472,58.65966687051795,57.086791329588415,55.54616931336527,54.03727873256294,52.5596065514451,51.112648588741344,49.695909322555906,48.308901699087826,46.951146945077696,45.62217438384162,44.32152125476653,43.04873253618013,41.80336077149536,40.58496589850583,39.3931150818039,38.227382548192274,37.08734942505829,35.97260358163333,34.88273947308373,33.817357987416024,32.77606629511744,31.758477701558707,30.764211502082926,29.792892839828074,28.8441525662321,27.917627104262685,27.01295831436939,26.129793363189055,25.267784595029344,24.426589406181822,23.605870122112847,22.805293877577558,22.024532499740715,21.26326239437238,20.521164435198493,19.797923856506745,19.093230149100545,18.406776959714445,17.738261994001544,17.087386923223846,16.4538572947648,15.837382446612876,15.237675425943587,14.654452911961798,14.087435143143086,13.536345849035412,13.000912186773471,12.480864682465334,11.975937177604358,11.601280687899923,11.554629585598818,11.505603008480538,11.454160599832822,11.400274724066712,11.34393172327795,11.285133327634629,11.22389822904321,11.160263832372125,11.09428820322978,11.026052236377614,10.95566207470833,10.883251815606206,10.808986549786436,10.733065787742683,10.655727341132573,10.577251741347858,10.49796729573654,10.418255904276716,10.338559786889732,10.259389305230178,10.181332104241289,10.105063849953144,10.031360903474834,9.961115350159032,9.895352901850051,9.83525431470018,9.78218112294464,9.737706690593283,9.703653842204481,9.682140669720498,9.67563655060922,9.687030988508827,9.719718649361393,9.777704979321019,9.86573814508448,9.98947485441707,10.155690059378108,10.372543839478393,10.649923205435137,10.999882556172063,11.43721459616428,11.980194389656704,12.651553843990463,13.47976354628579,14.500725211985953,15.760013222326874,17.315850380075624,19.243062543838633,21.63831812843094,24.626872758602744,28.36691674897901,33.000000000000256],"grid":[{"c":0.0,"const":{"kappa":440.6885603836612,"pcg_iters":32,"spec":[0.004528077426915364,0.018071302737293217,0.040507026385502506,0.07163206698392738,0.11116455134507655,0.15874646716881882,0.21394690525721252,0.2762659618949298,0.34513926605471484,0.4199430904288018,0.5,0.5845849869981137,0.6729320366825786,0.7642410644905735,0.8576851617267149,0.9524180841762578,1.0475819158237423,1.1423148382732848,1.2357589355094272,1.3270679633174218,1.4154150130018863,1.5000000000000009,1.5800569095711974,1.6548607339452857,1.7237340381050703,1.7860530947427873,1.8412535328311812,1.8888354486549235,1.9283679330160732,1.9594929736144977,1.981928697262707,1.9954719225730848]},"matched":{"kappa":528.0000000000047,"pcg_iters":36,"spec":[0.060606060606060025,0.1818181818181808,0.3636363636363643,0.6060606060606065,0.9090909090909087,1.2727272727272725,1.6969696969696975,2.181818181818181,2.7272727272727275,3.333333333333334,3.999999999999998,4.7272727272727275,5.515151515151517,6.363636363636363,7.272727272727271,8.24242424242424,9.272727272727273,10.363636363636365,11.515151515151517,12.72727272727273,14.0,15.333333333333336,16.72727272727274,18.181818181818173,19.696969696969713,21.272727272727263,22.909090909090903,24.6060606060606,26.363636363636346,28.18181818181816,30.060606060606045,31.99999999999998]}},{"c":0.5,"const":{"kappa":56.18109372953405,"pcg_iters":21,"spec":[0.022249477840672292,0.08443067575634548,0.17496851037516625,0.2800072239810109,0.3876044575522126,0.4896583976692608,0.5818371937312206,0.6625807340447069,0.7320076750527814,0.7910835590656067,0.8410963410630646,0.8833680664360352,0.9191172038895743,0.9494065124199517,0.9751349579978541,0.9970498344007885,1.0157663839402447,1.0317886371094436,1.0455286692746728,1.0573232571272566,1.0674477768934736,1.0761275610872345,1.0835470624269277,1.0898571903782994,1.0951811532895048,1.0996190896753948,1.1032517209946984,1.1061432115689853,1.1083433811328187,1.1098893818988387,1.1108069241481695,1.2500000000000009]},"matched":{"kappa":57.086791329588415,"pcg_iters":30,"spec":[0.07905066823205523,0.24966519604697024,0.48668763562543327,0.7487788590522053,0.9932621225263912,0.9999999999999973,1.1926370302472877,1.3696330544194313,1.543757586277812,1.7069130821370293,1.8612106492682121,2.0125730705597675,2.1630310303039795,2.3123291719654993,2.4601243602138867,2.6061338889657417,2.7500822759028183,2.8917116587393683,3.030779498786134,3.167056172526655,3.30032335557305,3.430372489503756,3.5570034696609207,3.6800234971748247,3.799246065044158,3.9144900546783425,4.025578922553702,4.132339960293961,4.234603614090083,4.332202851420123,4.424972564594277,4.512749001827861]}},{"c":0.8,"const":{"kappa":16.196570759910554,"pcg_iters":12,"spec":[0.15821250178127755,0.4356977587937508,0.642208601875078,0.7681455882420912,0.8440225912394682,0.8915243855695669,0.9226741588888591,0.943996236793903,0.9591416411409741,0.9702419128167415,0.9785951156863445,0.9850228621323137,0.9900633552778544,0.994079966828702,0.997324630810391,0.9999761438768574,1.0021640314008309,1.0039838384189796,1.005507174269415,1.0067884606414663,1.0078695572214085,1.0087829902363379,1.009554242392675,1.0102034001969808,1.0107463534038867,1.0111956769239814,1.0115612837273125,1.011850909635666,1.0120704722652958,1.0122243335682666,1.0123154864012704,2.5624999802029365]},"matched":{"kappa":10.883251815606206,"pcg_iters":15,"spec":[0.2086671910816923,0.5406120969162168,0.7631198952089937,0.8445511805542625,0.8920059380639801,0.9367160743870131,0.979196263211603,1.0192740563258877,1.0567836401257293,1.0915845267705706,1.123477465217385,1.1521213069382419,1.1769451972049816,1.1974313025548475,1.214705358483983,1.230931164742325,1.2465167843729443,1.261419384989894,1.2756507947913476,1.2892034743210687,1.302074240009025,1.3142584681887688,1.3257519619470348,1.3365504535830008,1.3466497527612291,1.3560457014355478,1.3647341793621077,1.372711095686358,1.379972383969292,1.3865139965189337,1.3923318989832134,2.270977586197275]}},{"c":0.9,"const":{"kappa":10.970828442154565,"pcg_iters":9,"spec":[0.45806852661374897,0.7773511514072295,0.889854090011303,0.9368677130414492,0.960243266028088,0.9734021926644872,0.9814979365508364,0.9868169904612549,0.9904917398926996,0.9931326616551831,0.9950916747713299,0.9965829203417759,0.9977426275547527,0.9986607413813828,0.9993985454090186,0.9999989338519394,1.0004926346188194,1.0009021075741382,1.0012440588179914,1.001531104481176,1.0017728969564692,1.001976902687755,1.0021489489066673,1.002293613938967,1.002414509537327,1.0025144873069267,1.0025957907966656,1.0026601679701512,1.00270895419575,1.0027431327780532,1.002763377877786,5.025391220229952]},"matched":{"kappa":9.687030988508827,"pcg_iters":11,"spec":[0.4855935752569923,0.7981070110455064,0.8825802960573095,0.8994512895916132,0.9145441290666079,0.9288799974190279,0.942555019259659,0.9555929289131263,0.9680003138893174,0.9797781053431,0.9909250628244093,1.001439027176528,1.0113173833608995,1.020557191495693,1.0291551451789922,1.0371073963823465,1.0444092127601803,1.0510543494120217,1.05703386877008,1.0623338563722349,1.0669311869119196,1.0707893260051635,1.0738862284592234,1.0763648057114192,1.0785415119624422,1.080549268398827,1.0823909344810503,1.084066638838401,1.085576191927182,1.0869193686962697,1.0880959386459537,4.703960011335278]}},{"c":0.95,"const":{"kappa":12.392995040510488,"pcg_iters":7,"spec":[0.784043288811279,0.9368905352174309,0.9715703798322384,0.9842835098162765,0.9902733133866464,0.9935550502809719,0.9955429863763773,0.9968364885971289,0.9977243655985225,0.9983595749583951,0.9988292230024151,0.999185852158737,0.9994626719513431,0.9996815006294598,0.9998571466521614,0.9999999431192338,1.0001172739577893,1.000214525329685,1.0002956968397596,1.0003638046736616,1.0004211537382255,1.0004695251717342,1.0005103078936084,1.0005445923584102,1.0005732382766146,1.000596924067222,1.0006161832552845,1.0006314313636797,1.0006429857410772,1.000651080015192,1.0006558743358691,9.716644589783714]},"matched":{"kappa":11.98019438965666,"pcg_iters":10,"spec":[0.7781001516327992,0.9131940461541482,0.9279151094928456,0.9333489301185548,0.9385727505217908,0.9436273888345073,0.9485221670175699,0.9532599248269135,0.9578416282149981,0.962267597819027,0.9665379069678102,0.970652527787698,0.9746113898468445,0.9784144054577939,0.9820614814324605,0.9855525251563291,0.9888874483620473,0.9920661702150902,0.9950886206467583,0.9979547446956192,1.0006645087590795,1.003217910123698,1.0056149921299107,1.0078558693437496,1.009940771400173,1.011870123980368,1.0136447099380552,1.0152660231792343,1.016737161655202,1.018065619205911,1.0192762602890066,9.321791071182258]}},{"c":0.99,"const":{"kappa":24.59413198016051,"pcg_iters":5,"spec":[0.9896636160220524,0.997428378331175,0.9988788266878248,0.9993873963600896,0.9996229319678923,0.9997508953200104,0.9998280410861295,0.9998780894418887,0.9999123757910303,0.9999368714738776,0.9999549645882894,0.9999686934608816,0.9999793439074024,0.9999877594366551,0.9999945118896584,0.9999999999194874,1.000004508187179,1.0000082442103164,1.000011362007483,1.0000139776782846,1.0000161799121279,1.0000180372239753,1.0000196030276818,1.000020919249895,1.0000220189393343,1.0000229281714978,1.000023667450101,1.0000242527422263,1.0000246962413963,1.0000250069236956,1.0000251909418445,24.33991758840925]},"matched":{"kappa":24.626872758602744,"pcg_iters":7,"spec":[0.9581871244659276,0.9609367633314461,0.9616748888409599,0.962390780085029,0.963094257579902,0.9637884958201258,0.9644749006267298,0.9651542040745444,0.9658268296358836,0.9664930424663305,0.9671530202074037,0.9678068897396527,0.9684547477797674,0.9690966732311501,0.9697327351140079,0.9703629980762869,0.9709875266205055,0.9716063887604293,0.9722196596316033,0.9728274255313614,0.9734297889338558,0.9740268752363547,0.9746188424319768,0.9752058957763641,0.9757883113080025,0.9763664760176801,0.9769409619472068,0.9775126773956172,0.9780832224913331,0.9786559304131967,0.9792404401403646,23.59715239315385]}},{"c":1.0,"const":{"kappa":33.000000000000384,"pcg_iters":2,"spec":[0.9999999999999946,0.999999999999999,0.999999999999999,0.9999999999999992,0.9999999999999993,0.9999999999999996,0.9999999999999996,0.9999999999999998,0.9999999999999998,0.9999999999999999,1.0,1.0,1.0,1.0,1.0,1.0000000000000002,1.0000000000000002,1.0000000000000002,1.0000000000000002,1.0000000000000002,1.0000000000000002,1.0000000000000002,1.0000000000000004,1.0000000000000004,1.0000000000000007,1.0000000000000009,1.0000000000000009,1.000000000000001,1.0000000000000013,1.000000000000002,1.000000000000004,33.000000000000206]},"matched":{"kappa":33.000000000000256,"pcg_iters":2,"spec":[0.9696969696969618,0.9696969696969672,0.9696969696969675,0.9696969696969677,0.969696969696968,0.9696969696969682,0.9696969696969686,0.9696969696969686,0.9696969696969687,0.9696969696969691,0.9696969696969691,0.9696969696969693,0.9696969696969695,0.9696969696969696,0.9696969696969697,0.9696969696969697,0.9696969696969698,0.96969696969697,0.9696969696969701,0.9696969696969703,0.9696969696969704,0.9696969696969705,0.9696969696969706,0.9696969696969706,0.9696969696969715,0.9696969696969716,0.9696969696969717,0.9696969696969722,0.9696969696969722,0.9696969696969727,0.9696969696969818,31.999999999999986]}}],"opt":{"const":{"c":0.915,"k":10.83178899924849},"matched":{"c":0.895,"k":9.67563655060922}}},"ma":{"k":[{"p":0,"bw":0,"kappa":440.6885603836939,"its":32,"minEig":0.00045913682277318646,"nnzM":32,"fap":64,"fit":636,"ftot":20544,"span":1,"spec":[0.004528077426915031,0.01807130273729281,0.04050702638550233,0.07163206698392742,0.11116455134507669,0.1587464671688185,0.2139469052572123,0.27626596189492963,0.34513926605471423,0.4199430904288004,0.4999999999999982,0.5845849869981137,0.6729320366825793,0.7642410644905738,0.8576851617267148,0.9524180841762578,1.0475819158237425,1.1423148382732846,1.2357589355094287,1.3270679633174216,1.415415013001887,1.5000000000000029,1.5800569095712016,1.6548607339452874,1.7237340381050716,1.7860530947427913,1.8412535328311852,1.8888354486549257,1.9283679330160768,1.9594929736144977,1.9819286972627077,1.9954719225730861]},{"p":1,"bw":1,"kappa":110.42214009591882,"its":16,"minEig":2.079007083064941e-06,"nnzM":94,"fap":252,"fit":824,"ftot":13564,"span":4,"spec":[0.009035651368646305,0.009035651368646716,0.035816033491963134,0.03581603349196368,0.07937323358440913,0.07937323358440941,0.13813298094746512,0.13813298094746523,0.20997154521440095,0.20997154521440134,0.29229249349905634,0.29229249349905745,0.3821205322452861,0.3821205322452874,0.4762090420881287,0.4762090420881295,0.5711574191366416,0.5711574191366434,0.6635339816587086,0.6635339816587121,0.7499999999999976,0.7500000000000016,0.8274303669726426,0.8274303669726434,0.8930265473713934,0.8930265473713951,0.9444177243274625,0.9444177243274627,0.9797464868072485,0.9797464868072495,0.9977359612865416,0.997735961286543]},{"p":2,"bw":2,"kappa":146.89820383662084,"its":27,"minEig":0.0003443526170798898,"nnzM":154,"fap":440,"fit":1012,"ftot":27892,"span":7,"spec":[0.013522814666561779,0.05324009384517405,0.11666508630280557,0.1998702969874756,0.2977947039404858,0.40463855994493436,0.51431393219338,0.6209146549075187,0.7191678327488302,0.8048305612252229,0.8749999999999968,0.928311983652209,0.9650124107197309,0.9868959818542511,0.9971176245455077,0.9998922727005141,1.0001077272994843,1.0028823754544913,1.0131040181457498,1.0349875892802716,1.0716880163477909,1.125000000000002,1.1951694387747764,1.28083216725117,1.3790853450924818,1.4856860678066228,1.5953614400550684,1.7022052960595164,1.800129703012528,1.8833349136971946,1.9467599061548266,1.9864771853334382]},{"p":3,"bw":3,"kappa":55.58720334294173,"its":16,"minEig":4.139228982934018e-06,"nnzM":212,"fap":628,"fit":1200,"ftot":19956,"span":10,"spec":[0.017989659741636913,0.017989659741637198,0.07034927872882882,0.07034927872882975,0.152446356959173,0.15244635695917344,0.25718524146949717,0.25718524146949795,0.37585504062907826,0.37585504062907865,0.49915008524221666,0.4991500852422186,0.618224963327151,0.6182249633271535,0.7256430324097639,0.7256430324097651,0.816094040838453,0.8160940408384554,0.8867906185015562,0.886790618501561,0.9374999999999964,0.9375000000000016,0.9702197217568028,0.9702197217568032,0.9885566804327155,0.9885566804327169,0.9969106106310628,0.9969106106310631,0.9995897952033503,0.9995897952033514,0.9999948741287034,0.9999948741287037]},{"p":4,"bw":4,"kappa":88.14134273250804,"its":23,"minEig":0.00030966439462523296,"nnzM":268,"fap":816,"fit":1388,"ftot":32868,"span":13,"spec":[0.02243627859635821,0.08714927835286344,0.18677823474095648,0.3103945980092061,0.4452378350118382,0.578658239791819,0.6999045509277656,0.8014385239636566,0.8795672086065572,0.9343321160335448,0.9687499999999969,0.9876288253264024,0.9962572567755396,0.9992716488510057,0.9999416217707067,0.9999997561012233,1.000000243898776,1.0000583782292942,1.0007283511489962,1.0037427432244626,1.0123711746735984,1.0312500000000029,1.0656678839664553,1.1204327913934427,1.1985614760363439,1.300095449072237,1.4213417602081833,1.5547621649881633,1.6896054019907985,1.8132217652590428,1.9128507216471375,1.9775637214036434]},{"p":8,"bw":8,"kappa":48.97211890555963,"its":19,"minEig":0.0002808722704591079,"nnzM":472,"fap":1568,"fit":2140,"ftot":42356,"span":25,"spec":[0.040022317320178524,0.15136766820783104,0.31075093025460604,0.48775092983887647,0.6537479910729398,0.788971015315837,0.8854310489250915,0.9455232755544271,0.9778516919842852,0.992565779471843,0.9980468749999964,0.999631582976025,0.9999571705932252,0.9999977498397039,0.9999999760529703,0.9999999999987494,1.0000000000012494,1.000000023947029,1.0000022501602974,1.0000428294067756,1.0003684170239755,1.001953125000002,1.0074342205281557,1.0221483080157143,1.0544767244455735,1.1145689510749095,1.2110289846841635,1.3462520089270626,1.5122490701611264,1.6892490697453935,1.8486323317921678,1.9599776826798214]},{"p":16,"bw":16,"kappa":25.935669411242703,"its":15,"minEig":0.0002613605387063162,"nnzM":784,"fap":3072,"fit":3644,"ftot":57860,"span":49,"spec":[0.07425098554132162,0.2665691138566053,0.5048798759252178,0.7173544016880733,0.8651151302893512,0.9470632447426929,0.9833013257778718,0.9958994418528528,0.9992509131750735,0.9999047203232111,0.9999923706054654,0.999999673263846,0.9999999943915089,0.9999999999785241,0.9999999999999966,0.9999999999999991,1.0000000000000002,1.000000000000004,1.000000000021477,1.000000005608492,1.0000003267361541,1.0000076293945335,1.0000952796767886,1.0007490868249265,1.0041005581471478,1.0166986742221296,1.0529367552573081,1.1348848697106502,1.2826455983119307,1.4951201240747805,1.7334308861433911,1.9257490144586793]},{"p":32,"bw":31,"kappa":13.379127533531499,"its":12,"minEig":0.0002480550003732493,"nnzM":1024,"fap":6080,"fit":6652,"ftot":86032,"span":97,"spec":[0.13909049734318613,0.4521793015637179,0.7445067926445058,0.9139473355293897,0.979530600287835,0.9966688995079258,0.9996452584149306,0.9999767669112772,0.9999991431291517,0.9999999843494343,0.9999999998835808,0.9999999999997429,0.9999999999999979,0.9999999999999982,0.9999999999999988,0.9999999999999997,1.000000000000001,1.0000000000000016,1.0000000000000022,1.0000000000000024,1.0000000000002573,1.0000000001164162,1.000000015650564,1.0000008568708474,1.000023233088722,1.0003547415850698,1.0033311004920749,1.0204693997121657,1.0860526644706134,1.255493207355492,1.5478206984362768,1.8609095026568112]},{"p":64,"bw":31,"kappa":6.828906778204648,"its":9,"minEig":0.0002399952245607366,"nnzM":1024,"fap":12096,"fit":12668,"ftot":126236,"span":193,"spec":[0.25546350935840906,0.694369338148667,0.9319674236290701,0.9920235708288284,0.9995286007942071,0.999986809885419,0.9999998399070056,0.9999999992541775,0.9999999999988775,0.9999999999999951,0.9999999999999968,0.9999999999999979,0.999999999999998,0.9999999999999988,0.9999999999999993,1.0000000000000002,1.0000000000000002,1.0000000000000004,1.0000000000000018,1.000000000000002,1.000000000000002,1.0000000000000022,1.0000000000000047,1.0000000000011224,1.0000000007458218,1.0000001600929944,1.0000131901145806,1.0004713992057932,1.007976429171175,1.068032576370929,1.3056306618513251,1.7445364906415861]}],"w":[{"p":0,"bw":1,"kappa":5017.694496850147,"its":37,"minEig":5.3966495238721456e-05,"nnzM":94,"fap":256,"fit":828,"ftot":31020,"span":4,"spec":[0.000770644167148234,0.0073836117016687014,0.018833270700272995,0.03781963772373357,0.06575494580074129,0.10408112520273269,0.1541165794007168,0.21703606351903426,0.29383127800212755,0.38527153078987436,0.4918656295732356,0.61382696705594,0.7510435849197575,0.9030548407351738,1.0690360885940597,1.2477925209690928,1.4377630110673718,1.637034450783646,1.8433667110498113,2.05422797226244,2.266839796522414,2.478230954490774,2.685298690837246,2.8848758252555777,3.0738018505384326,3.2489960118304344,3.407530232679155,3.546699679529013,3.6640886577420133,3.757629075166075,3.825645805265039,3.8668569965293584]},{"p":1,"bw":3,"kappa":752.1917011354835,"its":35,"minEig":2.2504588497619214e-06,"nnzM":212,"fap":504,"fit":1076,"ftot":38292,"span":6,"spec":[0.004945279118966763,0.009670485051369058,0.028144399506232425,0.04073533155982931,0.0775399676556877,0.10828803842272505,0.16651306705787539,0.2209130641149054,0.3043640503766582,0.385229046749043,0.4974088653053125,0.6045587339390976,0.7483334908760546,0.8780004163785793,1.0551222721563713,1.2000817889773807,1.410364444160891,1.560783678424958,1.801085849468444,1.9459580471638034,2.2092441007065062,2.338125773713457,2.612903353885436,2.717615642236433,2.987986105708364,3.0639681395963563,3.3104047623194495,3.357484783464073,3.558299709325761,3.5807539376539363,3.7139245894807065,3.7197979130853946]},{"p":2,"bw":5,"kappa":242.84486317124947,"its":33,"minEig":7.068056965912648e-06,"nnzM":322,"fap":744,"fit":1316,"ftot":44300,"span":8,"spec":[0.014663471682986139,0.02311874397189248,0.02335414382771708,0.07301819482254512,0.07325893351524608,0.11355750438202236,0.20576382186666886,0.20648037554706794,0.3065809253320856,0.44057606943825306,0.44199545122133765,0.6221585334921175,0.7877124826245075,0.7898713260783249,1.0605362075341291,1.2385935194932454,1.2414431355947235,1.5975463148882398,1.7646006845838933,1.7681093700615318,2.1843979303191694,2.318951713306964,2.323145733988246,2.7537548947130026,2.8426303411969225,2.847517203680499,3.2309129546228945,3.2734125213433996,3.2787905492864717,3.5470459506492182,3.5561123693882153,3.56094877447026]},{"p":4,"bw":9,"kappa":57.999966010312264,"its":32,"minEig":1.730030686893254e-05,"nnzM":518,"fap":1200,"fit":1772,"ftot":58032,"span":10,"spec":[0.0560158095291655,0.0663671659670807,0.06732157668212442,0.07035943939429924,0.07272295968045828,0.21646570391028697,0.2170181994269238,0.2529576203783842,0.2667858945923052,0.3864999457155871,0.5962135862831015,0.5978290432678977,0.732472130122476,0.7660389487493056,0.9773101216164164,1.2017690407045627,1.2048261421800759,1.508240347177881,1.5499838081603712,1.7771249139879572,1.9546467798628433,1.9592555969676986,2.4202464882708425,2.446931760822219,2.6049646862499465,2.6979834328543895,2.704031827538769,3.1645804147069287,3.1664995798443965,3.2267543992435193,3.242355190685849,3.248915048731725]},{"p":8,"bw":17,"kappa":13.771414774580435,"its":28,"minEig":5.025606869791718e-05,"nnzM":814,"fap":2016,"fit":2588,"ftot":74608,"span":12,"spec":[0.19259136435798443,0.20761224916450122,0.20789495111926581,0.20885906986853706,0.20904255967848376,0.2430471752732709,0.24881099703693874,0.2542963049589309,0.2667472934595578,0.6510577804377946,0.652860276490946,0.6542742060023069,0.6592651890458016,0.66037124045782,0.9614820839202224,1.0009169697952713,1.0025669984344383,1.3083582121960675,1.6120671226091157,1.6147944038115483,1.6185814298958283,1.623529844213182,1.630097940183096,2.341974401634428,2.3502260368398438,2.354199543440258,2.548603288808882,2.6237641814027968,2.6258763497665276,2.628540506993725,2.6335520071530825,2.6522555605761506]},{"p":16,"bw":31,"kappa":3.3630912170814224,"its":14,"minEig":0.00013417362428011354,"nnzM":1024,"fap":3264,"fit":3836,"ftot":57096,"span":14,"spec":[0.49423982954574,0.5681885674973713,0.5726458542393948,0.5743680877197195,0.5745315386034738,0.5772011687048061,0.5776151470677116,0.5820081961663677,0.5825881848678276,0.5886389994160321,0.5893388315425394,0.5971554604233099,0.5979003339838935,0.6078294663682032,0.6085041290090215,0.9967059575169919,1.1541744214074154,1.544357233251513,1.5461199216933672,1.5484510031416745,1.5513524337166635,1.554817299244845,1.558862413814934,1.563452149252968,1.5686617883151983,1.5743566251540155,1.5807943422601685,1.5875526980043886,1.5954304057627469,1.6031673147762018,1.6145208835405116,1.6621736298770975]},{"p":24,"bw":31,"kappa":1.8341492535366772,"its":10,"minEig":0.00018389073064414315,"nnzM":1024,"fap":4000,"fit":4572,"ftot":49848,"span":14,"spec":[0.7191541538280438,0.7662137939723357,0.7710724355572726,0.7731731883474788,0.7732122811678757,0.7778570200760709,0.7780168323540265,0.9704987000915134,0.9999999999999827,0.9999999999999897,0.9999999999999921,0.9999999999999926,0.9999999999999959,0.999999999999998,0.9999999999999991,1.0000000000000007,1.0000000000000022,1.0000000000000029,1.0000000000000038,1.0000000000000049,1.0000000000000104,1.0000000000000122,1.0000000000000147,1.0000000000000284,1.067642526403637,1.2579960233611827,1.2600093052853787,1.2625337403225958,1.2655957435615923,1.2691867891849773,1.277341356968043,1.3190360544215074]},{"p":31,"bw":31,"kappa":1.0000000000000626,"its":1,"minEig":0.00023008934256571717,"nnzM":1024,"fap":4224,"fit":4796,"ftot":9148,"span":14,"spec":[0.9999999999999675,0.9999999999999719,0.9999999999999819,0.9999999999999856,0.9999999999999881,0.9999999999999889,0.9999999999999899,0.999999999999991,0.9999999999999936,0.9999999999999951,0.9999999999999971,0.9999999999999974,0.999999999999998,0.9999999999999984,0.9999999999999988,0.999999999999999,0.9999999999999998,1.0000000000000002,1.000000000000002,1.0000000000000024,1.0000000000000027,1.0000000000000029,1.0000000000000036,1.0000000000000044,1.0000000000000053,1.000000000000007,1.000000000000008,1.000000000000009,1.000000000000012,1.000000000000015,1.000000000000017,1.00000000000003]}]}};
+/*__END_DBDATA__*/
+</script>
+<script>
+(function(){
+'use strict';
+var NS = 'http://www.w3.org/2000/svg';
+var SANS = 'ui-sans-serif,system-ui,sans-serif';
+var PHY = '#1F4E79', PRB = '#B5443C', GOLD = '#C9A227', INK = '#1B2733', GRA = '#5A6773';
+
+function el(parent, tag, attrs){
+  var e = document.createElementNS(NS, tag), k;
+  for(k in attrs) e.setAttribute(k, attrs[k]);
+  parent.appendChild(e); return e;
+}
+function txt(parent, x, y, s, attrs){
+  var t = el(parent, 'text', Object.assign({x:x, y:y, 'font-family':SANS, 'font-size':12, fill:GRA}, attrs||{}));
+  t.textContent = s; return t;
+}
+function clear(node){ while(node.firstChild) node.removeChild(node.firstChild); }
+function sci(x){
+  if(x === 0) return '0';
+  var e = Math.floor(Math.log10(Math.abs(x)));
+  var m = x / Math.pow(10, e);
+  return m.toFixed(1) + 'e' + (e >= 0 ? '+' : '') + e;
+}
+function fmt(x, d){ return x.toFixed(d); }
+function badge(id, ok, text){
+  var b = document.getElementById(id); if(!b) return;
+  b.textContent = text; b.className = 'stbadge' + (ok ? '' : ' fail');
+}
+function log10(x){ return Math.log(x) / Math.LN10; }
+
+/* ================= WIDGET A — dual-basis explorer ================= */
+(function(){
+  var n = DB.n, h = DB.h, m = n + 1;           /* 32 nodes, 33 edges */
+  var X = DB.X, B = DB.B, piDiag = DB.piDiag;
+  var eSel = 17, fSel = 25, mode = 'e';
+  var chain = document.getElementById('db-chain');
+  var measSvg = document.getElementById('db-meas');
+  var respSvg = document.getElementById('db-resp');
+
+  function nodeX(i){ return 40 + i * (880 / 33); }  /* i = 0..33 in chain coords */
+
+  function drawChain(){
+    clear(chain);
+    var y = 58;
+    /* wall hatches */
+    [0, 33].forEach(function(i){
+      var x = nodeX(i);
+      el(chain, 'line', {x1:x, y1:y-26, x2:x, y2:y+26, stroke:INK, 'stroke-width':3});
+      for(var t = -24; t <= 20; t += 8)
+        el(chain, 'line', {x1:x, y1:y+t+4, x2:x+(i?9:-9), y2:y+t-4, stroke:GRA, 'stroke-width':1, opacity:0.55});
+    });
+    /* edges */
+    for(var e = 1; e <= 33; e++){
+      var x1 = nodeX(e-1), x2 = nodeX(e);
+      var col = (e === eSel) ? PHY : (e === fSel ? PRB : '#C7CED4');
+      var wd = (e === eSel || e === fSel) ? 5 : 2.5;
+      el(chain, 'line', {x1:x1+4, y1:y, x2:x2-4, y2:y, stroke:col, 'stroke-width':wd, 'stroke-linecap':'round'});
+      var hit = el(chain, 'rect', {x:x1, y:y-16, width:x2-x1, height:32, fill:'transparent', style:'cursor:pointer'});
+      hit.addEventListener('click', (function(ee){ return function(){
+        if(mode === 'e') eSel = ee; else fSel = ee; drawAll();
+      };})(e));
+    }
+    /* nodes */
+    for(var i = 1; i <= 32; i++)
+      el(chain, 'circle', {cx:nodeX(i), cy:y, r:3, fill:'#fff', stroke:GRA, 'stroke-width':1.2});
+    txt(chain, nodeX(0)-4, 100, 'wall', {'text-anchor':'end'});
+    txt(chain, nodeX(33)+4, 100, 'wall', {});
+    var xe = (nodeX(eSel-1) + nodeX(eSel)) / 2;
+    txt(chain, xe, 24, 'edge e = ' + eSel, {'text-anchor':'middle', fill:PHY, 'font-weight':600, 'font-size':13});
+    if(fSel !== eSel){
+      var xf = (nodeX(fSel-1) + nodeX(fSel)) / 2;
+      txt(chain, xf, 100, 'edge f = ' + fSel, {'text-anchor':'middle', fill:PRB, 'font-weight':600, 'font-size':13});
+    }
+  }
+
+  function panelAxes(svg, title, yLab){
+    clear(svg);
+    el(svg, 'line', {x1:34, y1:170, x2:456, y2:170, stroke:GRA, 'stroke-width':1});
+    txt(svg, 245, 20, title, {'text-anchor':'middle', fill:INK, 'font-weight':700, 'font-size':13.5});
+    txt(svg, 245, 314, 'node i (1 … 32); walls at the ends', {'text-anchor':'middle'});
+    txt(svg, 456, 44, yLab, {'font-size':11.5, 'text-anchor':'end'});
+  }
+  function px(i){ return 34 + i * (422 / 33); }   /* node i = 1..32 */
+
+  function drawMeas(){
+    panelAxes(measSvg, 'measurement row b' + eSel + ' — two spikes', '±1/h = ±33');
+    var sc = 128 / 33;
+    for(var i = 1; i <= 32; i++){
+      var v = B[eSel-1][i-1];
+      if(v === 0){ el(measSvg, 'circle', {cx:px(i), cy:170, r:1.6, fill:'#C7CED4'}); continue; }
+      el(measSvg, 'line', {x1:px(i), y1:170, x2:px(i), y2:170 - v*sc, stroke:PHY, 'stroke-width':3.5, 'stroke-linecap':'round'});
+      el(measSvg, 'circle', {cx:px(i), cy:170 - v*sc, r:4, fill:PHY});
+      txt(measSvg, px(i) + (v > 0 ? -7 : 7), 170 - v*sc + (v > 0 ? -8 : 5),
+          (v > 0 ? '+33 (tail)' : '−33 (head)'),
+          {'text-anchor': v > 0 ? 'end' : 'start', fill:PHY, 'font-weight':600,
+           stroke:'#fff', 'stroke-width':3.5, 'paint-order':'stroke'});
+    }
+    var wallNote = (eSel === 1) ? 'tail is the left wall — one spike' :
+                   (eSel === 33) ? 'head is the right wall — one spike' : null;
+    if(wallNote) txt(measSvg, 245, 290, wallNote, {'text-anchor':'middle', fill:PRB,
+        stroke:'#fff', 'stroke-width':3.5, 'paint-order':'stroke'});
+  }
+
+  function drawResp(){
+    panelAxes(respSvg, 'response row v' + eSel + ' — a global dipole field', '±h = ±0.0303');
+    var sc = 128 / (1.1 * h);
+    /* closed form: gold line  h(x - 1[x >= x_e]) with drop at x_e */
+    var xe = eSel * h;
+    function cx(x){ return 34 + x * 33 * (422 / 33); }
+    function cy(v){ return 170 - v * sc; }
+    var d = 'M' + cx(0) + ',' + cy(0) +
+            ' L' + cx(xe) + ',' + cy(h * xe) +
+            ' L' + cx(xe) + ',' + cy(h * (xe - 1)) +
+            ' L' + cx(1) + ',' + cy(0);
+    el(respSvg, 'path', {d:d, fill:'none', stroke:GOLD, 'stroke-width':2, opacity:0.9});
+    for(var i = 1; i <= 32; i++){
+      var v = X[eSel-1][i-1];
+      el(respSvg, 'circle', {cx:px(i), cy:cy(v), r:3, fill:PHY, stroke:'#fff', 'stroke-width':0.8});
+    }
+    el(respSvg, 'line', {x1:cx(xe), y1:36, x2:cx(xe), y2:296, stroke:PHY, 'stroke-width':1, 'stroke-dasharray':'3 4', opacity:0.6});
+    txt(respSvg, 245, 290, 'gold: h(x − 1[x ≥ ' + eSel + '/33]) — drop of h across the edge',
+        {'text-anchor':'middle', fill:'#A88A1F', stroke:'#fff', 'stroke-width':3.5, 'paint-order':'stroke'});
+  }
+
+  function dot(e, f){
+    var s = 0; for(var i = 0; i < n; i++) s += X[e-1][i] * B[f-1][i];
+    return s;
+  }
+
+  function drawReadouts(){
+    var v = dot(eSel, fSel);
+    document.getElementById('db-elab').textContent = eSel;
+    document.getElementById('db-flab').textContent = fSel;
+    document.getElementById('db-dot').textContent = v.toFixed(9);
+    document.getElementById('db-exp').textContent =
+      (eSel === fSel) ? '32/33 = 0.969697…' : '−1/33 = −0.030303…';
+    document.getElementById('db-levwrap').style.display = (eSel === fSel) ? '' : 'none';
+  }
+
+  function drawAll(){ drawChain(); drawMeas(); drawResp(); drawReadouts(); }
+
+  var seg = document.getElementById('db-mode');
+  Array.prototype.forEach.call(seg.querySelectorAll('button'), function(b){
+    b.addEventListener('click', function(){
+      mode = b.getAttribute('data-m');
+      Array.prototype.forEach.call(seg.querySelectorAll('button'), function(x){ x.className = ''; });
+      b.className = 'active';
+    });
+  });
+
+  drawAll();
+
+  /* ---- self-test: closed form + both Gram identities from the baked rows ---- */
+  try{
+    var devCF = 0, e, i, j, s;
+    for(e = 1; e <= 33; e++) for(i = 1; i <= n; i++){
+      var xi = i * h, xe = e * h;
+      var cf = h * (xi - (xi >= xe - 1e-12 ? 1 : 0));
+      devCF = Math.max(devCF, Math.abs(cf - X[e-1][i-1]));
+    }
+    var devBio = 0;
+    for(i = 0; i < n; i++) for(j = 0; j < n; j++){
+      s = 0; for(e = 0; e < m; e++) s += X[e][i] * B[e][j];
+      devBio = Math.max(devBio, Math.abs(s - (i === j ? 1 : 0)));
+    }
+    var devPi = 0;
+    for(e = 1; e <= m; e++) for(j = 1; j <= m; j++)
+      devPi = Math.max(devPi, Math.abs(dot(e, j) - ((e === j ? 1 : 0) - 1/33)));
+    var devLev = 0;
+    for(e = 0; e < m; e++) devLev = Math.max(devLev, Math.abs(piDiag[e] - 32/33));
+    var ok = devCF < 1e-11 && devBio < 1e-11 && devPi < 1e-11 && devLev < 1e-11;
+    badge('db-badge', ok, ok ?
+      ('self-test ✓ · closed form ' + sci(devCF) + ' · XᵀB−I ' + sci(devBio) + ' · Π ' + sci(devPi)) :
+      'self-test ✗');
+  }catch(err){ badge('db-badge', false, 'self-test error'); }
+})();
+
+/* ================= WIDGET B — the stationary whitener ================= */
+(function(){
+  var A = DB.ar;
+  var cF = A.cFine, kC = A.kConst, kM = A.kMatched, grid = A.grid;
+  var dsel = 'const', idx = 180;   /* c = 0.900 */
+  var curve = document.getElementById('ar-curve');
+  var spec = document.getElementById('ar-spec');
+
+  var L = 60, R = 944, T = 20, Bm = 296;         /* curve plot box */
+  var yLo = log10(8), yHi = log10(600);
+  function cx(c){ return L + c * (R - L); }
+  function cy(k){ return Bm - (log10(k) - yLo) / (yHi - yLo) * (Bm - T); }
+
+  var cursor, curveBuilt = false;
+  function buildCurve(){
+    clear(curve);
+    [10, 100].forEach(function(g){
+      el(curve, 'line', {x1:L, y1:cy(g), x2:R, y2:cy(g), stroke:'#EDF0F3', 'stroke-width':1});
+      txt(curve, L-8, cy(g)+4, 'κ = ' + g, {'text-anchor':'end'});
+    });
+    for(var t = 0; t <= 10; t++){
+      var xx = cx(t/10);
+      el(curve, 'line', {x1:xx, y1:Bm, x2:xx, y2:Bm+5, stroke:GRA});
+      if(t % 2 === 0) txt(curve, t === 10 ? xx + 6 : xx, Bm+20, 'c = ' + (t/10).toFixed(1),
+        {'text-anchor': t === 10 ? 'end' : 'middle'});
+    }
+    el(curve, 'line', {x1:L, y1:Bm, x2:R, y2:Bm, stroke:GRA, 'stroke-width':1});
+    function poly(arr, col){
+      var d = '';
+      for(var i = 0; i < cF.length; i++)
+        d += (i ? ' L' : 'M') + cx(cF[i]).toFixed(1) + ',' + cy(arr[i]).toFixed(1);
+      el(curve, 'path', {d:d, fill:'none', stroke:col, 'stroke-width':2.4, 'stroke-linejoin':'round'});
+    }
+    poly(kC, PHY); poly(kM, PRB);
+    txt(curve, cx(0.06), cy(kC[12])-12, 'const-D', {fill:PHY, 'font-weight':700});
+    txt(curve, cx(0.13), cy(kM[26])+18, 'matched-D', {fill:PRB, 'font-weight':700});
+    /* markers: optima + c = 1 */
+    el(curve, 'circle', {cx:cx(A.opt.const.c), cy:cy(A.opt.const.k), r:5, fill:GOLD, stroke:'#fff', 'stroke-width':1.2});
+    el(curve, 'circle', {cx:cx(A.opt.matched.c), cy:cy(A.opt.matched.k), r:5, fill:GOLD, stroke:'#fff', 'stroke-width':1.2});
+    txt(curve, cx(A.opt.const.c)-10, cy(A.opt.const.k)+22, 'c* = ' + A.opt.const.c + ', κ = ' + A.opt.const.k.toFixed(2),
+        {'text-anchor':'end', fill:'#A88A1F', 'font-weight':600,
+         stroke:'#fff', 'stroke-width':3.5, 'paint-order':'stroke'});
+    var g1 = grid[grid.length-1];
+    el(curve, 'circle', {cx:cx(1), cy:cy(g1.const.kappa), r:5, fill:PRB, stroke:'#fff', 'stroke-width':1.2});
+    txt(curve, cx(1)-8, cy(g1.const.kappa)-14, 'c = 1: κ = 33, spectrum {1×31, 33}, PCG 2',
+        {'text-anchor':'end', fill:PRB, 'font-weight':600,
+         stroke:'#fff', 'stroke-width':3.5, 'paint-order':'stroke'});
+    txt(curve, cx(0.008), cy(kC[0])-10, 'c = 0 = Jacobi: κ = 440.7', {fill:GRA});
+    cursor = el(curve, 'line', {x1:cx(0.9), y1:T, x2:cx(0.9), y2:Bm, stroke:INK, 'stroke-width':1.2, 'stroke-dasharray':'4 4', opacity:0.7});
+    curveBuilt = true;
+  }
+
+  function nearestGrid(c){
+    var best = 0, bd = 1e9;
+    for(var i = 0; i < grid.length; i++){
+      var d = Math.abs(grid[i].c - c);
+      if(d < bd){ bd = d; best = i; }
+    }
+    return grid[best];
+  }
+
+  var SL = 60, SR = 944;
+  var sLo = log10(0.004), sHi = log10(35);
+  function sx(lam){ return SL + (log10(lam) - sLo) / (sHi - sLo) * (SR - SL); }
+
+  function drawSpec(){
+    clear(spec);
+    var g = nearestGrid(cF[idx]), v = g[dsel];
+    el(spec, 'line', {x1:SL, y1:60, x2:SR, y2:60, stroke:GRA, 'stroke-width':1});
+    [0.01, 0.1, 1, 10].forEach(function(t){
+      el(spec, 'line', {x1:sx(t), y1:60, x2:sx(t), y2:65, stroke:GRA});
+      txt(spec, sx(t), 80, 'λ = ' + t, {'text-anchor':'middle'});
+    });
+    el(spec, 'line', {x1:sx(1), y1:14, x2:sx(1), y2:60, stroke:GOLD, 'stroke-width':1, 'stroke-dasharray':'3 4'});
+    v.spec.forEach(function(lam){
+      el(spec, 'line', {x1:sx(lam), y1:22, x2:sx(lam), y2:56, stroke:dsel === 'const' ? PHY : PRB,
+        'stroke-width':1.6, opacity:0.75});
+    });
+    txt(spec, SL, 14, 'spec(M⁻¹A) at measured c = ' + g.c + ' (' + dsel + '-D) — 32 eigenvalues, log axis',
+        {'font-weight':600, fill:INK});
+  }
+
+  function update(){
+    var c = cF[idx];
+    document.getElementById('ar-cval').textContent = c.toFixed(3);
+    document.getElementById('ar-kc').textContent = kC[idx].toFixed(2);
+    document.getElementById('ar-km').textContent = kM[idx].toFixed(2);
+    var g = nearestGrid(c);
+    var exact = Math.abs(g.c - c) < 1e-12;
+    document.getElementById('ar-its').textContent = exact ?
+      (g[dsel].pcg_iters + ' (measured at this c)') :
+      (g[dsel].pcg_iters + ' (nearest measured c = ' + g.c + ')');
+    document.getElementById('ar-spat').textContent = 'c = ' + g.c;
+    cursor.setAttribute('x1', cx(c)); cursor.setAttribute('x2', cx(c));
+    drawSpec();
+  }
+
+  buildCurve();
+  document.getElementById('ar-slider').addEventListener('input', function(){
+    idx = parseInt(this.value, 10); update();
+  });
+  var seg = document.getElementById('ar-dsel');
+  Array.prototype.forEach.call(seg.querySelectorAll('button'), function(b){
+    b.addEventListener('click', function(){
+      dsel = b.getAttribute('data-d');
+      Array.prototype.forEach.call(seg.querySelectorAll('button'), function(x){ x.className = ''; });
+      b.className = 'active'; update();
+    });
+  });
+  update();
+
+  /* ---- self-test: fine grid vs sweep table, optima, spectra ratios ---- */
+  try{
+    var devG = 0, devR = 0, i, j;
+    for(i = 0; i < grid.length; i++){
+      var g = grid[i];
+      for(j = 0; j < cF.length; j++) if(Math.abs(cF[j] - g.c) < 1e-9){
+        devG = Math.max(devG, Math.abs(kC[j] - g.const.kappa) / g.const.kappa,
+                              Math.abs(kM[j] - g.matched.kappa) / g.matched.kappa);
+      }
+      ['const','matched'].forEach(function(dv){
+        var s = g[dv].spec, mn = Math.min.apply(null, s), mx = Math.max.apply(null, s);
+        devR = Math.max(devR, Math.abs(mx/mn - g[dv].kappa) / g[dv].kappa);
+      });
+    }
+    var am = 0; for(i = 0; i < kC.length; i++) if(kC[i] < kC[am]) am = i;
+    var okOptC = Math.abs(cF[am] - A.opt.const.c) < 1e-9 && Math.abs(kC[am] - A.opt.const.k) < 1e-9;
+    am = 0; for(i = 0; i < kM.length; i++) if(kM[i] < kM[am]) am = i;
+    var okOptM = Math.abs(cF[am] - A.opt.matched.c) < 1e-9 && Math.abs(kM[am] - A.opt.matched.k) < 1e-9;
+    var ok = devG < 1e-9 && devR < 1e-8 && okOptC && okOptM;
+    badge('ar-badge', ok, ok ?
+      ('self-test ✓ · 7 sweep points on the 201-curve (' + sci(devG) + ') · spectra↔κ (' + sci(devR) + ') · optima re-found') :
+      'self-test ✗');
+  }catch(err){ badge('ar-badge', false, 'self-test error'); }
+})();
+
+/* ================= WIDGET C — the colorer family ================= */
+(function(){
+  var fam = 'k', idx = 5;
+  var mat = document.getElementById('ma-mat');
+  var spec = document.getElementById('ma-spec');
+  var slider = document.getElementById('ma-slider');
+
+  function rows(){ return fam === 'k' ? DB.ma.k : DB.ma.w; }
+
+  function drawMat(r){
+    clear(mat);
+    var n = 32, s = 320 / n, x0 = 30, y0 = 26;
+    el(mat, 'rect', {x:x0, y:y0, width:320, height:320, fill:'none', stroke:'#C9D2DA'});
+    for(var i = 0; i < n; i++) for(var j = Math.max(0, i - r.bw); j <= Math.min(n-1, i + r.bw); j++)
+      el(mat, 'rect', {x:x0 + j*s, y:y0 + i*s, width:s, height:s,
+        fill:fam === 'k' ? PRB : GOLD, opacity: i === j ? 0.85 : 0.3});
+    txt(mat, x0 + 160, 16, 'footprint of M⁻¹ — bandwidth ' + r.bw + (r.bw === 31 ? ' (full)' : ''),
+        {'text-anchor':'middle', fill:INK, 'font-weight':700, 'font-size':13});
+    txt(mat, x0 + 160, 368, 'nnz(M⁻¹) = ' + r.nnzM + ' of 1024', {'text-anchor':'middle'});
+  }
+
+  var SL = 56, SR = 540;
+  var sLo = log10(0.0005), sHi = log10(5);
+  function sx(lam){ return SL + (log10(lam) - sLo) / (sHi - sLo) * (SR - SL); }
+
+  function drawSpec(r){
+    clear(spec);
+    var col = fam === 'k' ? PRB : '#A88A1F';
+    el(spec, 'line', {x1:SL, y1:282, x2:SR, y2:282, stroke:GRA, 'stroke-width':1});
+    [0.001, 0.01, 0.1, 1].forEach(function(t){
+      el(spec, 'line', {x1:sx(t), y1:282, x2:sx(t), y2:287, stroke:GRA});
+      txt(spec, sx(t), 304, 'λ = ' + t, {'text-anchor':'middle'});
+    });
+    el(spec, 'line', {x1:sx(1), y1:152, x2:sx(1), y2:282, stroke:GOLD, 'stroke-width':1, 'stroke-dasharray':'3 4'});
+    r.spec.forEach(function(lam){
+      el(spec, 'line', {x1:sx(lam), y1:182, x2:sx(lam), y2:278, stroke:col, 'stroke-width':1.6, opacity:0.75});
+    });
+    var mn = Math.min.apply(null, r.spec), mx = Math.max.apply(null, r.spec);
+    el(spec, 'path', {d:'M' + sx(mn) + ',168 L' + sx(mn) + ',160 L' + sx(mx) + ',160 L' + sx(mx) + ',168',
+      fill:'none', stroke:INK, 'stroke-width':1.2});
+    txt(spec, Math.min((sx(mn)+sx(mx))/2, SR-120), 150, 'κ = λmax/λmin = ' + r.kappa.toFixed(2),
+        {'text-anchor':'middle', fill:INK, 'font-weight':700, 'font-size':13,
+         stroke:'#fff', 'stroke-width':3.5, 'paint-order':'stroke'});
+    txt(spec, SL, 70, 'spec(M⁻¹A) — 32 eigenvalues, log axis', {'font-weight':600, fill:INK});
+    txt(spec, SL, 90, fam === 'k' ? 'walk family: watch the cluster at 1 − μᵏ⁺¹ ≈ 1' :
+        'clipped family: spread spectrum — κ is not destiny', {});
+    txt(spec, SL, 340, 'PCG to 10⁻¹⁰ from here: ' + r.its + ' iterations', {fill:col, 'font-weight':600, 'font-size':13});
+  }
+
+  function update(){
+    var rs = rows(), r = rs[idx];
+    document.getElementById('ma-parlab').textContent = fam;
+    document.getElementById('ma-parlab2').textContent = fam;
+    document.getElementById('ma-pval').textContent = r.p;
+    document.getElementById('ma-bw').textContent = r.bw + (fam === 'k' ? ' = min(k, 31)' : ' = min(2w+1, 31)');
+    document.getElementById('ma-kappa').textContent = r.kappa.toFixed(2);
+    document.getElementById('ma-its').textContent = r.its;
+    document.getElementById('ma-fap').textContent = r.fap;
+    document.getElementById('ma-fit').textContent = r.fit;
+    document.getElementById('ma-ftot').textContent = r.ftot;
+    document.getElementById('ma-span').textContent = r.span;
+    var chip = document.getElementById('ma-spd');
+    chip.textContent = 'SPD ✓ min eig(M⁻¹) = ' + sci(r.minEig);
+    drawMat(r); drawSpec(r);
+  }
+
+  slider.addEventListener('input', function(){ idx = parseInt(this.value, 10); update(); });
+  var seg = document.getElementById('ma-fam');
+  Array.prototype.forEach.call(seg.querySelectorAll('button'), function(b){
+    b.addEventListener('click', function(){
+      fam = b.getAttribute('data-f');
+      Array.prototype.forEach.call(seg.querySelectorAll('button'), function(x){ x.className = ''; });
+      b.className = 'active';
+      slider.max = rows().length - 1;
+      if(idx > rows().length - 1) idx = rows().length - 1;
+      slider.value = idx;
+      update();
+    });
+  });
+  update();
+
+  /* ---- self-test: bandwidth laws, SPD, spectra↔κ, w = 31 recovery ---- */
+  try{
+    var okBW = true, okSPD = true, devR = 0;
+    DB.ma.k.forEach(function(r){
+      if(r.bw !== Math.min(r.p, 31)) okBW = false;
+      if(!(r.minEig > 0)) okSPD = false;
+      var mn = Math.min.apply(null, r.spec), mx = Math.max.apply(null, r.spec);
+      devR = Math.max(devR, Math.abs(mx/mn - r.kappa) / r.kappa);
+    });
+    DB.ma.w.forEach(function(r){
+      if(r.bw !== Math.min(2*r.p + 1, 31)) okBW = false;
+      if(!(r.minEig > 0)) okSPD = false;
+      var mn = Math.min.apply(null, r.spec), mx = Math.max.apply(null, r.spec);
+      devR = Math.max(devR, Math.abs(mx/mn - r.kappa) / r.kappa);
+    });
+    var last = DB.ma.w[DB.ma.w.length - 1];
+    var okRec = Math.abs(last.kappa - 1) < 1e-9 && last.its === 1;
+    var ok = okBW && okSPD && devR < 1e-8 && okRec;
+    badge('ma-badge', ok, ok ?
+      ('self-test ✓ · both bandwidth laws · SPD at all 17 stops · spectra↔κ (' + sci(devR) + ') · w=31 → κ=1') :
+      'self-test ✗');
+  }catch(err){ badge('ma-badge', false, 'self-test error'); }
+})();
+
+})();
+</script>
+</body>
+</html>
