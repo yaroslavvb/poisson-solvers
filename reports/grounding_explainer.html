@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Where You Put the Zero — boundary conditions as grounding choices</title>
+<script>
+window.MathJax = {tex:{inlineMath:[['$','$']]}, chtml:{scale:0.96}};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
+<style>
+:root{
+  --paper:#F2F4F6; --ink:#1B2733; --phy:#1F4E79; --prb:#B5443C;
+  --gold:#C9A227; --graphite:#5A6773; --card:#FFFFFF;
+}
+*{box-sizing:border-box}
+html{background:var(--paper)}
+body{margin:0;color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,"URW Palladio L",Georgia,serif;
+  font-size:17px;line-height:1.62;-webkit-font-smoothing:antialiased}
+main{max-width:1000px;margin:0 auto;padding:0 20px 90px}
+.prose{max-width:700px;margin:0 auto}
+h1{font-size:clamp(30px,5vw,46px);line-height:1.12;font-weight:600;letter-spacing:-0.01em;margin:.2em 0 .25em}
+h2{font-size:24px;font-weight:600;margin:2.6em 0 .5em;letter-spacing:-0.005em}
+h3{font-size:19px;font-weight:600;margin:1.9em 0 .35em;letter-spacing:-0.003em}
+.eyebrow{font-size:12px;letter-spacing:.22em;text-transform:uppercase;
+  font-family:ui-sans-serif,system-ui,sans-serif;font-weight:600;margin:3.4em 0 -0.2em}
+.eyebrow.phy{color:var(--phy)} .eyebrow.prb{color:var(--prb)} .eyebrow.syn{color:var(--gold)}
+.eyebrow.ink{color:var(--graphite)}
+p{margin:.85em 0}
+a{color:var(--phy)}
+figure{margin:2em auto;max-width:1000px;text-align:center}
+figcaption{font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;color:var(--graphite);
+  max-width:760px;margin:.6em auto 0;line-height:1.5;text-align:left}
+.hero{padding:76px 0 8px;text-align:center}
+.hero .sub{color:var(--graphite);font-size:18px;max-width:660px;margin:0 auto}
+.identity{display:flex;align-items:stretch;max-width:860px;margin:38px auto 8px;
+  border:1px solid #DDE3E8;border-radius:10px;overflow:hidden;background:var(--card)}
+.identity>div{flex:1;padding:22px 14px 18px;text-align:center}
+.identity .left{background:linear-gradient(90deg,rgba(31,78,121,.10),rgba(31,78,121,.02))}
+.identity .right{background:linear-gradient(90deg,rgba(181,68,60,.02),rgba(181,68,60,.10))}
+.identity .lab{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;
+  letter-spacing:.16em;text-transform:uppercase;font-weight:600;margin-bottom:8px}
+.identity .left .lab{color:var(--phy)} .identity .right .lab{color:var(--prb)}
+.identity .formula{font-size:20px}
+.identity .small{font-size:13.5px;color:var(--graphite);margin-top:6px}
+.note{background:var(--card);border-left:3px solid var(--gold);padding:12px 18px;border-radius:0 8px 8px 0;
+  font-size:15.5px;max-width:700px;margin:1.4em auto}
+.check{font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;color:var(--graphite);
+  border-top:1px solid #DDE3E8;margin-top:70px;padding-top:18px;max-width:700px;margin-left:auto;margin-right:auto}
+.kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em;
+  background:#EAEEF2;padding:1px 5px;border-radius:4px}
+.fig-svg{width:100%;height:auto;border:1px solid #E2E6EA;border-radius:6px;background:#fff}
+.widget{background:var(--card);border:1px solid #E2E6EA;border-radius:8px;padding:16px 16px 12px;
+  max-width:1000px;margin:1.6em auto}
+.widget .fig-svg{border:none}
+.readouts{display:flex;flex-wrap:wrap;gap:8px 26px;justify-content:center;margin-top:10px;
+  font-family:ui-sans-serif,system-ui,sans-serif;font-size:13.5px;color:var(--graphite)}
+.readouts b{font-variant-numeric:tabular-nums;color:var(--ink)}
+.readouts .phy b{color:var(--phy)} .readouts .prbr b{color:var(--prb)} .readouts .gld b{color:#A88A1F}
+table.pins{border-collapse:collapse;margin:1.6em auto;font-size:15px;max-width:100%}
+table.pins th{font-family:ui-sans-serif,system-ui,sans-serif;font-size:11.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--graphite);font-weight:600}
+table.pins th,table.pins td{border:1px solid #E2E6EA;padding:7px 14px;text-align:left;background:var(--card)}
+.tablewrap{overflow-x:auto;margin:0 -20px;padding:0 20px}
+.controls{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;
+  font-family:ui-sans-serif,system-ui,sans-serif;font-size:13.5px;margin:10px 0 4px;color:var(--graphite)}
+.controls label{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.controls input[type=range]{width:170px;accent-color:var(--phy)}
+.seg{display:inline-flex;border:1px solid #C9D2DA;border-radius:6px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:5px 12px;font:600 13px ui-sans-serif,system-ui,sans-serif;
+  color:var(--graphite);cursor:pointer;border-left:1px solid #E2E6EA}
+.seg button:first-child{border-left:0}
+.seg button.active{background:var(--phy);color:#fff}
+.stbadge{display:inline-block;font:600 12px ui-sans-serif,system-ui,sans-serif;
+  border-radius:12px;padding:3px 11px;margin-left:auto;line-height:1.45;
+  background:#E7F0E7;color:#2F6B3A;border:1px solid #CBDECB}
+.stbadge.fail{background:#F6E4E2;color:#9C332B;border-color:#E5C4C0}
+.wtitle{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;font-family:ui-sans-serif,system-ui,sans-serif;
+  font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:var(--graphite);margin:0 0 8px}
+.wtitle .dot{display:inline-block;width:9px;height:9px;border-radius:50%}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+.rankpill{display:inline-block;font:700 12.5px ui-sans-serif,system-ui,sans-serif;border-radius:12px;
+  padding:3px 12px;background:rgba(31,78,121,.10);color:var(--phy);border:1px solid rgba(31,78,121,.25)}
+.rankpill.two{background:rgba(181,68,60,.09);color:var(--prb);border-color:rgba(181,68,60,.3)}
+table.frax{border-collapse:collapse;margin:1.2em auto;background:var(--card)}
+table.frax th{font-family:ui-sans-serif,system-ui,sans-serif;font-size:11px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--graphite);font-weight:600;border:1px solid #E2E6EA;padding:5px 9px}
+table.frax td{border:1px solid #E2E6EA;padding:5px 9px;text-align:center;font-variant-numeric:tabular-nums;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px}
+table.frax tr.hl td{background:#FBF6E3}
+table.frax td.neg{color:var(--prb)} table.frax td.pos{color:var(--phy)}
+table.frax td.zer{color:#B9C2CA}
+.codeblock{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.6;
+  background:var(--card);border:1px solid #E2E6EA;border-radius:8px;padding:14px 18px;overflow-x:auto;
+  max-width:760px;margin:1.4em auto;white-space:pre;color:var(--ink)}
+.codeblock .cm{color:var(--graphite)}
+.codeblock .hi{color:var(--phy);font-weight:600}
+.mcheck{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;color:var(--graphite);
+  padding:8px 20px;border:1px solid #EDF0F3;border-radius:6px;background:#FAFBFC;margin:1.2em 0;line-height:1.8}
+.mcheck b{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 22px;max-width:1000px;margin:1.4em auto;align-items:start}
+.gcell{background:var(--card);border:1px solid #E2E6EA;border-radius:8px;padding:12px 14px 8px}
+.gcell h4{margin:0 0 2px;font:700 13px ui-sans-serif,system-ui,sans-serif;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--phy)}
+.gcell .fam{font:400 12.5px ui-sans-serif,system-ui,sans-serif;color:var(--graphite);margin-bottom:4px}
+.gcell table.frax{margin:.6em auto}
+@media(max-width:760px){.identity{flex-direction:column}.duo{grid-template-columns:1fr}
+  .grid2{grid-template-columns:1fr}.seg{flex-wrap:wrap}.seg button{padding:5px 8px;font-size:12px}}
+</style>
+</head>
+<body>
+<main>
+
+<div class="hero prose" style="max-width:880px">
+  <div class="eyebrow ink" style="margin-top:0">n = 6 in exact rationals &nbsp;·&nbsp; n = 32 in floats &nbsp;·&nbsp; 24 + 26 machine checks, all PASS</div>
+  <h1>Where You Put the Zero</h1>
+  <p class="sub">Boundary conditions are grounding choices. Neumann, Dirichlet, Robin, and no-condition-at-all
+  are four ways to answer one question about the free path Laplacian $L = B^\top\! B$ — <i>which voltage is
+  declared zero?</i> — and the four inverses that result are four different matrices with four different
+  meanings. The observables never change: $R_{\mathrm{eff}}(i,j) = \vert i-j\vert$, exactly, from every one of them.</p>
+  <div class="identity">
+    <div class="left"><div class="lab">Physics · where is the reference electrode?</div>
+      <div class="formula">$G_k$ = delete row/col $k$ of $L$, invert, re-embed</div>
+      <div class="small">node $k$ is soldered to ground — its voltage <i>is</i> the zero</div></div>
+    <div class="right"><div class="lab">Statistics · what do you condition on?</div>
+      <div class="formula">principal submatrix of the <i>precision</i> matrix</div>
+      <div class="small">the same deletion — conditioning the Gaussian field on $u_k=0$</div></div>
+  </div>
+  <p class="sub" style="margin-top:14px;font-size:15.5px">Same matrix, different zero — and this page is the
+  expansion of <a href="green_tents_explainer.html">the green tents</a> §4 into the full family it was hinting at.</p>
+</div>
+
+<div class="prose">
+<div class="eyebrow ink">§1 · The zoo, up front</div>
+<h2>Four boundary conditions, one table</h2>
+<p>Everything the page will do is in this table; the rest is the working-out. Each row is one way of pinning
+down the floating rod on $(0,1)$ — equivalently, one way of editing the $6\times6$ free path Laplacian
+$L$ with diagonal $\{1,2,2,2,2,1\}$ — and every cell is backed by a machine check in
+<span class="kbd">results/grounding.json</span> or the exact-rational Wolfram companion.</p>
+</div>
+
+<div class="tablewrap"><table class="pins">
+<tr><th>continuous BC</th><th>physical picture</th><th>discrete implementation</th><th>what the inverse represents</th><th>statistical reading</th><th>triangular rank</th></tr>
+<tr><td><b>Neumann</b><br>$u'(0)=u'(1)=0$</td>
+  <td>insulated ends — no flux; solvable only when $\int f = 0$, solution defined up to a constant</td>
+  <td>the free Laplacian $L$ <i>itself</i> — degree diagonal $\{1,2,2,2,2,1\}$, zero row sums, kernel = constants, rank 5</td>
+  <td>no inverse exists; the <b>pseudoinverse</b> $L^{+}$ is the mean-zero gauge: voltages of balanced injections with $\sum v = 0$</td>
+  <td>intrinsic (improper) GMRF restricted to $\mathbf 1^{\perp}$ — Rue–Held's IGMRF</td>
+  <td><b>2</b> — exactly</td></tr>
+<tr><td><b>Dirichlet, both ends</b><br>$u(0)=u(1)=0$</td>
+  <td>walls as infinite baths — whatever arrives is swallowed at temperature zero</td>
+  <td>append wall nodes and delete them — equivalently corner entries $1\to2$: $\mathrm{tridiag}(-1,2,-1)$, the suite's $A$</td>
+  <td>bridge covariance / <a href="green_tents_explainer.html">tent Green functions</a>: $\min(i,j)\,(7-\max(i,j))/7$</td>
+  <td>condition the free field on the wall values — principal submatrix of precision</td>
+  <td><b>1</b></td></tr>
+<tr><td><b>Dirichlet at one point</b><br>$u(x_k)=0$</td>
+  <td>a reference electrode soldered to node $k$; the rest of the rod floats</td>
+  <td><span class="kbd">GroundedInverse[L,k]</span>: delete row/col $k$, invert, re-embed with a zero row/col</td>
+  <td>$k=1$: the integer Brownian-motion kernel $\min(i,j)-1$; interior $k$: two independent motion blocks run away from $k$</td>
+  <td>condition the GMRF on $u_k=0$; interior $k$ is a Markov separator — the chain splits</td>
+  <td><b>1</b> — for every $k$</td></tr>
+<tr><td><b>Robin</b><br>$u'(0)=\kappa\,u(0)$</td>
+  <td>a leaky wall — the end grounded <i>through a resistor</i> $1/\kappa$ (a spring, a heat-leak)</td>
+  <td>bump one diagonal entry: $L + \kappa\,e_1e_1^{\top}$ — partial grounding</td>
+  <td>$\min(i,j)-1+1/\kappa$: the grounded inverse plus a uniform offset $1/\kappa$; interpolates Neumann ($\kappa\to0$) to Dirichlet ($\kappa\to\infty$)</td>
+  <td>a Gaussian pseudo-observation of $u_1$ with precision $\kappa$</td>
+  <td><b>1</b> — for every $\kappa&gt;0$</td></tr>
+</table></div>
+
+<div class="prose">
+<p>Two of those rank entries are the findings this page exists to explain:
+<span class="kbd">TriangularRankOneQ[GroundedInverse[L,1]]</span> is <span class="kbd">True</span>, and
+<span class="kbd">PseudoInverse[L]</span> only passes the rank-<i>2</i> test — verified in exact rational
+arithmetic, corner-rank certificates $[0,1,1,1,1,1]$ and $[1,2,2,2,2,1]$. By §6 both will be one theorem
+plus one gauge identity.</p>
+</div>
+
+<div class="prose">
+<div class="eyebrow phy">§2 · The continuous world</div>
+<h2>Four ways to end a rod</h2>
+<p>The equation is always $-u'' = f$ on $(0,1)$; the operator does not know what happens at the ends. A
+second-order ODE needs one condition per endpoint, and the choice is physical, not mathematical
+bookkeeping:</p>
+</div>
+
+<figure>
+<svg viewBox="0 0 960 250" xmlns="http://www.w3.org/2000/svg" class="fig-svg" role="img" aria-label="Four boundary conditions: insulated, clamped, electrode, leaky wall">
+<defs>
+<pattern id="hbc" patternUnits="userSpaceOnUse" width="7" height="7" patternTransform="rotate(45)">
+  <line x1="0" y1="0" x2="0" y2="7" stroke="#5A6773" stroke-width="1.1" opacity="0.45"/></pattern>
+<marker id="ah-s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+  <path d="M0,0 L10,5 L0,10 z" fill="#5A6773"/></marker>
+</defs>
+<!-- panel 1: Neumann -->
+<text x="120" y="30" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="middle">Neumann · insulated</text>
+<text x="120" y="47" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11.5" fill="#5A6773" text-anchor="middle">u&#8242;(0) = u&#8242;(1) = 0</text>
+<rect x="22" y="90" width="12" height="80" fill="url(#hbc)" stroke="#5A6773" stroke-width="0.8"/>
+<rect x="206" y="90" width="12" height="80" fill="url(#hbc)" stroke="#5A6773" stroke-width="0.8"/>
+<line x1="34" y1="160" x2="206" y2="160" stroke="#5A6773" stroke-width="1" stroke-dasharray="2 4"/>
+<path d="M34,130 C80,105 160,150 206,118" fill="none" stroke="#1F4E79" stroke-width="2.6"/>
+<path d="M34,110 C80,85 160,130 206,98" fill="none" stroke="#1F4E79" stroke-width="1.3" opacity="0.4"/>
+<line x1="120" y1="100" x2="120" y2="78" stroke="#5A6773" stroke-width="1.6" marker-end="url(#ah-s)"/>
+<line x1="120" y1="130" x2="120" y2="152" stroke="#5A6773" stroke-width="1.6" marker-end="url(#ah-s)"/>
+<text x="132" y="120" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11" fill="#5A6773">+ c</text>
+<text x="120" y="195" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11.5" fill="#5A6773" text-anchor="middle">no flux through the ends;</text>
+<text x="120" y="211" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11.5" fill="#5A6773" text-anchor="middle">level floats: u + c also solves</text>
+<text x="120" y="227" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11.5" fill="#B5443C" text-anchor="middle">needs &#8747;f = 0</text>
+<!-- panel 2: Dirichlet both -->
+<text x="360" y="30" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="middle">Dirichlet · two baths</text>
+<text x="360" y="47" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11.5" fill="#5A6773" text-anchor="middle">u(0) = u(1) = 0</text>
+<line x1="272" y1="80" x2="272" y2="175" stroke="#1B2733" stroke-width="2.4"/>
+<line x1="448" y1="80" x2="448" y2="175" stroke="#1B2733" stroke-width="2.4"/>
+<line x1="272" y1="160" x2="448" y2="160" stroke="#5A6773" stroke-width="1" stroke-dasharray="2 4"/>
+<path d="M272,160 L340,104 L448,160" fill="none" stroke="#1F4E79" stroke-width="2.6" stroke-linejoin="round"/>
+<circle cx="340" cy="104" r="3.5" fill="#1F4E79"/>
+<text x="266" y="74" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11" fill="#5A6773" text-anchor="end">0&#176; bath</text>
+<text x="454" y="74" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11" fill="#5A6773">0&#176; bath</text>
+<text x="360" y="195" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11.5" fill="#5A6773" text-anchor="middle">value clamped at both ends:</text>
+<text x="360" y="211" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11.5" fill="#5A6773" text-anchor="middle">the tent country of the</text>
+<text x="360" y="227" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11.5" fill="#1F4E79" text-anchor="middle">green-tents page</text>
+<!-- panel 3: Dirichlet at one point -->
+<text x="600" y="30" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="middle">Dirichlet at one point</text>
+<text x="600" y="47" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11.5" fill="#5A6773" text-anchor="middle">u(x&#8342;) = 0, ends free</text>
+<line x1="512" y1="160" x2="688" y2="160" stroke="#5A6773" stroke-width="1" stroke-dasharray="2 4"/>
+<path d="M512,120 C540,140 570,160 600,160 C630,160 660,135 688,112" fill="none" stroke="#1F4E79" stroke-width="2.6"/>
+<circle cx="600" cy="160" r="3.5" fill="#C9A227"/>
+<line x1="600" y1="160" x2="600" y2="196" stroke="#C9A227" stroke-width="2"/>
+<line x1="588" y1="196" x2="612" y2="196" stroke="#C9A227" stroke-width="2"/>
+<line x1="592" y1="201" x2="608" y2="201" stroke="#C9A227" stroke-width="2"/>
+<line x1="596" y1="206" x2="604" y2="206" stroke="#C9A227" stroke-width="2"/>
+<text x="600" y="227" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11.5" fill="#5A6773" text-anchor="middle">reference electrode at x&#8342;</text>
+<!-- panel 4: Robin -->
+<text x="840" y="30" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="middle">Robin · leaky wall</text>
+<text x="840" y="47" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11.5" fill="#5A6773" text-anchor="middle">u&#8242;(0) = &#954;&#183;u(0)</text>
+<line x1="752" y1="160" x2="928" y2="160" stroke="#5A6773" stroke-width="1" stroke-dasharray="2 4"/>
+<path d="M752,118 C790,120 850,140 928,108" fill="none" stroke="#1F4E79" stroke-width="2.6"/>
+<circle cx="752" cy="118" r="3.5" fill="#B5443C"/>
+<path d="M752,118 L752,138 L747,143 L757,151 L747,159 L757,167 L747,175 L752,181 L752,192" fill="none" stroke="#B5443C" stroke-width="1.8"/>
+<line x1="740" y1="192" x2="764" y2="192" stroke="#B5443C" stroke-width="2"/>
+<line x1="744" y1="197" x2="760" y2="197" stroke="#B5443C" stroke-width="2"/>
+<line x1="748" y1="202" x2="756" y2="202" stroke="#B5443C" stroke-width="2"/>
+<text x="770" y="160" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11" fill="#B5443C">R = 1/&#954;</text>
+<text x="840" y="227" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11.5" fill="#5A6773" text-anchor="middle">grounded through a resistor</text>
+</svg>
+<figcaption><b>The four endings.</b> Insulation reflects the flux and leaves the level free (any $u+c$ solves);
+a bath clamps the value; an electrode clamps the value at a single interior point and lets both physical ends
+float; a resistor to ground does something in between — the wall takes flux $\kappa\,u(0)$, proportional to
+how hot the end is. As $\kappa\to\infty$ the resistor becomes a wire (Dirichlet); as $\kappa\to0$ it becomes
+an open circuit (Neumann).</figcaption>
+</figure>
+
+<div class="prose">
+<p><b>Neumann has a solvability tax.</b> Integrate $-u''=f$ across the rod: the left side telescopes to the
+net flux through the ends, which insulation forces to zero. So a steady state exists only when
+$\int_0^1 f = 0$ — you cannot pump one watt into a perfectly insulated rod and call it steady — and when a
+solution exists, $u + c$ is another. The discrete mirror is exact: $Lx = e_1$ (a lone unit source) is
+<i>inconsistent</i>, with least-squares residual $1/\sqrt6$ — precisely the constant component of $e_1$ —
+while $Lx = e_1 - e_2$ (a balanced source–sink pair) solves fine, and adding a constant to $x$ still solves
+it, to $8.9\times10^{-16}$.</p>
+<p><b>And every ending builds its Green's function the same way.</b> The Sturm–Liouville recipe: take
+<i>one</i> fundamental solution $u$ of the homogeneous equation satisfying the <i>left</i> boundary condition,
+one solution $v$ satisfying the <i>right</i>, and glue them at the source:
+$$G(s,t) \;=\; \frac{u(\min(s,t))\;v(\max(s,t))}{W},$$
+with $W$ the (constant) Wronskian. For $-u''=0$ the fundamental solutions are affine — lines — which is why
+every Green's function on this page is built from ramps. The bridge takes $u = x$ (vanishes at the left wall)
+and $v = 1-x$ (vanishes at the right); the one-electrode kernel takes a ramp and a <i>constant</i> (the free
+end wants zero slope); Robin takes a ramp whose intercept remembers $\kappa$. Hold on to the phrase
+<b>"one fundamental solution per side"</b> — in §6 it becomes a rank count.</p>
+</div>
+
+<div class="prose">
+<div class="eyebrow prb">§3 · The discrete world</div>
+<h2>How each boundary condition edits the matrix</h2>
+<p>The protagonist of this page is twelve lines of Mathematica. The construction is Vishnoi's: orient the
+path's five edges, stack the signed incidence rows, and square up —</p>
+</div>
+
+<div class="codeblock">n = 6;
+g = PathGraph[Range[n]];
+B = -Transpose@IncidenceMatrix@DirectedGraph[g, "Acyclic"];  <span class="cm">(* rows e_i - e_{i+1} *)</span>
+L = Transpose[B].B;                       <span class="cm">(* free Laplacian, diag {1,2,2,2,2,1} *)</span>
+
+GroundedInverse[l_, k_] := Module[{keep = Delete[Range[Length[l]], k], out},
+  out = ConstantArray[0, {Length[l], Length[l]}];
+  out[[keep, keep]] = Inverse[l[[keep, keep]]];
+  out];                                   <span class="cm">(* delete row/col k, invert, re-embed *)</span>
+
+TriangularRankOneQ[m_] := AllTrue[Range[n], MatrixRank[m[[1 ;; #, # ;; n]]] &lt;= 1 &amp;];
+TriangularRankQ[m_, r_] := AllTrue[Range[n], MatrixRank[m[[1 ;; #, # ;; n]]] &lt;= r &amp;];
+
+<span class="hi">TriangularRankOneQ[GroundedInverse[L, 1]]</span>   <span class="cm">(* True  *)</span>
+<span class="hi">TriangularRankQ[PseudoInverse[L], 2]</span>        <span class="cm">(* True  *)</span></div>
+
+<div class="prose">
+<p>$L$ is the free Laplacian: row sums zero, kernel exactly the constants, rank 5. Its degree-1 corners
+<i>are</i> the insulation — <a href="green_tents_explainer.html">the green tents</a> §4 told that story
+entrywise, and this page begins where that one stopped. From here, each boundary condition is a small,
+literal edit:</p>
+</div>
+
+<div class="tablewrap"><table class="pins">
+<tr><th>edit to $L$</th><th>resulting operator</th><th>boundary condition</th><th>electrical reading</th></tr>
+<tr><td><b>none</b> — keep the singularity</td><td>$L$, rank 5</td><td>Neumann at both ends</td>
+  <td>no path to ground anywhere; only voltage <i>differences</i> mean anything</td></tr>
+<tr><td><b>append walls, then delete them</b> — equivalently corners $1\to2$</td>
+  <td>$L + e_1e_1^{\top} + e_6e_6^{\top} = \mathrm{tridiag}(-1,2,-1)$ — the suite's <span class="kbd">laplacian_1d(6)</span>, verified as the $8$-path Laplacian minus its wall rows/cols</td>
+  <td>Dirichlet at both ends</td>
+  <td>two wires to ground; the end rows leak</td></tr>
+<tr><td><b>delete row/col $k$</b>, invert, re-embed</td><td><span class="kbd">GroundedInverse[L,k]</span></td>
+  <td>Dirichlet at the single point $x_k$</td>
+  <td>reference electrode soldered to node $k$: $v_k \equiv 0$ by decree</td></tr>
+<tr><td><b>bump one diagonal entry</b> by $\kappa$</td><td>$L + \kappa\,e_1e_1^{\top}$</td>
+  <td>Robin at the left end</td>
+  <td>node 1 grounded through resistance $1/\kappa$ — partial grounding</td></tr>
+<tr><td><b>none</b> — but fix the gauge</td><td>$L^{+}$, the Moore–Penrose pseudoinverse</td>
+  <td>Neumann plus the convention "ground the average"</td>
+  <td>voltages of balanced injections, reported with $\sum v=0$</td></tr>
+</table></div>
+
+<div class="prose">
+<p>The statistical column of §1's table is the same list read by a different community. Deleting row and
+column $k$ of a <i>precision</i> matrix is exactly conditioning the Gaussian field on $u_k = 0$ — that is
+the whole rule, and it is why grounding and conditioning are one operation. Keeping $L$ un-edited leaves an
+<i>improper</i> prior — Rue and Held's intrinsic GMRF, a density that only integrates on the complement of
+the constants — and adding $\kappa\,e_1e_1^{\top}$ is precisely what a Gaussian likelihood term ("I observed
+$u_1 \approx 0$ with precision $\kappa$") does to a posterior precision. Boundary conditions, reference
+electrodes, and priors-versus-observations are three dialects for the five rows of the table above.</p>
+</div>
+
+<div class="prose">
+<div class="eyebrow syn">§4 · Interactive</div>
+<h2>The grounding explorer</h2>
+<p>One chain, four zeros. Pick the boundary condition; the heatmap is the full $32\times32$ inverse (computed
+in-page from the closed forms the checks scripts verified, and re-checked at load against baked columns of
+<span class="kbd">results/grounding.json</span> — badge). The right panel is one column of the inverse — a
+Green's function — and morphs between tent, ramp, split, offset ramp, and centered tent as you change where
+the zero lives. The $n=6$ table underneath is the same mode in exact arithmetic.</p>
+</div>
+
+<figure class="widget">
+<div class="wtitle"><span class="dot" style="background:var(--phy)"></span> grounding explorer — one chain, four zeros
+<span class="stbadge" id="gx-badge">self-test &hellip;</span></div>
+<div class="controls">
+  <span class="seg" id="gx-mode">
+    <button data-m="dir">Dirichlet both</button>
+    <button data-m="gnd" class="active">ground node k</button>
+    <button data-m="rob">Robin &#954;</button>
+    <button data-m="pinv">pseudoinverse</button>
+  </span>
+  <label id="gx-kwrap">ground k <input id="gx-k" type="range" min="1" max="32" step="1" value="12">
+    <b id="gx-klab" style="color:#A88A1F">12</b></label>
+  <label id="gx-kapwrap" style="display:none">&#954; <input id="gx-kap" type="range" min="0" max="8" step="1" value="4">
+    <b id="gx-kaplab" style="color:#A88A1F">1</b></label>
+  <label>column j <input id="gx-j" type="range" min="1" max="32" step="1" value="16">
+    <b id="gx-jlab" style="color:var(--phy)">16</b></label>
+</div>
+<div class="duo">
+  <div>
+    <svg id="gx-heat" viewBox="0 0 470 462" class="fig-svg" role="img" aria-label="Heatmap of the n=32 inverse"></svg>
+  </div>
+  <div>
+    <svg id="gx-col" viewBox="0 0 470 330" class="fig-svg" role="img" aria-label="Selected column of the inverse"></svg>
+    <svg id="gx-uv" viewBox="0 0 470 128" class="fig-svg" role="img" aria-label="The u and v factors at n=6"></svg>
+  </div>
+</div>
+<div class="readouts">
+  <span><span class="rankpill" id="gx-rank">triangular rank 1</span></span>
+  <span>certificate (n = 6, exact) <b id="gx-cert">[0, 1, 1, 1, 1, 1]</b></span>
+  <span class="phy">G[j,j] <b id="gx-diag">&hellip;</b></span>
+  <span class="gld" id="gx-limwrap" style="display:none">1/&#954; offset <b id="gx-lim">&hellip;</b></span>
+</div>
+<div style="overflow-x:auto;margin-top:8px">
+<div id="gx-n6lab" style="font:600 12px ui-sans-serif,system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--graphite);text-align:center;margin-top:6px">GroundedInverse[L, 3] — exact</div>
+<table class="frax" id="gx-n6"></table>
+</div>
+<figcaption>Left: the $n=32$ inverse under the chosen grounding — blue positive, red negative, white zero;
+the gold square marks the grounded node (its row and column are identically zero: interior grounding is a
+<i>Markov separator</i>, and the two blocks are independent). Right, top: column $j$ — the Green's function
+of a unit injection at $j$ — with the $u_iv_j$ ramps it factors into (right, bottom, at $n=6$: $u$ blue,
+$v$ red, second pinv pair gold). Robin mode snaps $\kappa$ to the 9-point grid the checks verified; at
+$\kappa\in\{1/100, 1/10, 1, 10, 100\}$ the $n=6$ table below is the exact rational inverse from the JSON.
+The self-test recomputes every closed form against the baked columns at load.</figcaption>
+</figure>
+
+<div class="prose">
+<div class="eyebrow phy">§5 · What the inverses represent</div>
+<h2>Five inverses at n = 6, in exact integers and rationals</h2>
+<p>Small enough to read entry by entry, and every matrix below is quoted verbatim from the exact-arithmetic
+checks. Watch two things: <b>where the zero row/column sits</b>, and <b>which two ramps multiply</b> to give
+the upper triangle.</p>
+</div>
+
+<div class="grid2">
+  <div class="gcell"><h4>Ground node 1 &mdash; Brownian motion</h4>
+    <div class="fam">$G_1 = \mathrm{GroundedInverse}[L,1] = \min(i,j)-1$, exact integers &nbsp;·&nbsp; $u_i = i-1$, $v_j = 1$</div>
+    <table class="frax">
+    <tr><td class="zer">0</td><td class="zer">0</td><td class="zer">0</td><td class="zer">0</td><td class="zer">0</td><td class="zer">0</td></tr>
+    <tr><td class="zer">0</td><td class="pos">1</td><td class="pos">1</td><td class="pos">1</td><td class="pos">1</td><td class="pos">1</td></tr>
+    <tr><td class="zer">0</td><td class="pos">1</td><td class="pos">2</td><td class="pos">2</td><td class="pos">2</td><td class="pos">2</td></tr>
+    <tr><td class="zer">0</td><td class="pos">1</td><td class="pos">2</td><td class="pos">3</td><td class="pos">3</td><td class="pos">3</td></tr>
+    <tr><td class="zer">0</td><td class="pos">1</td><td class="pos">2</td><td class="pos">3</td><td class="pos">4</td><td class="pos">4</td></tr>
+    <tr><td class="zer">0</td><td class="pos">1</td><td class="pos">2</td><td class="pos">3</td><td class="pos">4</td><td class="pos">5</td></tr>
+    </table>
+    <div class="fam">Variance grows linearly away from the pin and the far end wanders free: scaled to the
+    continuum this is the Brownian-<i>motion</i> covariance $\min(x_i,x_j)$. One pin = motion. Note
+    $G_1[6,6]=5$: the resistance of five unit resistors in series back to the electrode.</div>
+  </div>
+  <div class="gcell"><h4>Ground both walls &mdash; Brownian bridge</h4>
+    <div class="fam">$\mathrm{tridiag}(-1,2,-1)^{-1} = \min(i,j)(7-\max(i,j))/7$ &nbsp;·&nbsp; $u_i = i$, $v_j = (7-j)/7$</div>
+    <table class="frax">
+    <tr><td class="pos">6/7</td><td class="pos">5/7</td><td class="pos">4/7</td><td class="pos">3/7</td><td class="pos">2/7</td><td class="pos">1/7</td></tr>
+    <tr><td class="pos">5/7</td><td class="pos">10/7</td><td class="pos">8/7</td><td class="pos">6/7</td><td class="pos">4/7</td><td class="pos">2/7</td></tr>
+    <tr><td class="pos">4/7</td><td class="pos">8/7</td><td class="pos">12/7</td><td class="pos">9/7</td><td class="pos">6/7</td><td class="pos">3/7</td></tr>
+    <tr><td class="pos">3/7</td><td class="pos">6/7</td><td class="pos">9/7</td><td class="pos">12/7</td><td class="pos">8/7</td><td class="pos">4/7</td></tr>
+    <tr><td class="pos">2/7</td><td class="pos">4/7</td><td class="pos">6/7</td><td class="pos">8/7</td><td class="pos">10/7</td><td class="pos">5/7</td></tr>
+    <tr><td class="pos">1/7</td><td class="pos">2/7</td><td class="pos">3/7</td><td class="pos">4/7</td><td class="pos">5/7</td><td class="pos">6/7</td></tr>
+    </table>
+    <div class="fam">Every column is a tent pitched between the two walls — the
+    <a href="bridge_explainer.html">bridge covariance</a>, equal to $\tfrac1h(\min(x,y)-xy)$ with
+    $h=\tfrac17$ on this chain. Two pins = bridge.</div>
+  </div>
+  <div class="gcell"><h4>Ground node 3 &mdash; the chain splits</h4>
+    <div class="fam">$\mathrm{GroundedInverse}[L,3]$: block-diagonal, one motion kernel <i>per side</i>, each run away from $k$</div>
+    <table class="frax">
+    <tr><td class="pos">2</td><td class="pos">1</td><td class="zer">0</td><td class="zer">0</td><td class="zer">0</td><td class="zer">0</td></tr>
+    <tr><td class="pos">1</td><td class="pos">1</td><td class="zer">0</td><td class="zer">0</td><td class="zer">0</td><td class="zer">0</td></tr>
+    <tr><td class="zer">0</td><td class="zer">0</td><td class="zer">0</td><td class="zer">0</td><td class="zer">0</td><td class="zer">0</td></tr>
+    <tr><td class="zer">0</td><td class="zer">0</td><td class="zer">0</td><td class="pos">1</td><td class="pos">1</td><td class="pos">1</td></tr>
+    <tr><td class="zer">0</td><td class="zer">0</td><td class="zer">0</td><td class="pos">1</td><td class="pos">2</td><td class="pos">2</td></tr>
+    <tr><td class="zer">0</td><td class="zer">0</td><td class="zer">0</td><td class="pos">1</td><td class="pos">2</td><td class="pos">3</td></tr>
+    </table>
+    <div class="fam">The cross-blocks are exactly zero: grounding an interior node is conditioning on a
+    <b>Markov separator</b>, and the two segments become independent — the left block is $3-\max(i,j)$, the
+    right is $\min(i,j)-3$. This is <a href="14-hierarchical-inverse.html">report 14</a>'s
+    one-node-separator picture with the separator's location under your thumb.</div>
+  </div>
+  <div class="gcell"><h4>Robin &#954; = 1 &mdash; ground through a resistor</h4>
+    <div class="fam">$(L + e_1e_1^{\top})^{-1} = \min(i,j)$, exact &nbsp;·&nbsp; $u_i = i$, $v_j = 1$; general $\kappa$: $\min(i,j)-1+1/\kappa$</div>
+    <table class="frax">
+    <tr><td class="pos">1</td><td class="pos">1</td><td class="pos">1</td><td class="pos">1</td><td class="pos">1</td><td class="pos">1</td></tr>
+    <tr><td class="pos">1</td><td class="pos">2</td><td class="pos">2</td><td class="pos">2</td><td class="pos">2</td><td class="pos">2</td></tr>
+    <tr><td class="pos">1</td><td class="pos">2</td><td class="pos">3</td><td class="pos">3</td><td class="pos">3</td><td class="pos">3</td></tr>
+    <tr><td class="pos">1</td><td class="pos">2</td><td class="pos">3</td><td class="pos">4</td><td class="pos">4</td><td class="pos">4</td></tr>
+    <tr><td class="pos">1</td><td class="pos">2</td><td class="pos">3</td><td class="pos">4</td><td class="pos">5</td><td class="pos">5</td></tr>
+    <tr><td class="pos">1</td><td class="pos">2</td><td class="pos">3</td><td class="pos">4</td><td class="pos">5</td><td class="pos">6</td></tr>
+    </table>
+    <div class="fam">The motion kernel <i>shifted up by</i> $1/\kappa = 1$: the whole rod rides on the
+    voltage drop across the grounding resistor. At $\kappa=\tfrac1{10}$ the matrix is the same staircase
+    sitting on a plateau of 10s; at $\kappa=10$, on a film of $\tfrac1{10}$s. Exact at all five checked
+    $\kappa$, closed form on a 13-point sweep from $10^{-6}$ to $10^{6}$ to $2.2\times10^{-10}$.</div>
+  </div>
+</div>
+
+<div class="prose" style="max-width:760px">
+<div class="gcell" style="max-width:640px;margin:0 auto"><h4>No ground at all &mdash; the pseudoinverse</h4>
+  <div class="fam">$L^{+}$, exact rationals over 36 &nbsp;·&nbsp; <i>two</i> pairs: $u^{(1)}_i=\big[\tfrac{55}{36},\tfrac{61}{36},\tfrac{73}{36},\tfrac{91}{36},\tfrac{115}{36},\tfrac{145}{36}\big]$, $v^{(1)}=\mathbf 1$ and $u^{(2)}=\mathbf 1$, $v^{(2)}_j=\big[0,-\tfrac56,-\tfrac32,-2,-\tfrac73,-\tfrac52\big]$</div>
+  <table class="frax">
+  <tr><td class="pos">55/36</td><td class="pos">25/36</td><td class="pos">1/36</td><td class="neg">&#8722;17/36</td><td class="neg">&#8722;29/36</td><td class="neg">&#8722;35/36</td></tr>
+  <tr><td class="pos">25/36</td><td class="pos">31/36</td><td class="pos">7/36</td><td class="neg">&#8722;11/36</td><td class="neg">&#8722;23/36</td><td class="neg">&#8722;29/36</td></tr>
+  <tr><td class="pos">1/36</td><td class="pos">7/36</td><td class="pos">19/36</td><td class="pos">1/36</td><td class="neg">&#8722;11/36</td><td class="neg">&#8722;17/36</td></tr>
+  <tr><td class="neg">&#8722;17/36</td><td class="neg">&#8722;11/36</td><td class="pos">1/36</td><td class="pos">19/36</td><td class="pos">7/36</td><td class="pos">1/36</td></tr>
+  <tr><td class="neg">&#8722;29/36</td><td class="neg">&#8722;23/36</td><td class="neg">&#8722;11/36</td><td class="pos">7/36</td><td class="pos">31/36</td><td class="pos">25/36</td></tr>
+  <tr><td class="neg">&#8722;35/36</td><td class="neg">&#8722;29/36</td><td class="neg">&#8722;17/36</td><td class="pos">1/36</td><td class="pos">25/36</td><td class="pos">55/36</td></tr>
+  </table>
+  <div class="fam">Rows and columns sum to zero — $L^{+}\mathbf 1 = 0$, $\mathbf 1^{\top}L^{+} = 0$ — because
+  this is the <b>mean-zero gauge</b>: apply it only to balanced injections ($\sum f = 0$, which is the
+  Neumann compatibility condition wearing vector clothes) and it returns the unique voltage profile with
+  $\sum v = 0$. The negative entries are not anti-correlations of anything physical; they are the average
+  being subtracted. And the upper triangle now needs <i>two</i> products of ramps, not one — the whole of
+  §6 is about that extra pair.</div>
+</div>
+<p style="margin-top:1.4em">Line the five up and the <a href="green_tents_explainer.html">green tents</a> §4
+pin-count table — 0 pins, 1 pin, 2 pins — has become a <i>continuum</i>: Robin's $\kappa$ slides from the
+unpinned pseudoinverse world ($\kappa\to0$, where the inverse blows up as $G_1 + \tfrac1\kappa\mathbf{11}^{\top}$
+along the constants it can no longer kill) to the one-pin motion kernel ($\kappa\to\infty$, error exactly
+$1/\kappa$). A boundary condition is not a binary; it has a knob.</p>
+</div>
+
+<div class="prose">
+<div class="eyebrow prb">§6 · The rank ledger</div>
+<h2>Why 1, and why 2: the predicate is a semiseparability certificate</h2>
+<p>Now the findings. <span class="kbd">TriangularRankQ</span> walks $j$ from 1 to $n$ and asks for the rank
+of every <b>aligned corner block</b> $m[\![1..j,\; j..n]\!]$ — rows from the top, columns to the right,
+hinged on the diagonal at $(j,j)$:</p>
+</div>
+
+<figure>
+<svg viewBox="0 0 960 300" xmlns="http://www.w3.org/2000/svg" class="fig-svg" role="img" aria-label="Aligned corner blocks and their ranks">
+<text x="200" y="34" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" font-weight="700" fill="#1B2733" text-anchor="middle">the aligned corner block at j = 3</text>
+<g>
+<rect x="80" y="50" width="240" height="240" fill="none" stroke="#5A6773" stroke-width="1"/>
+<line x1="120" y1="50" x2="120" y2="290" stroke="#E2E6EA"/><line x1="160" y1="50" x2="160" y2="290" stroke="#E2E6EA"/>
+<line x1="200" y1="50" x2="200" y2="290" stroke="#E2E6EA"/><line x1="240" y1="50" x2="240" y2="290" stroke="#E2E6EA"/>
+<line x1="280" y1="50" x2="280" y2="290" stroke="#E2E6EA"/>
+<line x1="80" y1="90" x2="320" y2="90" stroke="#E2E6EA"/><line x1="80" y1="130" x2="320" y2="130" stroke="#E2E6EA"/>
+<line x1="80" y1="170" x2="320" y2="170" stroke="#E2E6EA"/><line x1="80" y1="210" x2="320" y2="210" stroke="#E2E6EA"/>
+<line x1="80" y1="250" x2="320" y2="250" stroke="#E2E6EA"/>
+<line x1="80" y1="50" x2="320" y2="290" stroke="#C7CED4" stroke-width="1" stroke-dasharray="3 4"/>
+<rect x="160" y="50" width="160" height="120" fill="#1F4E79" opacity="0.14" stroke="#1F4E79" stroke-width="2"/>
+<circle cx="180" cy="130" r="5" fill="#C9A227"/>
+<text x="196" y="134" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11.5" fill="#A88A1F">(j, j) — hinged on the diagonal</text>
+<text x="240" y="44" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11.5" fill="#1F4E79" text-anchor="middle">cols j..n</text>
+<text x="70" y="114" font-family="ui-sans-serif,system-ui,sans-serif" font-size="11.5" fill="#1F4E79" text-anchor="end">rows 1..j</text>
+</g>
+<text x="640" y="34" font-family="ui-sans-serif,system-ui,sans-serif" font-size="13" font-weight="700" fill="#1B2733" text-anchor="middle">corner ranks, j = 1..6 (exact)</text>
+<g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14">
+<text x="420" y="90" fill="#5A6773" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12.5">GroundedInverse[L,1]</text>
+<text x="660" y="90" fill="#1F4E79" font-weight="600">[0, 1, 1, 1, 1, 1]  &#8804; 1 &#10003;</text>
+<text x="420" y="122" fill="#5A6773" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12.5">GroundedInverse[L,k], every k</text>
+<text x="660" y="122" fill="#1F4E79" font-weight="600">all &#8804; 1 &#10003;</text>
+<text x="420" y="154" fill="#5A6773" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12.5">bridge tridiag(-1,2,-1)&#8315;&#185;</text>
+<text x="660" y="154" fill="#1F4E79" font-weight="600">[1, 1, 1, 1, 1, 1]  &#8804; 1 &#10003;</text>
+<text x="420" y="186" fill="#5A6773" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12.5">Robin, every &#954; &gt; 0</text>
+<text x="660" y="186" fill="#1F4E79" font-weight="600">[1, 1, 1, 1, 1, 1]  &#8804; 1 &#10003;</text>
+<text x="420" y="218" fill="#5A6773" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12.5">PseudoInverse[L]</text>
+<text x="660" y="218" fill="#B5443C" font-weight="600">[1, 2, 2, 2, 2, 1]  &#8804; 2, not 1</text>
+<text x="420" y="250" fill="#5A6773" font-family="ui-sans-serif,system-ui,sans-serif" font-size="12.5">rank-2 blocks attained at</text>
+<text x="660" y="250" fill="#B5443C" font-weight="600">j = 2, 3, 4, 5  (exactly 2)</text>
+</g>
+</svg>
+<figcaption><b>The certificate, drawn.</b> The corner block overlaps the diagonal — it is strictly bigger
+than the strict off-diagonal block $[1..j]\times[j{+}1..n]$ — so bounding <i>its</i> rank is the
+<b>semiseparable rank</b> in the strict sense of the semiseparable-matrix literature. On the chain the
+maximum corner rank equals the maximum off-diagonal block rank of
+<a href="14-hierarchical-inverse.html">report 14</a> — verified on the pseudoinverse, the bridge, Robin,
+and all six groundings: the user's predicate and 14's separator-rank probe are the same instrument.</figcaption>
+</figure>
+
+<div class="prose">
+<p><b>Rank 1 is a theorem, not a coincidence.</b> Gantmacher and Krein (1941): the inverse of any
+irreducible symmetric positive-definite tridiagonal matrix is a <b>single-pair matrix</b> (a <i>Green
+matrix</i>) — there exist vectors $u, v$ with
+$$\big(T^{-1}\big)_{ij} \;=\; u_{\min(i,j)}\;v_{\max(i,j)},$$
+so every corner block lies inside a single outer product. The suite re-checked it on 20 random irreducible
+SPD tridiagonals at $n = 6$ and $32$: SVD triangular rank 1, every time. And the continuous mirror is §2's
+Sturm–Liouville formula $G = u(\min)v(\max)/W$ read literally: <b>$u$ is the left boundary condition, $v$ is
+the right one, and the triangular rank counts fundamental solutions per side.</b> One per side — rank one.
+The factor pairs are sitting in the §5 tables: motion $u_i = i-1,\ v_j = 1$ (a ramp against the pin, a
+constant for the free end); bridge $u_i = i,\ v_j = (7-j)/7$ (two ramps, one per wall); Robin
+$u_i = i-1+1/\kappa,\ v_j = 1$ (the intercept remembers the resistor); interior grounding, one pair
+<i>per block</i>. All recovered exactly, and numerically re-extracted to $2.2\times10^{-16}$.</p>
+<p><b>So why is the pseudoinverse rank 2?</b> Because $L^{+}$ is <i>not</i> the inverse of any irreducible
+SPD tridiagonal — no grounding produced it. What it is instead is the star equation of this page:</p>
+<div style="text-align:center;font-size:21px;margin:1.1em 0">
+$L^{+} \;=\; C\,G_k\,C$, &nbsp; $C = I - \tfrac1n\mathbf{11}^{\top}$ — <b>for every $k$</b>
+</div>
+<p>Ground <i>anywhere</i>, then double-center, and you always land on the same matrix: all six centered
+groundings are bit-identical in exact rational arithmetic, the common matrix satisfies all four
+Moore–Penrose axioms exactly — hence <i>is</i> $L^{+}$ — and NumPy's <span class="kbd">pinv</span> agrees to
+$1.8\times10^{-15}$. The centering $C$ is the "ground the average" instruction, and it is precisely what
+costs the extra rank: on the upper triangle,
+$$L^{+} \;=\; u^{(1)}v^{(1)\top} + u^{(2)}v^{(2)\top}$$
+with the two pairs quoted under the §5 table — a <b>motion pair</b> (ramp times constant: the $G_k$
+inheritance) plus a <b>centering pair</b> (constant times row-mean: the average being subtracted). One
+fundamental solution per side, <i>plus one gauge correction</i>: rank $1+1$, and the certificate
+$[1,2,2,2,2,1]$ says the bound is attained — $\mathrm{TriangularRankQ}[L^{+},1]$ is
+<span class="kbd">False</span>, with rank-2 corner blocks at $j = 2,3,4,5$. The user's two findings are one
+theorem plus one gauge identity.</p>
+</div>
+
+<div class="note"><b>Same certificate, another chapter:</b> <a href="13-preconditioning-as-decoupling.html">report 13</a> §3
+met this rank-1 triangle as "semiseparable: dense does not mean unstructured" and already cited
+Gantmacher–Krein; <a href="09-stiffness-as-precision.html">report 09</a> met it as the Brownian bridge's
+outer-product covariance; <a href="14-hierarchical-inverse.html">report 14</a> re-derived it as the
+one-node-separator bound. This page adds the missing column: the rank also counts <i>boundary conditions
+per side</i>, and jumps by one exactly when the gauge, not a boundary, fixes the constant. One caveat
+travels with the whole ledger: it is a fact about <b>intervals</b>. Every separator of a chain is a single
+node and every endpoint admits one fundamental solution, so the ranks sit at 1 and 2; on a 2-D grid a
+separator is a whole cross-section — one grid row, $\sqrt N$ nodes — and the off-diagonal blocks of the
+inverse carry rank up to that width (<a href="14-hierarchical-inverse.html">report 14</a> measures the
+cliff at exactly 32). Grounding and gauge still work the same in 2-D; the tidy rank-1/rank-2 accounting
+does not.</div>
+
+<div class="prose">
+<div class="eyebrow syn">§7 · The invariance punchline</div>
+<h2>Ground anywhere — the physics does not move</h2>
+<p>If four different inverses all describe the same rod, what did the choice of zero actually change?
+<b>Labels, not physics.</b> Fix a balanced experiment — inject one ampere at node $i$, draw it out at node
+$j$ — and solve with any grounding you like. The individual voltages $v_i, v_j$ depend on where the
+electrode sits (they must: the electrode defines "zero volts"). The <i>difference</i> does not, and
+$$R_{\mathrm{eff}}(i,j) \;=\; G_{ii} + G_{jj} - 2G_{ij} \;=\; \vert i - j\vert$$
+comes out <b>exactly</b> — the same $6\times6$ integer matrix of pairwise resistances from all six
+groundings <i>and</i> from the pseudoinverse, series unit resistors counted on your fingers, agreeing with
+<span class="kbd">mathematica/electrical_networks.wls</span> ($R_{\mathrm{eff}}(1,6) = 5$). At $n=32$ the
+float check closes to $6.5\times10^{-13}$. The gauge identity of §6 is the reason: $G_k$ and $L^{+}$ differ
+only by rank-one pieces built from $\mathbf 1$, and $e_i - e_j$ annihilates them.</p>
+</div>
+
+<figure class="widget">
+<div class="wtitle"><span class="dot" style="background:var(--gold)"></span> gauge invariance — drag the ground, watch the difference freeze
+<span class="stbadge" id="gv-badge">self-test &hellip;</span></div>
+<div class="controls">
+  <span class="seg" id="gv-mode">
+    <button data-m="gnd" class="active">ground at k</button>
+    <button data-m="pinv">pseudoinverse</button>
+  </span>
+  <label id="gv-kwrap">ground k <input id="gv-k" type="range" min="1" max="32" step="1" value="28">
+    <b id="gv-klab" style="color:#A88A1F">28</b></label>
+  <label>inject at i <input id="gv-i" type="range" min="1" max="32" step="1" value="8">
+    <b id="gv-ilab" style="color:var(--phy)">8</b></label>
+  <label>draw at j <input id="gv-j" type="range" min="1" max="32" step="1" value="24">
+    <b id="gv-jlab" style="color:var(--prb)">24</b></label>
+</div>
+<svg id="gv-svg" viewBox="0 0 960 300" class="fig-svg" role="img" aria-label="Voltage profile under a dipole injection, with movable ground"></svg>
+<div class="readouts">
+  <span class="phy">v<sub>i</sub> <b id="gv-vi">&hellip;</b></span>
+  <span class="prbr">v<sub>j</sub> <b id="gv-vj">&hellip;</b></span>
+  <span class="gld">v<sub>i</sub> &#8722; v<sub>j</sub> = R<sub>eff</sub>(i,j) <b id="gv-diff">&hellip;</b></span>
+  <span>|i &#8722; j| <b id="gv-dist">&hellip;</b></span>
+</div>
+<figcaption>The voltage profile $v = G(e_i - e_j)$ for a one-ampere dipole between $i$ (blue) and $j$
+(red). Drag the ground $k$: the whole curve shifts so that $v_k = 0$ (gold electrode), $v_i$ and $v_j$ jump
+— but $v_i - v_j$ and $R_{\mathrm{eff}}$ never move, because $v_i - v_j = (e_i-e_j)^{\top}G(e_i-e_j)$ is
+exactly the effective resistance. In pseudoinverse mode no node is zero; instead $\sum v = 0$ (dashed mean
+line) — a different convention, the same differences. In ground mode every displayed voltage is an exact
+integer. The self-test recomputes $R_{\mathrm{eff}} = \vert i-j\vert$ from all 32 groundings and the
+centered pseudoinverse over all $32\times32$ pairs at load.</figcaption>
+</figure>
+
+<div class="prose">
+<p>This is a <b>gauge choice</b> in the physicist's strict sense: a redundancy of description fixed by
+convention, with a dictionary of observables that do not care. Potentials are gauge; potential
+<i>differences</i>, effective resistances, and currents are physics. The suite has been quietly using this
+freedom all along — <a href="dual_basis_explainer.html">the dual-basis page</a>'s response matrix
+$X = B_{\mathrm{inc}}L^{+}$ is a gauge-fixed family of dipole fields (each row a balanced $e$-difference,
+so the choice of gauge cancels row by row), and <a href="10-fluctuation-dissipation.html">report 10</a>'s
+improper prior is the statistician's same move: don't fight the flat direction, just report functionals
+orthogonal to it. Where you put the zero is a fact about your notebook. $\vert i-j\vert$ is a fact about
+the rod.</p>
+</div>
+
+<div class="note"><b>Terminology, gently:</b> everything on this page is a <i>boundary</i> condition — a
+constraint pinned to the <b>space</b> axis. Its famous cousin, the <i>initial</i> condition, lives on the
+time axis, and a full heat problem $\partial_t u = u'' + f$ needs one of each kind: boundary conditions at
+the ends for all time, an initial temperature across the rod at $t=0$. The steady states of this suite are
+what remains after the initial condition has been forgotten — the $t\to\infty$ limit where only the
+boundary condition still speaks; <a href="10-fluctuation-dissipation.html">report 10</a> tells the
+time-axis half of the story, and <a href="green_tents_explainer.html">the green tents</a> the equilibrium
+half. Saying "initial conditions" for the ends of a rod is the one substitution this dictionary won't
+survive.</div>
+
+<div class="prose">
+<div class="eyebrow ink">§8 · Suite crossings</div>
+<h2>Where the suite has already touched this page</h2>
+<p><b>The seed</b> — <a href="green_tents_explainer.html">the green tents</a> §4: free vs grounded, the
+degree diagonal as insulation, and the 0/1/2-pin table this page stretches into a $\kappa$-continuum.</p>
+<p><b>The two-pin world</b> — <a href="bridge_explainer.html">the bridge explainer</a> and
+<a href="09-stiffness-as-precision.html">report 09</a>: everything downstream of
+$\mathrm{tridiag}(-1,2,-1)$, including the rank-1 triangle read as bridge covariance.</p>
+<p><b>The rank machinery</b> — <a href="13-preconditioning-as-decoupling.html">report 13</a> §3
+(semiseparable, Gantmacher–Krein) and <a href="14-hierarchical-inverse.html">report 14</a> (separator rank;
+this page's corner certificate equals its off-diagonal block rank on the chain).</p>
+<p><b>The gauge users</b> — <a href="dual_basis_explainer.html">the dual-basis page</a> ($X = B_{\mathrm{inc}}L^{+}$,
+dipoles immune to grounding) and <span class="kbd">mathematica/electrical_networks.wls</span>
+(effective resistance, the projection $\Pi$, Vishnoi's conventions — including the $B$ sign this page's
+$L=B^\top\!B$ inherits).</p>
+<p><b>The statistics</b> — <a href="09-stiffness-as-precision.html">report 09</a> (precision = stiffness;
+conditioning = principal submatrix) and <a href="10-fluctuation-dissipation.html">report 10</a> (proper vs
+improper priors: the pseudoinverse as the covariance the intrinsic field almost has).</p>
+</div>
+
+<div class="check">
+<b>Everything above is machine-verified twice.</b>
+Python: <span class="kbd">python/experiments/grounding_checks.py</span> — <b>24/24 PASS</b> in 0.1&#8201;s,
+every quoted number exported to <span class="kbd">results/grounding.json</span> (145,812 bytes): the free-Laplacian
+anatomy (diag $\{1,2,2,2,2,1\}$, rank 5, kernel = constants); the $e_1$ solvability failure at residual
+$1/\sqrt6$ vs the balanced $e_1-e_2$ solve ($8.9\times10^{-16}$); both user findings with exact corner
+certificates $[0,1,1,1,1,1]$ and $[1,2,2,2,2,1]$, the pinv rank <i>exactly</i> 2 (rank-2 blocks at
+$j=2,3,4,5$); $G_1 = \min(i,j)-1$ and the interior block splits, all $k$; the wall-append identity
+tridiag$(-1,2,-1)$ = <span class="kbd">laplacian_1d(6)</span> and the bridge $\min(i,j)(7-\max(i,j))/7$;
+Robin exact at five $\kappa$, closed-form sweep $10^{-6}..10^{6}$ ($2.2\times10^{-10}$), both limits (error
+$=1/\kappa$, to $5\times10^{-6}$); Gantmacher–Krein on 20 random SPD tridiagonals; the gauge identity
+$L^{+}=CG_kC$ for every $k$ with all four Moore–Penrose axioms exact ($1.8\times10^{-15}$ vs NumPy); the
+two-pair decomposition of $L^{+}$; $R_{\mathrm{eff}}=\vert i-j\vert$ exact from every gauge; corner rank ==
+separator rank on every mode; and the full $n=32$ replay (min-kernels all $k$, continuum
+$\tfrac1h\min(x,y)$ / $\tfrac1h(\min(x,y)-xy)$, 9-$\kappa$ Robin grid, gauge identity, $R_{\mathrm{eff}}$;
+$\le 6.5\times10^{-13}$).
+Wolfram: <span class="kbd">mathematica/grounding_checks.wls</span> — <b>26 PASS, 0 FAIL</b>, exit 0, no
+<span class="kbd">N[]</span> anywhere: the user's <span class="kbd">TriangularRankOneQ</span> /
+<span class="kbd">TriangularRankQ</span> / <span class="kbd">GroundedInverse</span> verbatim on exact
+rationals, both findings, the sharper rank-exactly-2 facts, closed forms for every $G_k$, the $\min(i,j)$
+Robin family with affine factor pairs, the gauge identity, and $R_{\mathrm{eff}}(1,6)=5$.
+Both in-page widgets re-verify their baked data at load (green badges).
+Companion pages:
+<a href="green_tents_explainer.html">the green tents</a> ·
+<a href="bridge_explainer.html">the bridge explainer</a> ·
+<a href="dual_basis_explainer.html">one space, two bases</a> ·
+<a href="09-stiffness-as-precision.html">09 · stiffness as precision</a> ·
+<a href="10-fluctuation-dissipation.html">10 · fluctuation–dissipation</a> ·
+<a href="13-preconditioning-as-decoupling.html">13 · preconditioning as decoupling</a> ·
+<a href="14-hierarchical-inverse.html">14 · the hierarchical inverse</a>.
+</div>
+
+</main>
+<script>
+var GD = {"n6":{"L":[[1,-1,0,0,0,0],[-1,2,-1,0,0,0],[0,-1,2,-1,0,0],[0,0,-1,2,-1,0],[0,0,0,-1,2,-1],[0,0,0,0,-1,1]],"selCol":4,"dir":{"ex":[["6/7","5/7","4/7","3/7","2/7","1/7"],["5/7","10/7","8/7","6/7","4/7","2/7"],["4/7","8/7","12/7","9/7","6/7","3/7"],["3/7","6/7","9/7","12/7","8/7","4/7"],["2/7","4/7","6/7","8/7","10/7","5/7"],["1/7","2/7","3/7","4/7","5/7","6/7"]],"u":["1","2","3","4","5","6"],"v":["6/7","5/7","4/7","3/7","2/7","1/7"],"cr":[1,1,1,1,1,1]},"gnd":[{"ex":[["0","0","0","0","0","0"],["0","1","1","1","1","1"],["0","1","2","2","2","2"],["0","1","2","3","3","3"],["0","1","2","3","4","4"],["0","1","2","3","4","5"]],"cr":[0,1,1,1,1,1],"uv":{"left":{"u":[],"v":[]},"right":{"u":["1","2","3","4","5"],"v":["1","1","1","1","1"]}}},{"ex":[["1","0","0","0","0","0"],["0","0","0","0","0","0"],["0","0","1","1","1","1"],["0","0","1","2","2","2"],["0","0","1","2","3","3"],["0","0","1","2","3","4"]],"cr":[1,0,1,1,1,1],"uv":{"left":{"u":["1"],"v":["1"]},"right":{"u":["1","2","3","4"],"v":["1","1","1","1"]}}},{"ex":[["2","1","0","0","0","0"],["1","1","0","0","0","0"],["0","0","0","0","0","0"],["0","0","0","1","1","1"],["0","0","0","1","2","2"],["0","0","0","1","2","3"]],"cr":[1,1,0,1,1,1],"uv":{"left":{"u":["1","1"],"v":["2","1"]},"right":{"u":["1","2","3"],"v":["1","1","1"]}}},{"ex":[["3","2","1","0","0","0"],["2","2","1","0","0","0"],["1","1","1","0","0","0"],["0","0","0","0","0","0"],["0","0","0","0","1","1"],["0","0","0","0","1","2"]],"cr":[1,1,1,0,1,1],"uv":{"left":{"u":["1","1","1"],"v":["3","2","1"]},"right":{"u":["1","2"],"v":["1","1"]}}},{"ex":[["4","3","2","1","0","0"],["3","3","2","1","0","0"],["2","2","2","1","0","0"],["1","1","1","1","0","0"],["0","0","0","0","0","0"],["0","0","0","0","0","1"]],"cr":[1,1,1,1,0,1],"uv":{"left":{"u":["1","1","1","1"],"v":["4","3","2","1"]},"right":{"u":["1"],"v":["1"]}}},{"ex":[["5","4","3","2","1","0"],["4","4","3","2","1","0"],["3","3","3","2","1","0"],["2","2","2","2","1","0"],["1","1","1","1","1","0"],["0","0","0","0","0","0"]],"cr":[1,1,1,1,1,0],"uv":{"left":{"u":["1","1","1","1","1"],"v":["5","4","3","2","1"]},"right":{"u":[],"v":[]}}}],"rob":{"keys":["1/100","1/10","1","10","100"],"ex":{"1/100":[["100","100","100","100","100","100"],["100","101","101","101","101","101"],["100","101","102","102","102","102"],["100","101","102","103","103","103"],["100","101","102","103","104","104"],["100","101","102","103","104","105"]],"1/10":[["10","10","10","10","10","10"],["10","11","11","11","11","11"],["10","11","12","12","12","12"],["10","11","12","13","13","13"],["10","11","12","13","14","14"],["10","11","12","13","14","15"]],"1":[["1","1","1","1","1","1"],["1","2","2","2","2","2"],["1","2","3","3","3","3"],["1","2","3","4","4","4"],["1","2","3","4","5","5"],["1","2","3","4","5","6"]],"10":[["1/10","1/10","1/10","1/10","1/10","1/10"],["1/10","11/10","11/10","11/10","11/10","11/10"],["1/10","11/10","21/10","21/10","21/10","21/10"],["1/10","11/10","21/10","31/10","31/10","31/10"],["1/10","11/10","21/10","31/10","41/10","41/10"],["1/10","11/10","21/10","31/10","41/10","51/10"]],"100":[["1/100","1/100","1/100","1/100","1/100","1/100"],["1/100","101/100","101/100","101/100","101/100","101/100"],["1/100","101/100","201/100","201/100","201/100","201/100"],["1/100","101/100","201/100","301/100","301/100","301/100"],["1/100","101/100","201/100","301/100","401/100","401/100"],["1/100","101/100","201/100","301/100","401/100","501/100"]]},"cr":[1,1,1,1,1,1]},"pinv":{"ex":[["55/36","25/36","1/36","-17/36","-29/36","-35/36"],["25/36","31/36","7/36","-11/36","-23/36","-29/36"],["1/36","7/36","19/36","1/36","-11/36","-17/36"],["-17/36","-11/36","1/36","19/36","7/36","1/36"],["-29/36","-23/36","-11/36","7/36","31/36","25/36"],["-35/36","-29/36","-17/36","1/36","25/36","55/36"]],"cr":[1,2,2,2,2,1],"uv":[{"u":["55/36","61/36","73/36","91/36","115/36","145/36"],"v":["1","1","1","1","1","1"]},{"u":["1","1","1","1","1","1"],"v":["0","-5/6","-3/2","-2","-7/3","-5/2"]}]},"reff":[[0,1,2,3,4,5],[1,0,1,2,3,4],[2,1,0,1,2,3],[3,2,1,0,1,2],[4,3,2,1,0,1],[5,4,3,2,1,0]]},"n32":{"h":0.030303030303030304,"selCol":16,"pinvCol":[-1.0781250000000495,-1.0468750000000484,-0.984375000000046,-0.8906250000000452,-0.7656250000000437,-0.6093750000000424,-0.42187500000003897,-0.20312500000003506,0.04687499999996915,0.328124999999972,0.6406249999999759,0.9843749999999805,1.3593749999999851,1.7656249999999905,2.2031249999999956,2.6718750000000027,2.171875000000006,1.7031250000000075,1.265625000000012,0.8593750000000182,0.4843750000000248,0.14062500000003064,-0.17187499999996306,-0.45312499999995687,-0.7031249999999531,-0.9218749999999492,-1.1093749999999474,-1.2656249999999452,-1.390624999999942,-1.4843749999999407,-1.5468749999999376,-1.5781249999999358],"dirCol":[0.5151515151515139,1.0303030303030278,1.5454545454545419,2.060606060606056,2.57575757575757,3.0909090909090837,3.6060606060605975,4.121212121212111,4.636363636363625,5.15151515151514,5.666666666666654,6.1818181818181674,6.696969696969681,7.212121212121195,7.727272727272709,8.242424242424223,7.7575757575757365,7.27272727272725,6.787878787878764,6.30303030303028,5.818181818181796,5.333333333333312,4.848484848484829,4.363636363636346,3.878787878787864,3.3939393939393803,2.909090909090897,2.424242424242414,1.9393939393939312,1.4545454545454484,0.9696969696969654,0.48484848484848275],"gndCol":{"1":[0.0,0.9999999999999908,1.9999999999999816,2.9999999999999725,3.999999999999964,4.999999999999955,5.999999999999946,6.999999999999936,7.999999999999927,8.999999999999918,9.99999999999991,10.9999999999999,11.99999999999989,12.99999999999988,13.99999999999987,14.999999999999861,14.999999999999853,14.999999999999844,14.999999999999835,14.999999999999826,14.99999999999982,14.999999999999817,14.999999999999813,14.999999999999812,14.999999999999812,14.99999999999981,14.999999999999808,14.999999999999808,14.999999999999806,14.999999999999805,14.999999999999805,14.999999999999805],"2":[0.0,0.0,0.9999999999999909,1.9999999999999818,2.999999999999973,3.9999999999999645,4.999999999999956,5.999999999999947,6.999999999999938,7.999999999999929,8.99999999999992,9.999999999999913,10.999999999999904,11.999999999999895,12.999999999999886,13.999999999999877,13.999999999999869,13.99999999999986,13.99999999999985,13.999999999999842,13.999999999999835,13.99999999999983,13.999999999999826,13.999999999999822,13.999999999999822,13.999999999999822,13.99999999999982,13.999999999999817,13.999999999999815,13.999999999999813,13.999999999999813,13.999999999999813],"3":[0.0,0.0,0.0,0.9999999999999927,1.9999999999999853,2.9999999999999782,3.9999999999999716,4.9999999999999645,5.999999999999957,6.99999999999995,7.999999999999943,8.999999999999936,9.999999999999929,10.999999999999922,11.999999999999915,12.999999999999908,12.9999999999999,12.999999999999893,12.999999999999886,12.99999999999988,12.999999999999872,12.999999999999867,12.999999999999861,12.999999999999858,12.999999999999856,12.999999999999856,12.999999999999856,12.999999999999854,12.999999999999853,12.999999999999853,12.99999999999985,12.99999999999985],"4":[0.0,0.0,0.0,0.0,0.9999999999999944,1.999999999999989,2.9999999999999836,3.9999999999999787,4.999999999999973,5.999999999999968,6.999999999999963,7.999999999999957,8.999999999999952,9.999999999999947,10.999999999999941,11.999999999999934,11.999999999999929,11.999999999999924,11.999999999999918,11.999999999999913,11.999999999999908,11.999999999999904,11.9999999999999,11.999999999999897,11.999999999999895,11.999999999999895,11.999999999999897,11.999999999999899,11.999999999999899,11.999999999999899,11.9999999999999,11.9999999999999],"5":[0.0,0.0,0.0,0.0,0.0,0.9999999999999944,1.999999999999989,2.9999999999999836,3.9999999999999787,4.999999999999973,5.999999999999968,6.999999999999963,7.999999999999957,8.999999999999952,9.999999999999948,10.999999999999943,10.999999999999938,10.999999999999932,10.999999999999927,10.999999999999922,10.999999999999915,10.99999999999991,10.999999999999904,10.9999999999999,10.999999999999897,10.999999999999895,10.999999999999893,10.999999999999893,10.999999999999893,10.999999999999893,10.999999999999892,10.999999999999892],"6":[0.0,0.0,0.0,0.0,0.0,0.0,0.9999999999999962,1.9999999999999925,2.999999999999989,3.999999999999986,4.999999999999982,5.999999999999979,6.999999999999975,7.999999999999972,8.999999999999968,9.999999999999966,9.999999999999963,9.99999999999996,9.999999999999954,9.999999999999948,9.999999999999945,9.999999999999941,9.999999999999938,9.999999999999934,9.99999999999993,9.999999999999927,9.999999999999927,9.999999999999927,9.999999999999927,9.999999999999929,9.999999999999929,9.999999999999929],"7":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.9999999999999961,1.9999999999999922,2.9999999999999885,3.9999999999999853,4.999999999999981,5.999999999999978,6.999999999999973,7.99999999999997,8.999999999999966,8.999999999999963,8.99999999999996,8.999999999999954,8.999999999999948,8.999999999999945,8.999999999999941,8.999999999999938,8.999999999999934,8.99999999999993,8.999999999999927,8.999999999999925,8.999999999999925,8.999999999999924,8.999999999999925,8.999999999999927,8.999999999999927],"8":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.9999999999999953,1.9999999999999907,2.9999999999999862,3.9999999999999822,4.999999999999978,5.999999999999973,6.999999999999969,7.9999999999999645,7.999999999999961,7.999999999999958,7.999999999999955,7.99999999999995,7.999999999999946,7.9999999999999405,7.999999999999935,7.99999999999993,7.9999999999999245,7.999999999999921,7.999999999999917,7.999999999999914,7.999999999999911,7.999999999999909,7.999999999999909,7.999999999999909],"9":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.999999999999996,1.999999999999992,2.999999999999988,3.9999999999999845,4.9999999999999805,5.999999999999976,6.999999999999972,6.999999999999968,6.9999999999999645,6.999999999999962,6.999999999999958,6.999999999999954,6.999999999999949,6.999999999999946,6.999999999999941,6.999999999999937,6.999999999999933,6.999999999999929,6.999999999999926,6.999999999999924,6.999999999999923,6.999999999999922,6.999999999999922],"10":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.9999999999999976,1.9999999999999951,2.999999999999993,3.999999999999991,4.9999999999999885,5.999999999999986,5.999999999999983,5.999999999999981,5.99999999999998,5.999999999999978,5.999999999999976,5.999999999999973,5.999999999999971,5.999999999999968,5.999999999999965,5.999999999999963,5.99999999999996,5.999999999999958,5.9999999999999565,5.999999999999956,5.999999999999956,5.999999999999956],"11":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.9999999999999983,1.9999999999999967,2.999999999999995,3.999999999999994,4.999999999999992,4.99999999999999,4.9999999999999885,4.999999999999987,4.999999999999985,4.999999999999984,4.999999999999982,4.9999999999999805,4.999999999999979,4.999999999999977,4.999999999999975,4.999999999999974,4.9999999999999725,4.999999999999972,4.999999999999971,4.99999999999997,4.99999999999997],"12":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.9999999999999996,1.9999999999999991,2.9999999999999987,3.9999999999999987,3.999999999999998,3.9999999999999973,3.9999999999999964,3.9999999999999964,3.999999999999996,3.9999999999999956,3.999999999999995,3.9999999999999942,3.9999999999999933,3.9999999999999925,3.9999999999999916,3.9999999999999907,3.99999999999999,3.999999999999989,3.999999999999989,3.999999999999989],"13":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.9999999999999998,1.9999999999999996,2.9999999999999996,3.0,2.9999999999999996,2.999999999999999,2.9999999999999987,2.9999999999999982,2.9999999999999982,2.9999999999999982,2.9999999999999982,2.9999999999999982,2.999999999999998,2.9999999999999973,2.999999999999997,2.9999999999999964,2.9999999999999964,2.9999999999999964,2.9999999999999964],"14":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.9999999999999997,1.9999999999999993,1.9999999999999993,1.9999999999999993,1.9999999999999993,1.9999999999999991,1.9999999999999991,1.9999999999999991,1.9999999999999991,1.9999999999999993,1.9999999999999991,1.9999999999999991,1.9999999999999991,1.9999999999999991,1.9999999999999991,1.9999999999999991,1.9999999999999991,1.9999999999999991],"15":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.9999999999999998,0.9999999999999997,0.9999999999999997,0.9999999999999997,0.9999999999999997,0.9999999999999996,0.9999999999999996,0.9999999999999996,0.9999999999999996,0.9999999999999997,0.9999999999999998,0.9999999999999998,0.9999999999999998,0.9999999999999998,0.9999999999999998,0.9999999999999998,0.9999999999999998],"16":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"17":[1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"18":[2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"19":[3.0,3.0,3.0,3.0,3.0,3.0,3.0,3.0,3.0,3.0,3.0,3.0,3.0,3.0,3.0,3.0,2.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"20":[4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,4.0,3.0,2.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"21":[5.0,5.0,5.0,5.0,5.0,5.0,5.0,5.0,5.0,5.0,5.0,5.0,5.0,5.0,5.0,5.0,4.0,3.0,2.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"22":[6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,5.0,4.0,3.0,2.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"23":[7.0,7.0,7.0,7.0,7.0,7.0,7.0,7.0,7.0,7.0,7.0,7.0,7.0,7.0,7.0,7.0,6.0,5.0,4.0,3.0,2.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"24":[8.0,8.0,8.0,8.0,8.0,8.0,8.0,8.0,8.0,8.0,8.0,8.0,8.0,8.0,8.0,8.0,7.0,6.0,5.0,4.0,3.0,2.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"25":[9.0,9.0,9.0,9.0,9.0,9.0,9.0,9.0,9.0,9.0,9.0,9.0,9.0,9.0,9.0,9.0,8.0,7.0,6.0,5.0,4.0,3.0,2.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"26":[10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,10.0,9.0,8.0,7.0,6.0,5.0,4.0,3.0,2.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"27":[11.0,11.0,11.0,11.0,11.0,11.0,11.0,11.0,11.0,11.0,11.0,11.0,11.0,11.0,11.0,11.0,10.0,9.0,8.0,7.0,6.0,5.0,4.0,3.0,2.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0],"28":[12.0,12.0,12.0,12.0,12.0,12.0,12.0,12.0,12.0,12.0,12.0,12.0,12.0,12.0,12.0,12.0,11.0,10.0,9.0,8.0,7.0,6.0,5.0,4.0,3.0,2.0,1.0,0.0,0.0,0.0,0.0,0.0],"29":[13.0,13.0,13.0,13.0,13.0,13.0,13.0,13.0,13.0,13.0,13.0,13.0,13.0,13.0,13.0,13.0,12.0,11.0,10.0,9.0,8.0,7.0,6.0,5.0,4.0,3.0,2.0,1.0,0.0,0.0,0.0,0.0],"30":[14.0,14.0,14.0,14.0,14.0,14.0,14.0,14.0,14.0,14.0,14.0,14.0,14.0,14.0,14.0,14.0,13.0,12.0,11.0,10.0,9.0,8.0,7.0,6.0,5.0,4.0,3.0,2.0,1.0,0.0,0.0,0.0],"31":[15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,15.0,14.0,13.0,12.0,11.0,10.0,9.0,8.0,7.0,6.0,5.0,4.0,3.0,2.0,1.0,0.0,0.0],"32":[16.0,16.0,16.0,16.0,16.0,16.0,16.0,16.0,16.0,16.0,16.0,16.0,16.0,16.0,16.0,16.0,15.0,14.0,13.0,12.0,11.0,10.0,9.0,8.0,7.0,6.0,5.0,4.0,3.0,2.0,1.0,0.0]},"robKappas":[0.01,0.03,0.1,0.3,1.0,3.0,10.0,30.0,100.0],"robCols":{"0.01":[99.99999999999616,100.99999999999612,101.99999999999608,102.99999999999604,103.99999999999599,104.99999999999595,105.99999999999591,106.99999999999588,107.99999999999585,108.99999999999584,109.99999999999582,110.9999999999958,111.99999999999577,112.99999999999575,113.99999999999574,114.99999999999574,114.99999999999575,114.99999999999577,114.99999999999578,114.9999999999958,114.99999999999581,114.99999999999582,114.99999999999585,114.99999999999586,114.99999999999586,114.99999999999586,114.99999999999585,114.99999999999585,114.99999999999585,114.99999999999585,114.99999999999585,114.99999999999585],"0.03":[33.33333333333344,34.33333333333344,35.33333333333344,36.33333333333344,37.333333333333435,38.33333333333343,39.33333333333342,40.33333333333342,41.33333333333342,42.333333333333414,43.3333333333334,44.333333333333385,45.33333333333337,46.33333333333336,47.33333333333335,48.333333333333336,48.33333333333333,48.33333333333332,48.333333333333314,48.3333333333333,48.33333333333329,48.33333333333328,48.33333333333327,48.33333333333326,48.33333333333325,48.33333333333325,48.33333333333324,48.333333333333236,48.333333333333236,48.333333333333236,48.333333333333236,48.333333333333236],"0.1":[9.999999999999815,10.999999999999797,11.999999999999778,12.999999999999758,13.999999999999739,14.99999999999972,15.999999999999702,16.999999999999684,17.999999999999666,18.99999999999965,19.999999999999634,20.999999999999623,21.999999999999613,22.999999999999606,23.9999999999996,24.999999999999588,24.999999999999577,24.99999999999957,24.999999999999563,24.999999999999556,24.99999999999955,24.99999999999954,24.99999999999954,24.999999999999538,24.999999999999538,24.999999999999535,24.999999999999535,24.99999999999953,24.999999999999524,24.99999999999952,24.99999999999952,24.99999999999952],"0.3":[3.3333333333333397,4.333333333333342,5.333333333333344,6.3333333333333455,7.333333333333347,8.333333333333348,9.33333333333335,10.333333333333352,11.333333333333352,12.333333333333353,13.333333333333357,14.33333333333336,15.333333333333364,16.333333333333368,17.33333333333337,18.333333333333375,18.33333333333338,18.333333333333385,18.333333333333393,18.3333333333334,18.333333333333407,18.333333333333417,18.333333333333425,18.33333333333343,18.33333333333344,18.333333333333446,18.33333333333345,18.33333333333345,18.333333333333453,18.333333333333456,18.33333333333346,18.33333333333346],"1":[0.999999999999988,1.999999999999976,2.999999999999964,3.9999999999999525,4.9999999999999405,5.999999999999928,6.999999999999916,7.999999999999903,8.999999999999892,9.999999999999881,10.999999999999869,11.999999999999856,12.999999999999844,13.999999999999831,14.999999999999819,15.999999999999806,15.999999999999792,15.999999999999782,15.99999999999977,15.999999999999762,15.999999999999755,15.999999999999748,15.999999999999744,15.99999999999974,15.999999999999737,15.999999999999734,15.999999999999728,15.999999999999723,15.999999999999718,15.999999999999714,15.99999999999971,15.99999999999971],"3":[0.3333333333333332,1.3333333333333328,2.3333333333333326,3.3333333333333326,4.333333333333333,5.333333333333333,6.333333333333333,7.333333333333333,8.333333333333332,9.333333333333332,10.333333333333332,11.33333333333333,12.333333333333329,13.333333333333329,14.33333333333333,15.33333333333333,15.333333333333332,15.33333333333333,15.33333333333333,15.333333333333332,15.333333333333334,15.333333333333336,15.33333333333334,15.333333333333346,15.333333333333352,15.333333333333355,15.33333333333336,15.333333333333364,15.333333333333366,15.333333333333366,15.333333333333366,15.333333333333368],"10":[0.09999999999999996,1.0999999999999996,2.099999999999999,3.0999999999999988,4.099999999999999,5.1,6.1000000000000005,7.100000000000001,8.100000000000003,9.100000000000003,10.100000000000005,11.100000000000007,12.100000000000007,13.100000000000007,14.100000000000005,15.100000000000003,15.100000000000001,15.1,15.099999999999998,15.099999999999994,15.099999999999994,15.099999999999994,15.099999999999994,15.099999999999994,15.099999999999994,15.099999999999996,15.099999999999996,15.099999999999993,15.09999999999999,15.099999999999993,15.099999999999994,15.099999999999994],"30":[0.03333333333333341,1.0333333333333357,2.0333333333333377,3.03333333333334,4.033333333333342,5.033333333333344,6.033333333333347,7.033333333333351,8.033333333333355,9.033333333333358,10.033333333333362,11.033333333333365,12.033333333333367,13.033333333333369,14.033333333333369,15.033333333333367,15.033333333333367,15.033333333333367,15.033333333333369,15.033333333333367,15.033333333333367,15.033333333333369,15.033333333333369,15.03333333333337,15.033333333333372,15.033333333333372,15.033333333333374,15.033333333333378,15.03333333333338,15.033333333333381,15.033333333333383,15.033333333333383],"100":[0.010000000000000083,1.0100000000000084,2.0100000000000167,3.0100000000000247,4.010000000000033,5.0100000000000415,6.0100000000000495,7.010000000000057,8.010000000000064,9.01000000000007,10.010000000000078,11.010000000000085,12.010000000000092,13.0100000000001,14.010000000000105,15.01000000000011,15.010000000000115,15.010000000000122,15.01000000000013,15.010000000000137,15.010000000000144,15.010000000000149,15.010000000000154,15.010000000000158,15.01000000000016,15.010000000000161,15.010000000000163,15.010000000000167,15.01000000000017,15.010000000000174,15.010000000000176,15.010000000000176]},"pinvCR":[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],"dirCR":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],"robCR":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],"reffErr":6.536993168992922e-13},"meta":{"checks":24,"total":24,"runtime":0.088}};
+</script>
+<script>
+(function(){
+'use strict';
+if (typeof GD === 'undefined') return;
+var N = 32;
+
+/* ---------- shared helpers ---------- */
+function frac(s){                       /* "55/36" | "-5/6" | "0" -> float */
+  s = String(s);
+  var m = s.split('/');
+  return m.length === 2 ? parseFloat(m[0]) / parseFloat(m[1]) : parseFloat(m[0]);
+}
+function sci(x){
+  if (x === 0) return '0 (exact)';
+  var e = Math.floor(Math.log10(Math.abs(x)));
+  return (x / Math.pow(10, e)).toFixed(1) + 'e' + e;
+}
+function fmt(x){
+  if (Math.abs(x - Math.round(x)) < 1e-9) return String(Math.round(x));
+  return parseFloat(x.toPrecision(6)).toString();
+}
+function svgEl(tag, attrs, parent){
+  var el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (var a in attrs) el.setAttribute(a, attrs[a]);
+  if (parent) parent.appendChild(el);
+  return el;
+}
+function clearEl(el){ while (el.firstChild) el.removeChild(el.firstChild); }
+
+/* ---------- closed forms verified by the checks scripts ---------- */
+function bridge32(){                     /* min(i,j)(33-max(i,j))/33 */
+  var M = [];
+  for (var i = 1; i <= N; i++){ var row = [];
+    for (var j = 1; j <= N; j++) row.push(Math.min(i,j) * (33 - Math.max(i,j)) / 33);
+    M.push(row); }
+  return M;
+}
+function gk32(k){                        /* k-max | min-k | 0 (Markov split) */
+  var M = [];
+  for (var i = 1; i <= N; i++){ var row = [];
+    for (var j = 1; j <= N; j++){
+      if (i < k && j < k) row.push(k - Math.max(i,j));
+      else if (i > k && j > k) row.push(Math.min(i,j) - k);
+      else row.push(0);
+    }
+    M.push(row); }
+  return M;
+}
+function robin32(kap){                   /* min(i,j) - 1 + 1/kappa */
+  var M = [];
+  for (var i = 1; i <= N; i++){ var row = [];
+    for (var j = 1; j <= N; j++) row.push(Math.min(i,j) - 1 + 1/kap);
+    M.push(row); }
+  return M;
+}
+function center(M){                      /* C M C with C = I - 11^T/N  (the gauge identity) */
+  var i, j, rm = [], gm = 0;
+  for (i = 0; i < N; i++){ var s = 0;
+    for (j = 0; j < N; j++) s += M[i][j];
+    rm.push(s / N); gm += s / N; }
+  gm /= N;
+  var out = [];
+  for (i = 0; i < N; i++){ var row = [];
+    for (j = 0; j < N; j++) row.push(M[i][j] - rm[i] - rm[j] + gm);
+    out.push(row); }
+  return out;
+}
+var PINV32 = center(gk32(1));            /* L+ = C G_1 C */
+
+/* =======================================================================
+   widget (a): the grounding explorer
+   ======================================================================= */
+(function(){
+  var mode = 'gnd', kk = 12, kapIdx = 4, jj = 16;
+  var kaps = GD.n32.robKappas;
+  var heat = document.getElementById('gx-heat');
+  var colSvg = document.getElementById('gx-col');
+  var uvSvg = document.getElementById('gx-uv');
+  var segBtns = document.getElementById('gx-mode').getElementsByTagName('button');
+
+  /* heatmap scaffold: 32x32 rects */
+  var HX = 44, HY = 12, CS = 12.6;
+  var cells = [];
+  (function(){
+    var g = svgEl('g', {}, heat);
+    for (var i = 0; i < N; i++){
+      cells.push([]);
+      for (var j = 0; j < N; j++)
+        cells[i].push(svgEl('rect', {x: HX + j*CS, y: HY + i*CS, width: CS-0.7, height: CS-0.7,
+          fill: '#fff'}, g));
+    }
+    [1,8,16,24,32].forEach(function(t){
+      svgEl('text', {x: HX + (t-0.5)*CS, y: HY + N*CS + 16, 'text-anchor': 'middle',
+        'font-family': 'ui-sans-serif,system-ui,sans-serif', 'font-size': 11, fill: '#5A6773'}, heat)
+        .textContent = t;
+      svgEl('text', {x: HX - 8, y: HY + (t-0.5)*CS + 4, 'text-anchor': 'end',
+        'font-family': 'ui-sans-serif,system-ui,sans-serif', 'font-size': 11, fill: '#5A6773'}, heat)
+        .textContent = t;
+    });
+    svgEl('text', {x: HX + N*CS/2, y: HY + N*CS + 32, 'text-anchor': 'middle',
+      'font-family': 'ui-sans-serif,system-ui,sans-serif', 'font-size': 11.5, fill: '#5A6773'}, heat)
+      .textContent = 'j →   (blue > 0 · red < 0 · white 0)';
+  })();
+  var gnd6marker = svgEl('rect', {x: 0, y: 0, width: CS-0.7, height: CS-0.7, fill: 'none',
+    stroke: '#C9A227', 'stroke-width': 2.4, visibility: 'hidden'}, heat);
+  var colHl = svgEl('rect', {x: 0, y: HY - 3, width: CS-0.7, height: N*CS + 5, fill: 'none',
+    stroke: '#1F4E79', 'stroke-width': 1.2, 'stroke-dasharray': '3 3', opacity: 0.85}, heat);
+  var maxLab = svgEl('text', {x: HX + N*CS, y: HY - 2, 'text-anchor': 'end',
+    'font-family': 'ui-sans-serif,system-ui,sans-serif', 'font-size': 11, fill: '#5A6773'}, heat);
+
+  function mixc(t, r2, g2, b2){          /* white -> target */
+    var r = Math.round(255 + (r2-255)*t), g = Math.round(255 + (g2-255)*t),
+        b = Math.round(255 + (b2-255)*t);
+    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  }
+  function cellColor(v, mx){
+    if (mx <= 0 || v === 0) return '#fff';
+    var t = Math.pow(Math.abs(v)/mx, 0.6);
+    return v > 0 ? mixc(t, 31, 78, 121) : mixc(t, 181, 68, 60);
+  }
+
+  function currentMatrix(){
+    if (mode === 'dir') return bridge32();
+    if (mode === 'gnd') return gk32(kk);
+    if (mode === 'rob') return robin32(kaps[kapIdx]);
+    return PINV32;
+  }
+
+  /* n = 6 exact table */
+  function n6For(){
+    var lab, rows;
+    if (mode === 'dir'){ lab = 'tridiag(−1,2,−1)⁻¹ = min(i,j)(7−max(i,j))/7 — n = 6, exact';
+      rows = GD.n6.dir.ex; }
+    else if (mode === 'gnd'){
+      var k6 = Math.max(1, Math.min(6, Math.round(1 + (kk-1)*5/31)));
+      lab = 'GroundedInverse[L, ' + k6 + '] — n = 6, exact integers';
+      rows = GD.n6.gnd[k6-1].ex; }
+    else if (mode === 'rob'){
+      var key = String(kaps[kapIdx]);
+      var map = {'0.01':'1/100', '0.1':'1/10', '1':'1', '10':'10', '100':'100'};
+      if (map[key]){ lab = 'Inverse[L + ' + map[key] + ' e₁e₁ᵀ] = min(i,j) − 1 + ' +
+          (map[key]==='1'?'1':(key<1 ? String(Math.round(1/parseFloat(key))) : '1/' + map[key])) + ' — n = 6, exact';
+        rows = GD.n6.rob.ex[map[key]]; }
+      else { lab = 'exact n = 6 table shown at κ ∈ {1/100, 1/10, 1, 10, 100} — closed form min(i,j) − 1 + 1/κ holds at every κ'; rows = null; }
+    }
+    else { lab = 'PseudoInverse[L] — n = 6, exact rationals over 36'; rows = GD.n6.pinv.ex; }
+    return {lab: lab, rows: rows};
+  }
+
+  function renderN6(){
+    var t = document.getElementById('gx-n6');
+    var info = n6For();
+    document.getElementById('gx-n6lab').textContent = info.lab;
+    clearEl(t);
+    if (!info.rows) return;
+    info.rows.forEach(function(r){
+      var tr = document.createElement('tr');
+      r.forEach(function(cell){
+        var td = document.createElement('td');
+        var v = frac(cell);
+        td.className = v > 0 ? 'pos' : (v < 0 ? 'neg' : 'zer');
+        td.textContent = String(cell).replace('-', '−');
+        tr.appendChild(td);
+      });
+      t.appendChild(tr);
+    });
+  }
+
+  /* column panel */
+  function renderCol(M){
+    clearEl(colSvg);
+    var col = [];
+    for (var i = 0; i < N; i++) col.push(M[i][jj-1]);
+    var lo = Math.min(0, Math.min.apply(null, col)), hi = Math.max(0, Math.max.apply(null, col));
+    if (hi === lo) hi = lo + 1;
+    var pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
+    var X0 = 46, X1 = 452, Y0 = 20, Y1 = 288;
+    function px(i){ return X0 + (i-1) * (X1-X0) / (N-1); }
+    function py(v){ return Y1 - (v - lo) * (Y1-Y0) / (hi - lo); }
+    /* zero line */
+    svgEl('line', {x1: X0, y1: py(0), x2: X1, y2: py(0), stroke: '#5A6773',
+      'stroke-width': 1, 'stroke-dasharray': '2 4'}, colSvg);
+    svgEl('text', {x: X1 + 4, y: py(0) + 4, 'font-family': 'ui-sans-serif,system-ui,sans-serif',
+      'font-size': 10.5, fill: '#5A6773'}, colSvg).textContent = '0';
+    /* robin offset line */
+    if (mode === 'rob'){
+      var off = 1 / kaps[kapIdx];
+      svgEl('line', {x1: X0, y1: py(off), x2: X1, y2: py(off), stroke: '#C9A227',
+        'stroke-width': 1.2, 'stroke-dasharray': '5 4', opacity: 0.9}, colSvg);
+      svgEl('text', {x: X0 + 4, y: py(off) - 5, 'font-family': 'ui-sans-serif,system-ui,sans-serif',
+        'font-size': 10.5, fill: '#A88A1F'}, colSvg).textContent = '1/κ = ' + fmt(off);
+    }
+    /* mean line for pinv */
+    if (mode === 'pinv'){
+      svgEl('text', {x: X0 + 4, y: Y0 + 6, 'font-family': 'ui-sans-serif,system-ui,sans-serif',
+        'font-size': 10.5, fill: '#A88A1F'}, colSvg).textContent = 'Σ v = 0 — mean-zero gauge';
+    }
+    /* ground marker */
+    if (mode === 'gnd'){
+      svgEl('line', {x1: px(kk), y1: Y0, x2: px(kk), y2: Y1 + 6, stroke: '#C9A227',
+        'stroke-width': 1.6, opacity: 0.85}, colSvg);
+      svgEl('text', {x: px(kk), y: Y0 - 7, 'text-anchor': 'middle', 'font-weight': 600,
+        'font-family': 'ui-sans-serif,system-ui,sans-serif', 'font-size': 10.5, fill: '#A88A1F'},
+        colSvg).textContent = 'ground k = ' + kk;
+    }
+    /* curve */
+    var d = '';
+    for (var m = 1; m <= N; m++) d += (m === 1 ? 'M' : 'L') + px(m).toFixed(1) + ',' + py(col[m-1]).toFixed(1);
+    svgEl('path', {d: d, fill: 'none', stroke: '#1F4E79', 'stroke-width': 2.2,
+      'stroke-linejoin': 'round'}, colSvg);
+    for (m = 1; m <= N; m++)
+      svgEl('circle', {cx: px(m), cy: py(col[m-1]), r: 2.6,
+        fill: m === jj ? '#B5443C' : '#C9A227', stroke: '#fff', 'stroke-width': 0.7}, colSvg);
+    svgEl('text', {x: px(jj), y: py(col[jj-1]) - 9, 'text-anchor': 'middle', 'font-weight': 600,
+      'font-family': 'ui-sans-serif,system-ui,sans-serif', 'font-size': 11, fill: '#B5443C'},
+      colSvg).textContent = 'j = ' + jj;
+    svgEl('text', {x: X0, y: 310, 'font-family': 'ui-sans-serif,system-ui,sans-serif',
+      'font-size': 11.5, fill: '#5A6773'}, colSvg).textContent =
+      'column j of the inverse — the Green’s function of a unit injection at node ' + jj;
+  }
+
+  /* u/v factor sketch at n = 6 */
+  function renderUV(){
+    clearEl(uvSvg);
+    var X0 = 46, DX = 66, Y1 = 96, SC = 58;
+    var title = '', items = [];   /* {x, val, color, shape} */
+    function stems(vals, color, dx){
+      var mx = 0;
+      vals.forEach(function(v){ mx = Math.max(mx, Math.abs(v)); });
+      if (mx === 0) mx = 1;
+      vals.forEach(function(v, idx){
+        var x = X0 + idx*DX + dx, y = Y1 - (v/mx)*SC;
+        svgEl('line', {x1: x, y1: Y1, x2: x, y2: y, stroke: color, 'stroke-width': 1.4, opacity: 0.55}, uvSvg);
+        svgEl('circle', {cx: x, cy: y, r: 3, fill: color}, uvSvg);
+      });
+    }
+    svgEl('line', {x1: X0 - 12, y1: Y1, x2: X0 + 5*DX + 14, y2: Y1, stroke: '#C7CED4', 'stroke-width': 1}, uvSvg);
+    if (mode === 'dir'){
+      stems(GD.n6.dir.u.map(frac), '#1F4E79', -4);
+      stems(GD.n6.dir.v.map(frac), '#B5443C', 4);
+      title = 'uᵢ = i (blue)  ·  vⱼ = (7−j)/7 (red) — one ramp per wall';
+    } else if (mode === 'gnd'){
+      var k6 = Math.max(1, Math.min(6, Math.round(1 + (kk-1)*5/31)));
+      var uv = GD.n6.gnd[k6-1].uv;
+      stems(uv.left.v.map(frac).concat([0]).concat(uv.right.u.map(function(){return 0;})).slice(0,6), '#1F4E79', -4);
+      var right = [];
+      for (var t = 0; t < k6; t++) right.push(0);
+      uv.right.u.map(frac).forEach(function(v){ right.push(v); });
+      stems(right.slice(0,6), '#B5443C', 4);
+      title = 'one pair per block (n=6, k=' + k6 + '): left vⱼ = k−j (blue) · right uᵢ = i−k (red)';
+    } else if (mode === 'rob'){
+      var kap = kaps[kapIdx];
+      var u = [], v = [];
+      for (var i2 = 1; i2 <= 6; i2++){ u.push(i2 - 1 + 1/kap); v.push(1); }
+      stems(u, '#1F4E79', -4);
+      stems(v, '#B5443C', 4);
+      title = 'uᵢ = i − 1 + 1/κ (blue, intercept = the resistor)  ·  vⱼ = 1 (red)';
+    } else {
+      stems(GD.n6.pinv.uv[0].u.map(frac), '#1F4E79', -6);
+      stems(GD.n6.pinv.uv[1].v.map(frac), '#C9A227', 6);
+      title = 'TWO pairs: motion u⁽¹⁾ (blue) + centering v⁽²⁾ (gold) — the +1 rank';
+    }
+    for (var p = 1; p <= 6; p++)
+      svgEl('text', {x: X0 + (p-1)*DX, y: Y1 + 15, 'text-anchor': 'middle',
+        'font-family': 'ui-sans-serif,system-ui,sans-serif', 'font-size': 10.5, fill: '#5A6773'},
+        uvSvg).textContent = p;
+    var tt = svgEl('text', {x: 235, y: 14, 'text-anchor': 'middle',
+      'font-family': 'ui-sans-serif,system-ui,sans-serif', 'font-size': 10.8, fill: '#5A6773'}, uvSvg);
+    tt.textContent = title;
+  }
+
+  function render(){
+    var M = currentMatrix();
+    var mx = 0, i, j;
+    for (i = 0; i < N; i++) for (j = 0; j < N; j++) mx = Math.max(mx, Math.abs(M[i][j]));
+    for (i = 0; i < N; i++) for (j = 0; j < N; j++)
+      cells[i][j].setAttribute('fill', cellColor(M[i][j], mx));
+    maxLab.textContent = 'max |entry| = ' + fmt(mx);
+    if (mode === 'gnd'){
+      gnd6marker.setAttribute('visibility', 'visible');
+      gnd6marker.setAttribute('x', HX + (kk-1)*CS);
+      gnd6marker.setAttribute('y', HY + (kk-1)*CS);
+    } else gnd6marker.setAttribute('visibility', 'hidden');
+    colHl.setAttribute('x', HX + (jj-1)*CS);
+    renderCol(M);
+    renderUV();
+    renderN6();
+    /* readouts */
+    var rank = (mode === 'pinv') ? 2 : 1;
+    var pill = document.getElementById('gx-rank');
+    pill.textContent = 'triangular rank ' + rank + (mode === 'pinv' ? ' — exactly' : '');
+    pill.className = 'rankpill' + (rank === 2 ? ' two' : '');
+    var cert = (mode === 'dir') ? GD.n6.dir.cr :
+               (mode === 'gnd') ? GD.n6.gnd[Math.max(1, Math.min(6, Math.round(1 + (kk-1)*5/31)))-1].cr :
+               (mode === 'rob') ? GD.n6.rob.cr : GD.n6.pinv.cr;
+    document.getElementById('gx-cert').textContent = '[' + cert.join(', ') + ']';
+    document.getElementById('gx-diag').textContent = fmt(M[jj-1][jj-1]);
+    var lw = document.getElementById('gx-limwrap');
+    if (mode === 'rob'){
+      lw.style.display = '';
+      var kap = kaps[kapIdx];
+      document.getElementById('gx-lim').textContent = fmt(1/kap) +
+        (kap <= 0.01 ? ' — κ→0: blow-up along constants' :
+         kap >= 100 ? ' — κ→∞: → grounded-at-1, error 1/κ' : '');
+    } else lw.style.display = 'none';
+    document.getElementById('gx-kwrap').style.display = (mode === 'gnd') ? '' : 'none';
+    document.getElementById('gx-kapwrap').style.display = (mode === 'rob') ? '' : 'none';
+  }
+
+  /* wiring */
+  Array.prototype.forEach.call(segBtns, function(b){
+    b.addEventListener('click', function(){
+      Array.prototype.forEach.call(segBtns, function(x){ x.className = ''; });
+      b.className = 'active';
+      mode = b.getAttribute('data-m');
+      render();
+    });
+  });
+  document.getElementById('gx-k').addEventListener('input', function(){
+    kk = parseInt(this.value, 10);
+    document.getElementById('gx-klab').textContent = kk;
+    render();
+  });
+  document.getElementById('gx-kap').addEventListener('input', function(){
+    kapIdx = parseInt(this.value, 10);
+    document.getElementById('gx-kaplab').textContent = String(kaps[kapIdx]);
+    render();
+  });
+  document.getElementById('gx-j').addEventListener('input', function(){
+    jj = parseInt(this.value, 10);
+    document.getElementById('gx-jlab').textContent = jj;
+    render();
+  });
+  render();
+
+  /* ---- self-test: closed forms vs baked columns of results/grounding.json ---- */
+  try{
+    var jSel = GD.n32.selCol;            /* 16 */
+    var devG = 0, k, i3;
+    for (k = 1; k <= N; k++){
+      var Mk = gk32(k), bak = GD.n32.gndCol[String(k)];
+      for (i3 = 0; i3 < N; i3++) devG = Math.max(devG, Math.abs(Mk[i3][jSel-1] - bak[i3]));
+    }
+    var devB = 0, MB = bridge32(), bakB = GD.n32.dirCol;
+    for (i3 = 0; i3 < N; i3++) devB = Math.max(devB, Math.abs(MB[i3][jSel-1] - bakB[i3]));
+    var devR = 0;
+    kaps.forEach(function(kap){
+      var MR = robin32(kap), bakR = GD.n32.robCols[String(kap)];
+      for (var i4 = 0; i4 < N; i4++) devR = Math.max(devR, Math.abs(MR[i4][jSel-1] - bakR[i4]));
+    });
+    var devP = 0, bakP = GD.n32.pinvCol;
+    for (i3 = 0; i3 < N; i3++) devP = Math.max(devP, Math.abs(PINV32[i3][jSel-1] - bakP[i3]));
+    var rs = 0;
+    for (i3 = 0; i3 < N; i3++){ var s = 0;
+      for (var j3 = 0; j3 < N; j3++) s += PINV32[i3][j3];
+      rs = Math.max(rs, Math.abs(s)); }
+    var ok = devG < 1e-9 && devB < 1e-9 && devR < 1e-9 && devP < 1e-9 && rs < 1e-9;
+    var b = document.getElementById('gx-badge');
+    b.textContent = ok ?
+      ('self-test ✓ · 32 groundings ' + sci(devG) + ' · bridge ' + sci(devB) +
+       ' · robin 9κ ' + sci(devR) + ' · gauge C·G₁·C→L⁺ ' + sci(devP) +
+       ' · L⁺·1 ' + sci(rs)) : 'self-test ✗';
+    b.className = 'stbadge' + (ok ? '' : ' fail');
+  }catch(err){
+    var bb = document.getElementById('gx-badge');
+    bb.textContent = 'self-test error'; bb.className = 'stbadge fail';
+  }
+})();
+
+/* =======================================================================
+   widget (b): gauge invariance
+   ======================================================================= */
+(function(){
+  var mode = 'gnd', kk = 28, ii = 8, jj = 24;
+  var svg = document.getElementById('gv-svg');
+  var segBtns = document.getElementById('gv-mode').getElementsByTagName('button');
+
+  function voltages(){
+    var G = (mode === 'gnd') ? gk32(kk) : PINV32;
+    var v = [];
+    for (var m = 0; m < N; m++) v.push(G[m][ii-1] - G[m][jj-1]);
+    return v;
+  }
+
+  function render(){
+    clearEl(svg);
+    var v = voltages();
+    var lo = Math.min(0, Math.min.apply(null, v)), hi = Math.max(0, Math.max.apply(null, v));
+    if (hi === lo) hi = lo + 1;
+    var pad = (hi - lo) * 0.15; lo -= pad; hi += pad;
+    var X0 = 52, X1 = 918, Y0 = 22, Y1 = 232;
+    function px(m){ return X0 + (m-1) * (X1-X0) / (N-1); }
+    function py(x){ return Y1 - (x - lo) * (Y1-Y0) / (hi - lo); }
+    /* baseline + zero */
+    svgEl('line', {x1: X0 - 10, y1: py(0), x2: X1 + 10, y2: py(0), stroke: '#5A6773',
+      'stroke-width': 1, 'stroke-dasharray': '2 4'}, svg);
+    svgEl('text', {x: X1 + 14, y: py(0) + 4, 'font-family': 'ui-sans-serif,system-ui,sans-serif',
+      'font-size': 11, fill: '#5A6773'}, svg).textContent = 'v = 0';
+    /* node axis */
+    svgEl('line', {x1: X0 - 10, y1: 262, x2: X1 + 10, y2: 262, stroke: '#C7CED4', 'stroke-width': 1}, svg);
+    [1,8,16,24,32].forEach(function(t){
+      svgEl('text', {x: px(t), y: 280, 'text-anchor': 'middle',
+        'font-family': 'ui-sans-serif,system-ui,sans-serif', 'font-size': 11, fill: '#5A6773'}, svg)
+        .textContent = t;
+    });
+    /* curve */
+    var d = '';
+    for (var m = 1; m <= N; m++) d += (m === 1 ? 'M' : 'L') + px(m).toFixed(1) + ',' + py(v[m-1]).toFixed(1);
+    svgEl('path', {d: d, fill: 'none', stroke: '#1F4E79', 'stroke-width': 2.2,
+      'stroke-linejoin': 'round', opacity: 0.85}, svg);
+    for (m = 1; m <= N; m++)
+      svgEl('circle', {cx: px(m), cy: py(v[m-1]), r: 2.8,
+        fill: m === ii ? '#1F4E79' : (m === jj ? '#B5443C' : '#C9A227'),
+        stroke: '#fff', 'stroke-width': 0.8}, svg);
+    /* i and j markers */
+    svgEl('text', {x: px(ii), y: py(v[ii-1]) - 10, 'text-anchor': 'middle', 'font-weight': 600,
+      'font-family': 'ui-sans-serif,system-ui,sans-serif', 'font-size': 11.5, fill: '#1F4E79'}, svg)
+      .textContent = '+1 A at i = ' + ii;
+    svgEl('text', {x: px(jj), y: py(v[jj-1]) + 20, 'text-anchor': 'middle', 'font-weight': 600,
+      'font-family': 'ui-sans-serif,system-ui,sans-serif', 'font-size': 11.5, fill: '#B5443C'}, svg)
+      .textContent = '−1 A at j = ' + jj;
+    /* ground electrode */
+    if (mode === 'gnd'){
+      var gx = px(kk), gy = py(v[kk-1]);
+      svgEl('line', {x1: gx, y1: gy, x2: gx, y2: 246, stroke: '#C9A227', 'stroke-width': 2}, svg);
+      svgEl('line', {x1: gx-11, y1: 246, x2: gx+11, y2: 246, stroke: '#C9A227', 'stroke-width': 2}, svg);
+      svgEl('line', {x1: gx-7, y1: 251, x2: gx+7, y2: 251, stroke: '#C9A227', 'stroke-width': 2}, svg);
+      svgEl('line', {x1: gx-3, y1: 256, x2: gx+3, y2: 256, stroke: '#C9A227', 'stroke-width': 2}, svg);
+      svgEl('text', {x: gx, y: 295, 'text-anchor': 'middle', 'font-weight': 600,
+        'font-family': 'ui-sans-serif,system-ui,sans-serif', 'font-size': 11, fill: '#A88A1F'}, svg)
+        .textContent = 'ground k = ' + kk + ' (v = 0 here)';
+    } else {
+      svgEl('text', {x: X0, y: Y0 - 6, 'font-family': 'ui-sans-serif,system-ui,sans-serif',
+        'font-size': 11, fill: '#A88A1F', 'font-weight': 600}, svg)
+        .textContent = 'pseudoinverse gauge: no node pinned, Σ v = 0';
+    }
+    /* readouts */
+    document.getElementById('gv-vi').textContent = fmt(v[ii-1]);
+    document.getElementById('gv-vj').textContent = fmt(v[jj-1]);
+    document.getElementById('gv-diff').textContent = fmt(v[ii-1] - v[jj-1]);
+    document.getElementById('gv-dist').textContent = String(Math.abs(ii - jj));
+    document.getElementById('gv-kwrap').style.display = (mode === 'gnd') ? '' : 'none';
+  }
+
+  Array.prototype.forEach.call(segBtns, function(b){
+    b.addEventListener('click', function(){
+      Array.prototype.forEach.call(segBtns, function(x){ x.className = ''; });
+      b.className = 'active';
+      mode = b.getAttribute('data-m');
+      render();
+    });
+  });
+  [['gv-k', function(x){ kk = x; document.getElementById('gv-klab').textContent = x; }],
+   ['gv-i', function(x){ ii = x; document.getElementById('gv-ilab').textContent = x; }],
+   ['gv-j', function(x){ jj = x; document.getElementById('gv-jlab').textContent = x; }]]
+  .forEach(function(pair){
+    document.getElementById(pair[0]).addEventListener('input', function(){
+      pair[1](parseInt(this.value, 10)); render();
+    });
+  });
+  render();
+
+  /* ---- self-test: R_eff == |i-j| from all 32 groundings AND the centered pinv ---- */
+  try{
+    var bad = 0, devP = 0, k, a, b2;
+    for (k = 1; k <= N; k++){
+      var G = gk32(k);
+      for (a = 0; a < N; a++) for (b2 = 0; b2 < N; b2++){
+        var r = G[a][a] + G[b2][b2] - 2*G[a][b2];
+        if (r !== Math.abs(a - b2)) bad++;
+      }
+    }
+    for (a = 0; a < N; a++) for (b2 = 0; b2 < N; b2++){
+      var rp = PINV32[a][a] + PINV32[b2][b2] - 2*PINV32[a][b2];
+      devP = Math.max(devP, Math.abs(rp - Math.abs(a - b2)));
+    }
+    var ok = (bad === 0) && (devP < 1e-9);
+    var bb = document.getElementById('gv-badge');
+    bb.textContent = ok ?
+      ('self-test ✓ · R_eff ≡ |i−j| · all 32×32 pairs × 32 groundings exact · pinv ' + sci(devP))
+      : 'self-test ✗';
+    bb.className = 'stbadge' + (ok ? '' : ' fail');
+  }catch(err){
+    var bf = document.getElementById('gv-badge');
+    bf.textContent = 'self-test error'; bf.className = 'stbadge fail';
+  }
+})();
+
+})();
+</script>
+</body>
+</html>
