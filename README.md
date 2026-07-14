@@ -8,13 +8,14 @@ Implementation and study of **preconditioned conjugate gradients for the 2-D Poi
 
 ## Interactive demo & rendered reports
 
+- **[Incidence pseudoinverse explorer](interactive/incidence-pseudoinverse-explorer.html)** — drag through the rows and columns of $X=(B^\top)^+=BL^+$ on a 2-D grid: columns become minimum-energy edge flows, rows become edge-dipole voltage fields, and an AR/Richardson view connects truncated impulse responses to learned solver corrections.
 - **[Iterative solvers explorer](https://yaroslavvb.github.io/poisson-solvers/cg-explorer/)** — interactive dashboard for a 1D heat-conduction Poisson problem (heater at one end, chiller at the other): scrub through the iteration history of CG, SOR, gradient descent, and CG with a toy in-browser neural preconditioner ([arXiv:2502.01337](https://arxiv.org/abs/2502.01337), trained by [python/neural/train_npo_1d.py](python/neural/train_npo_1d.py)).
 - **[Hierarchical solver race](https://yaroslavvb.github.io/poisson-solvers/interactive/hierarchical-solvers.html)** — five solvers (GD, CG, PCG with the *actual* HODLR rank-2/rank-8 compressed inverses, damped Richardson) racing live in the browser on the hot/cold-rod problem of [report 14](reports/14-hierarchical-inverse.md) §5; runs locally too ([interactive/hierarchical-solvers.html](interactive/hierarchical-solvers.html), serve the repo root over HTTP).
 - **[Rendered report suite](https://yaroslavvb.github.io/poisson-solvers/)** — the reports below as web pages (GitHub Pages).
 
 ## Reading offline
 
-The whole suite (reports, figures, both interactive pages, vendored MathJax) is mirrored as a self-contained static site in `local-site/` — open `local-site/index.html` directly in a browser (`file://`, no server, no network needed). Regenerate it with `uv run python tools/build_local_site.py`.
+The whole suite (reports, figures, interactive pages, vendored MathJax) is mirrored as a self-contained static site in `local-site/` — open `local-site/index.html` directly in a browser (`file://`, no server, no network needed). Regenerate it with `uv run python tools/build_local_site.py`.
 
 ## Quickstart
 
@@ -29,6 +30,8 @@ uv run python python/neural/eval_npo.py            # evaluate it (FCG vs plain P
 wolframscript -file mathematica/poisson_pcg.wls    # Mathematica reference run
 wolframscript -file mathematica/eigen_check.wls    # analytic-spectrum cross-check
 wolframscript -file mathematica/nystrom_pcg.wls    # Wolfram Nystrom implementation
+wolframscript -file mathematica/st_flow_grid3.wls  # Vishnoi Sec. 4.3 unit s-t flow
+wolframscript -file mathematica/st_flow_hex_grid.wls # unit flow on a honeycomb grid
 ```
 
 All Python runs are bit-deterministic (fixed seeds) and reproduce the committed `results/*.json` exactly.
@@ -59,6 +62,7 @@ Standalone visual explainers — long-form, figure-first, each backed by its own
 5. **[The Solver That Knows What It Doesn't Know](https://yaroslavvb.github.io/poisson-solvers/reports/probabilistic_cg_explainer.html)** — conjugate gradients as Gaussian inference, after the Hennig–Pförtner–Weiland ICML 2026 probabilistic-numerics tutorial: rank-one conditioning as Gram–Schmidt in the $\Sigma_0$-Mahalanobis geometry, the policy design space whose two corners are Cholesky (stability) and CG (greedy information), the headline executed — prior $\Sigma_0 = A^{-1}$ + residual actions $\Rightarrow$ posterior means $=$ CG iterates, iterate-for-iterate, worked in exact fractions on Shewchuk's own $2\times2$ — and the uncertainty ledger: $\mathrm{tr}(A\Sigma_k) = n-k$ under *any* policy (identical budgets, wildly different errors), with posterior-collapse and chain-uncertainty-band interactives ([checks](python/experiments/probabilistic_cg_checks.py): 30 PASS).
 6. **[One Space, Two Bases](https://yaroslavvb.github.io/poisson-solvers/reports/dual_basis_explainer.html)** — measurements vs responses as dual bases of the chain: $A = B_{\mathrm{inc}}^\top B_{\mathrm{inc}}$ (sparse edge measurements) against $A^{-1} = X^\top X$ with $X = B_{\mathrm{inc}}A^{-1}$ (dense dipole-response fields, $X^\top B_{\mathrm{inc}} = I$), the rows identified exactly (centered steps $h(x_i - \mathbf{1}[x_i \ge x_e])$, tent differences), the Maxwell/Mohr unit-load assembly of covariance, the grounded $\Pi = I - \mathbf{1}\mathbf{1}^\top/33$ resolution — then imperfect prediction as preconditioning in both directions: stationary-AR(1) whiteners (freeze the bridge's $(n{+}1{-}i)/(n{+}2{-}i)$ coefficient at $c$, sweep it) vs finite-range colorers (truncated walk series and window-clipped dipole responses, matvec-only), with the dual-basis explorer, AR-coefficient and MA-range interactives ([checks](python/experiments/dual_basis_checks.py): 39 PASS).
 7. **[Where You Put the Zero](https://yaroslavvb.github.io/poisson-solvers/reports/grounding_explainer.html)** — boundary conditions as grounding choices on the path Laplacian: the zoo table (Neumann = the free Laplacian itself, Dirichlet = deleted wall rows, point-grounding = `GroundedInverse[L,k]`, Robin = $+\kappa$ on a diagonal, pseudoinverse = "ground the average"), each inverse identified exactly ($[\min(i,j)-1]$ Brownian motion, the bridge, interior-$k$ Markov block splits, Robin $= [\min(i,j)-1+1/\kappa]$), the triangular-rank ledger (Gantmacher–Krein rank 1 for every SPD tridiagonal grounding; the pseudoinverse's rank 2 from double centering, via the gauge identity $L^+ = C\,G_k\,C$ for every $k$), and the invariance punchline — drag the ground electrode, voltages jump, $v_i - v_j$ and $R_{\mathrm{eff}} = \vert i-j\vert$ freeze ([Python](python/experiments/grounding_checks.py): 24 PASS; [Wolfram](mathematica/grounding_checks.wls), user predicates verbatim: 26 PASS).
+8. **[The Clickable Grid](https://yaroslavvb.github.io/poisson-solvers/reports/grid_viz_explainer.html)** — the matrix zoo on a 7×7 grid, rendered where it lives: click an edge for its row of $B$ (the ±1 dipole spikes) or of $X = \mathrm{pinv}(B^\top)$ (the full 2-D dipole response field); click a vertex for its incident-edge stencil or its unit-injection current pattern (the Maxwell unit-load picture); rows of both Grams — the vertex Laplacian and the *edge Laplacian* $BB^\top$ (the answer to "does $BB^\top$ have a name?": sign rule verified, line-graph identity $\vert B\vert\vert B\vert^\top = 2I + A_{LG}$, all 48 nonzero eigenvalues shared with $L$, the 36 extra zeros = the cycle space) — both pseudoinverses ($L_{\mathrm{edge}}^+ = XX^\top$), Vishnoi's $\Pi$ with exact spanning-tree fractions (τ = 19{,}872{,}369{,}301{,}840{,}986{,}112 = OEIS A007341(7)) and a feed-it-a-cycle annihilation button, and a random-walk mode where partial sums $\sum_k (D^{-1}W)^k$ visibly fill in the grounded Green function (draggable ground, K slider to 2048) ([checks](python/experiments/grid_viz_checks.py): 35 PASS).
 
 ## Reports
 
@@ -85,6 +89,6 @@ Start with [reports/00-overview.md](reports/00-overview.md) (full repo map, run 
 - `mathematica/` — reference `.wls` scripts (problem, PCG, eigen checks, Nyström)
 - `python/` — `poisson.py`, `pcg.py`, `preconditioners.py`, `nystrom.py`, `neural/`, `experiments/`
 - `reports/` — the report suite (00–15)
-- `interactive/` — self-contained browser demos (`hierarchical-solvers.html`, `adi-sweep.html`)
+- `interactive/` — self-contained browser demos, including the incidence-pseudoinverse explorer
 - `results/` — JSON summaries + NPO checkpoint (deterministic, reproducible)
 - `figures/` — PNGs at dpi=150; `mma_*` are Mathematica exports

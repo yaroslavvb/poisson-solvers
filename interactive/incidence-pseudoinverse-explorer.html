@@ -1,0 +1,1924 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Incidence Pseudoinverse Explorer</title>
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24))}html,body{margin:0}body{box-sizing:border-box;padding:1rem;background:inherit}iframe{display:block;width:100%;max-width:736px;height:calc(100vh - 2rem);margin:0 auto;border:0}</style>
+</head>
+<body>
+<iframe sandbox="allow-scripts" referrerpolicy="no-referrer" title="Incidence Pseudoinverse Explorer" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;meta name=&quot;referrer&quot; content=&quot;no-referrer&quot;&gt;
+&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src &#x27;none&#x27;; script-src &#x27;unsafe-inline&#x27; &#x27;unsafe-eval&#x27; &#x27;wasm-unsafe-eval&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src &#x27;unsafe-inline&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src &#x27;none&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;&quot;&gt;
+&lt;title&gt;Incidence Pseudoinverse Explorer&lt;/title&gt;
+&lt;style&gt;:root {
+  color-scheme: light dark;
+  background-color: var(--background) !important;
+
+  /* Agent-facing contract; keep in sync with SKILL.md. */
+  --background: light-dark(rgb(255 255 255), rgb(24 24 24));
+  --foreground: light-dark(rgb(26 28 31), rgb(255 255 255));
+  --card: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --card-foreground: var(--foreground);
+  --popover: light-dark(rgb(255 255 255), rgb(45 45 45));
+  --popover-foreground: var(--foreground);
+  --primary: light-dark(rgb(51 156 255), rgb(131 195 255));
+  --primary-foreground: light-dark(rgb(255 255 255), rgb(13 13 13));
+  --secondary: light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%));
+  --secondary-foreground: var(--foreground);
+  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --muted-foreground: light-dark(
+    rgb(26 28 31 / 49.4%),
+    rgb(255 255 255 / 49.8%)
+  );
+  --accent: light-dark(rgb(229 242 255), rgb(13 39 63));
+  --accent-foreground: var(--primary);
+  --destructive: light-dark(rgb(226 85 7), rgb(255 133 73));
+  --border: light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%));
+  --input: light-dark(
+    rgb(26 28 31 / 11.8%),
+    color-mix(in oklab, rgb(0 0 0) 10%, transparent)
+  );
+  --ring: light-dark(rgb(51 156 255), rgb(131 195 255 / 76%));
+  --font-size-base: 14px;
+  --viz-series-1: var(--primary);
+  --viz-series-2: light-dark(rgb(243 136 59), rgb(245 154 86));
+  --viz-series-3: light-dark(rgb(93 201 119), rgb(116 213 139));
+  --viz-series-4: light-dark(rgb(235 119 177), rgb(240 143 192));
+  --viz-series-5: light-dark(rgb(155 121 236), rgb(170 145 239));
+  --viz-series-6: light-dark(rgb(58 185 177), rgb(90 203 194));
+
+  /* Internal implementation variables; not part of the agent contract. */
+  --font-sans: -apple-system, system-ui, &quot;Segoe UI&quot;, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;,
+    monospace;
+  --font-size-normal: max(11px, var(--font-size-base));
+  --font-size-tooltip: calc(var(--font-size-base) - 1px);
+  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
+  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
+  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
+  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
+  --font-weight-normal: 430;
+  --font-weight-medium: 500;
+  --line-height-normal: calc(var(--font-size-normal) * 1.5);
+  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
+  --line-height-small: calc(var(--font-size-small) + 4px);
+  --radius: 12.5px;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
+  --checkmark-image: url(&quot;data:image/svg+xml,%3Csvg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; viewBox=&#x27;0 0 17 17&#x27;%3E%3Cpath d=&#x27;M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z&#x27;/%3E%3C/svg%3E&quot;);
+
+  /* Legacy aliases; not part of the current agent contract. */
+  --viz-bg: transparent;
+  --viz-panel: var(--card);
+  --viz-border: var(--border);
+  --viz-text: var(--foreground);
+  --viz-muted: var(--muted-foreground);
+  --viz-accent: var(--primary);
+  --viz-accent-text: var(--primary-foreground);
+  --viz-accent-bg: var(--accent);
+  --viz-font-size: var(--font-size-base);
+  --viz-warning: var(--destructive);
+  --color-background-primary: var(--background);
+  --color-text-primary: var(--foreground);
+  --color-border-secondary: var(--border);
+}
+
+:root[data-theme=&quot;light&quot;] {
+  color-scheme: light;
+}
+
+:root[data-theme=&quot;dark&quot;] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html &gt; body {
+  margin: 0;
+  padding: 5px;
+  color: var(--foreground);
+  background: transparent !important;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-normal);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+}
+
+a {
+  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
+  cursor: pointer;
+  font-weight: var(--viz-font-weight-medium);
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+
+a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 0.5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-block: 0;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.3;
+}
+
+b,
+strong,
+th {
+  font-weight: var(--font-weight-medium);
+}
+
+code:not(pre code) {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  corner-shape: superellipse(1.5);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  word-break: break-word;
+}
+
+#widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.card {
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  border-radius: var(--radius-2xl);
+  corner-shape: superellipse(1.5);
+  color: var(--card-foreground);
+  background: var(--card);
+}
+
+#widget &gt; :not(.card) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(
+    20rem,
+    var(--tooltip-available-width, calc(100vw - 10px)),
+    calc(100vw - 10px)
+  );
+  max-height: min(
+    var(--tooltip-available-height, calc(100vh - 10px)),
+    calc(100vh - 10px)
+  );
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--popover-foreground);
+  background: var(--popover);
+  box-shadow: none;
+  font-size: var(--font-size-tooltip);
+  line-height: var(--line-height-tooltip);
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
+  gap: 10px;
+}
+
+.viz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-value {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.viz-badge {
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  color: var(--accent-foreground);
+  background: var(--accent);
+  font-weight: var(--font-weight-medium);
+}
+
+small,
+.text-small,
+.viz-badge {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-controls &gt; .form-label {
+  display: grid;
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 0;
+}
+
+.viz-controls &gt; .form-label &gt; :is(.form-control, .form-range, .form-select) {
+  grid-column: 1 / -1;
+}
+
+.btn,
+.form-check-input,
+.form-control,
+.form-range,
+.form-select {
+  font: inherit;
+}
+
+.btn {
+  appearance: button;
+  display: inline-flex;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: var(--cursor-interaction, pointer);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.btn:is(.btn-block, .viz-tile) {
+  inline-size: 100%;
+}
+
+.btn.viz-tile {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+a.btn {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn-primary {
+  border-color: transparent;
+  color: var(--primary-foreground);
+  background: var(--foreground);
+  background-clip: padding-box;
+}
+
+.btn-primary .text-muted {
+  color: color-mix(in srgb, var(--primary-foreground) 50%, transparent);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  background-clip: padding-box;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+[data-lucide] {
+  stroke-width: 1.6;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+.form-control[type=&quot;file&quot;] {
+  padding: 0;
+  overflow: hidden;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control[type=&quot;file&quot;]::file-selector-button {
+  min-height: 26px;
+  margin-right: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--input);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: inherit;
+  font: inherit;
+}
+
+.form-control[type=&quot;file&quot;]:not(:disabled):hover::file-selector-button {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-control-color[type=&quot;color&quot;] {
+  width: 40px;
+  height: 28px;
+  padding: 3px;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-lg) - 4px);
+  corner-shape: superellipse(1.5);
+}
+
+textarea.form-control {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.form-control:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.form-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 32px 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--foreground);
+  background-color: var(--secondary);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 10px) 50%;
+  background-repeat: no-repeat;
+  background-size: 4px 4px;
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-select:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-select:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-check {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-check-input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--input);
+  color: var(--primary-foreground);
+  background-color: transparent;
+  cursor: var(--cursor-interaction, default);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;] {
+  border-color: var(--input);
+  border-radius: var(--radius-sm);
+  corner-shape: superellipse(1.5);
+  background-color: var(--secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input:not(:disabled):not(:checked):hover {
+  background-color: var(--card);
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;]:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:checked::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-foreground);
+  content: &quot;&quot;;
+  mask: var(--checkmark-image) center / 12px 12px no-repeat;
+}
+
+.form-check-input[type=&quot;radio&quot;] {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+}
+
+.form-check-input[type=&quot;radio&quot;]:checked {
+  border: 2px solid var(--primary);
+  background:
+    radial-gradient(circle, var(--primary-foreground) 0 2.5px, transparent 3px),
+    var(--primary);
+}
+
+.form-check:not(.form-switch) .form-check-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+}
+
+.form-switch .form-check-input:disabled,
+.form-switch .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-check-label {
+  color: var(--foreground);
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-switch .form-check-input {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+  box-shadow: none;
+  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+  box-shadow: var(--shadow-sm);
+  content: &quot;&quot;;
+  transform: translate(2px, -50%);
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input:checked {
+  background: var(--primary);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(14px, -50%);
+}
+
+.form-switch .form-check-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.form-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 28px;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  outline: none;
+  border: 0;
+  accent-color: var(--primary);
+  background: linear-gradient(
+      color-mix(in srgb, var(--foreground) 7%, transparent),
+      color-mix(in srgb, var(--foreground) 7%, transparent)
+    )
+    center / 100% 2px no-repeat;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-webkit-slider-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range::-moz-range-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-moz-range-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.btn:not(.btn-primary, .viz-tile):is(
+    [aria-pressed=&quot;true&quot;],
+    [aria-selected=&quot;true&quot;],
+    .is-selected
+  ) {
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+.btn.viz-tile:is([aria-pressed=&quot;true&quot;], [aria-selected=&quot;true&quot;], .is-selected) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#widget &gt; svg {
+  width: 100%;
+}
+
+.text-warning,
+.text-destructive {
+  color: var(--destructive);
+}
+
+html&gt;body{padding:0}&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div id=&quot;incidence-pinv-explorer&quot;&gt;
+  &lt;style&gt;
+    #incidence-pinv-explorer {
+      width: 100%;
+      color: var(--foreground);
+    }
+    #incidence-pinv-explorer .xp-mapline {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+      padding-block: 0.35rem 0.8rem;
+    }
+    #incidence-pinv-explorer .xp-mapline code {
+      color: var(--foreground);
+    }
+    #incidence-pinv-explorer .xp-arrow {
+      color: var(--muted-foreground);
+    }
+    #incidence-pinv-explorer .xp-section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-block: 0.85rem 0.25rem;
+    }
+    #incidence-pinv-explorer .xp-section-head h3,
+    #incidence-pinv-explorer .xp-panel h3 {
+      margin: 0;
+    }
+    #incidence-pinv-explorer .xp-matrix-axis {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    #incidence-pinv-explorer .xp-y-label {
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+      color: var(--muted-foreground);
+    }
+    #incidence-pinv-explorer .xp-matrix-svg {
+      display: block;
+      width: 100%;
+      height: 250px;
+      touch-action: none;
+    }
+    #incidence-pinv-explorer .xp-matrix-readout {
+      min-height: 1.5em;
+      text-align: center;
+      color: var(--muted-foreground);
+    }
+    #incidence-pinv-explorer .xp-two {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.1rem;
+      margin-top: 1rem;
+    }
+    #incidence-pinv-explorer .xp-panel {
+      min-width: 0;
+    }
+    #incidence-pinv-explorer .xp-graph {
+      display: block;
+      width: 100%;
+      height: auto;
+      touch-action: none;
+      margin-top: 0.4rem;
+    }
+    #incidence-pinv-explorer .xp-caption {
+      min-height: 3.2em;
+      margin-top: 0.35rem;
+      color: var(--muted-foreground);
+    }
+    #incidence-pinv-explorer .xp-legend {
+      display: flex;
+      justify-content: center;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+      color: var(--muted-foreground);
+    }
+    #incidence-pinv-explorer .xp-swatch {
+      display: inline-block;
+      width: 0.7rem;
+      height: 0.7rem;
+      margin-right: 0.25rem;
+      vertical-align: -0.05rem;
+    }
+    #incidence-pinv-explorer .xp-positive { background: var(--viz-series-1); }
+    #incidence-pinv-explorer .xp-negative { background: var(--viz-series-2); }
+    #incidence-pinv-explorer .xp-operators {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+      margin-block: 1.2rem;
+      padding-block: 0.8rem;
+      border-block: 1px solid var(--border);
+    }
+    #incidence-pinv-explorer .xp-op code {
+      display: block;
+      margin-bottom: 0.25rem;
+      color: var(--foreground);
+    }
+    #incidence-pinv-explorer .xp-op .text-muted {
+      display: block;
+    }
+    #incidence-pinv-explorer .xp-ar-line {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+      margin-block: 0.65rem;
+    }
+    #incidence-pinv-explorer .xp-ar-line .form-range {
+      flex: 1 1 180px;
+    }
+    #incidence-pinv-explorer .xp-training-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.9rem;
+      margin-top: 0.7rem;
+    }
+    #incidence-pinv-explorer .xp-training-grid code {
+      display: block;
+      margin-top: 0.2rem;
+      white-space: normal;
+    }
+    #incidence-pinv-explorer .xp-selftest {
+      margin-top: 0.8rem;
+      color: var(--muted-foreground);
+      text-align: center;
+    }
+    #incidence-pinv-explorer svg text {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      fill: var(--foreground);
+      pointer-events: none;
+    }
+    #incidence-pinv-explorer svg .xp-small-svg-text {
+      font-size: calc(var(--font-size-base) * 0.68);
+    }
+    #incidence-pinv-explorer svg .xp-node-svg-text {
+      font-size: calc(var(--font-size-base) * 0.72);
+      font-weight: 500;
+    }
+    @media (max-width: 600px) {
+      #incidence-pinv-explorer .xp-two,
+      #incidence-pinv-explorer .xp-operators,
+      #incidence-pinv-explorer .xp-training-grid {
+        grid-template-columns: 1fr;
+      }
+      #incidence-pinv-explorer .xp-matrix-svg {
+        height: 220px;
+      }
+    }
+  &lt;/style&gt;
+
+  &lt;div class=&quot;xp-mapline&quot; aria-label=&quot;The incidence pseudoinverse maps nodal current to edge flow&quot;&gt;
+    &lt;span class=&quot;viz-badge&quot;&gt;nodal current &lt;code&gt;b&lt;/code&gt;&lt;/span&gt;
+    &lt;span class=&quot;xp-arrow&quot;&gt;&amp;#8594;&lt;/span&gt;
+    &lt;code&gt;X = (B&lt;sup&gt;T&lt;/sup&gt;)&lt;sup&gt;+&lt;/sup&gt; = BL&lt;sup&gt;+&lt;/sup&gt;&lt;/code&gt;
+    &lt;span class=&quot;xp-arrow&quot;&gt;&amp;#8594;&lt;/span&gt;
+    &lt;span class=&quot;viz-badge&quot;&gt;minimum-energy edge flow &lt;code&gt;f&lt;/code&gt;&lt;/span&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;viz-controls&quot; aria-label=&quot;Grid and matrix selection controls&quot;&gt;
+    &lt;label class=&quot;form-label&quot; for=&quot;xp-side&quot;&gt;Grid
+      &lt;select class=&quot;form-select&quot; id=&quot;xp-side&quot;&gt;
+        &lt;option value=&quot;3&quot;&gt;3 x 3&lt;/option&gt;
+        &lt;option value=&quot;4&quot;&gt;4 x 4&lt;/option&gt;
+        &lt;option value=&quot;5&quot; selected&gt;5 x 5&lt;/option&gt;
+        &lt;option value=&quot;6&quot;&gt;6 x 6&lt;/option&gt;
+      &lt;/select&gt;
+    &lt;/label&gt;
+    &lt;label class=&quot;form-label&quot; for=&quot;xp-column&quot;&gt;Column / source vertex
+      &lt;select class=&quot;form-select&quot; id=&quot;xp-column&quot;&gt;&lt;/select&gt;
+    &lt;/label&gt;
+    &lt;label class=&quot;form-label&quot; for=&quot;xp-sink&quot;&gt;Sink vertex
+      &lt;select class=&quot;form-select&quot; id=&quot;xp-sink&quot;&gt;&lt;/select&gt;
+    &lt;/label&gt;
+    &lt;label class=&quot;form-label&quot; for=&quot;xp-row&quot;&gt;Row / oriented edge
+      &lt;select class=&quot;form-select&quot; id=&quot;xp-row&quot;&gt;&lt;/select&gt;
+    &lt;/label&gt;
+    &lt;label class=&quot;form-check form-switch&quot;&gt;
+      &lt;input class=&quot;form-check-input&quot; id=&quot;xp-pair&quot; type=&quot;checkbox&quot; checked&gt;
+      &lt;span class=&quot;form-check-label&quot;&gt;physical source-sink pair&lt;/span&gt;
+    &lt;/label&gt;
+    &lt;label class=&quot;form-check form-switch&quot;&gt;
+      &lt;input class=&quot;form-check-input&quot; id=&quot;xp-labels&quot; type=&quot;checkbox&quot; checked&gt;
+      &lt;span class=&quot;form-check-label&quot;&gt;numeric values&lt;/span&gt;
+    &lt;/label&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;xp-section-head&quot;&gt;
+    &lt;h3 id=&quot;xp-matrix-title&quot;&gt;Matrix X&lt;/h3&gt;
+    &lt;span class=&quot;text-muted&quot;&gt;drag across the matrix to select one row and one column&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;xp-matrix-axis&quot;&gt;
+    &lt;span class=&quot;xp-y-label text-small&quot;&gt;rows = output edges&lt;/span&gt;
+    &lt;div&gt;
+      &lt;div class=&quot;text-small text-muted&quot; style=&quot;text-align:center&quot;&gt;columns = input vertices&lt;/div&gt;
+      &lt;svg id=&quot;xp-matrix&quot; class=&quot;xp-matrix-svg&quot; role=&quot;img&quot; aria-labelledby=&quot;xp-matrix-title xp-matrix-desc&quot;&gt;&lt;/svg&gt;
+      &lt;span id=&quot;xp-matrix-desc&quot; class=&quot;sr-only&quot;&gt;Heatmap of the edge-by-vertex incidence pseudoinverse. The selected row is an edge and the selected column is a vertex.&lt;/span&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div id=&quot;xp-matrix-readout&quot; class=&quot;xp-matrix-readout text-small&quot; aria-live=&quot;polite&quot;&gt;&lt;/div&gt;
+
+  &lt;div class=&quot;xp-two&quot;&gt;
+    &lt;section class=&quot;xp-panel&quot; aria-labelledby=&quot;xp-flow-title&quot;&gt;
+      &lt;div class=&quot;xp-section-head&quot;&gt;
+        &lt;h3 id=&quot;xp-flow-title&quot;&gt;Flow: a column of X&lt;/h3&gt;
+        &lt;span class=&quot;text-small text-muted&quot;&gt;drag s or t&lt;/span&gt;
+      &lt;/div&gt;
+      &lt;svg id=&quot;xp-flow&quot; class=&quot;xp-graph&quot; viewBox=&quot;0 0 360 360&quot; role=&quot;img&quot; aria-labelledby=&quot;xp-flow-title xp-flow-desc&quot;&gt;&lt;/svg&gt;
+      &lt;div id=&quot;xp-flow-desc&quot; class=&quot;xp-caption text-small&quot;&gt;&lt;/div&gt;
+    &lt;/section&gt;
+
+    &lt;section class=&quot;xp-panel&quot; aria-labelledby=&quot;xp-voltage-title&quot;&gt;
+      &lt;div class=&quot;xp-section-head&quot;&gt;
+        &lt;h3 id=&quot;xp-voltage-title&quot;&gt;Voltage: a row of X&lt;/h3&gt;
+        &lt;label class=&quot;form-label&quot; for=&quot;xp-voltage-mode&quot;&gt;View
+          &lt;select class=&quot;form-select&quot; id=&quot;xp-voltage-mode&quot;&gt;
+            &lt;option value=&quot;row&quot; selected&gt;row e of X (edge dipole)&lt;/option&gt;
+            &lt;option value=&quot;green&quot;&gt;column i of L+ (balanced impulse)&lt;/option&gt;
+            &lt;option value=&quot;pair&quot;&gt;L+ source-sink voltage&lt;/option&gt;
+            &lt;option value=&quot;richardson&quot;&gt;AR / Richardson estimate&lt;/option&gt;
+          &lt;/select&gt;
+        &lt;/label&gt;
+      &lt;/div&gt;
+      &lt;svg id=&quot;xp-voltage&quot; class=&quot;xp-graph&quot; viewBox=&quot;0 0 360 360&quot; role=&quot;img&quot; aria-labelledby=&quot;xp-voltage-title xp-voltage-desc&quot;&gt;&lt;/svg&gt;
+      &lt;div id=&quot;xp-voltage-desc&quot; class=&quot;xp-caption text-small&quot;&gt;&lt;/div&gt;
+    &lt;/section&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;xp-legend text-small&quot; aria-label=&quot;Signed value legend&quot;&gt;
+    &lt;span&gt;&lt;span class=&quot;xp-swatch xp-positive&quot;&gt;&lt;/span&gt;positive&lt;/span&gt;
+    &lt;span&gt;&lt;span class=&quot;xp-swatch xp-negative&quot;&gt;&lt;/span&gt;negative&lt;/span&gt;
+    &lt;span&gt;arrow direction = physical flow direction&lt;/span&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;xp-operators&quot; aria-label=&quot;Three related pseudoinverse maps&quot;&gt;
+    &lt;div class=&quot;xp-op&quot;&gt;
+      &lt;code&gt;L&lt;sup&gt;+&lt;/sup&gt;: vertex &amp;#8594; vertex&lt;/code&gt;
+      &lt;span&gt;current to voltage&lt;/span&gt;
+      &lt;span class=&quot;text-muted text-small&quot;&gt;Green operator; modal gain 1/&amp;sigma;&lt;sup&gt;2&lt;/sup&gt;&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;xp-op&quot;&gt;
+      &lt;code&gt;X = (B&lt;sup&gt;T&lt;/sup&gt;)&lt;sup&gt;+&lt;/sup&gt;: vertex &amp;#8594; edge&lt;/code&gt;
+      &lt;span&gt;current to minimum-energy flow&lt;/span&gt;
+      &lt;span class=&quot;text-muted text-small&quot;&gt;columns are flow responses; rows are dipole voltage fields&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;xp-op&quot;&gt;
+      &lt;code&gt;B&lt;sup&gt;+&lt;/sup&gt; = X&lt;sup&gt;T&lt;/sup&gt;: edge &amp;#8594; vertex&lt;/code&gt;
+      &lt;span&gt;least-squares integration&lt;/span&gt;
+      &lt;span class=&quot;text-muted text-small&quot;&gt;a column fits one edge-drop impulse; modal gain 1/&amp;sigma;&lt;/span&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;card&quot; aria-labelledby=&quot;xp-ar-title&quot;&gt;
+    &lt;h3 id=&quot;xp-ar-title&quot;&gt;Predictor &amp;#8596; solver recurrence&lt;/h3&gt;
+    &lt;div&gt;&lt;code&gt;x&lt;sub&gt;k+1&lt;/sub&gt; = (I - &amp;alpha;L)x&lt;sub&gt;k&lt;/sub&gt; + &amp;alpha;b&lt;/code&gt; is a vector AR(1); its first K steps form a finite-impulse-response approximation to &lt;code&gt;L&lt;sup&gt;+&lt;/sup&gt;b&lt;/code&gt;.&lt;/div&gt;
+    &lt;div class=&quot;xp-ar-line&quot;&gt;
+      &lt;label class=&quot;form-label&quot; for=&quot;xp-steps&quot;&gt;Richardson steps: &lt;strong id=&quot;xp-step-value&quot;&gt;8&lt;/strong&gt;&lt;/label&gt;
+      &lt;input class=&quot;form-range&quot; id=&quot;xp-steps&quot; type=&quot;range&quot; min=&quot;0&quot; max=&quot;60&quot; step=&quot;1&quot; value=&quot;8&quot;&gt;
+      &lt;span id=&quot;xp-ar-status&quot; class=&quot;text-small text-muted&quot;&gt;&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;text-small text-muted&quot;&gt;Choose “AR / Richardson estimate” in the voltage view to watch the truncated impulse response converge. The true residual remains the stopping test.&lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;card&quot; aria-labelledby=&quot;xp-data-title&quot; style=&quot;margin-top:1rem&quot;&gt;
+    &lt;div class=&quot;xp-section-head&quot;&gt;
+      &lt;h3 id=&quot;xp-data-title&quot;&gt;What is one statistical data point?&lt;/h3&gt;
+      &lt;label class=&quot;form-label&quot; for=&quot;xp-data-mode&quot;&gt;Learning task
+        &lt;select class=&quot;form-select&quot; id=&quot;xp-data-mode&quot;&gt;
+          &lt;option value=&quot;correction&quot; selected&gt;solver correction / preconditioner&lt;/option&gt;
+          &lt;option value=&quot;whole&quot;&gt;whole-solve warm start&lt;/option&gt;
+          &lt;option value=&quot;flow&quot;&gt;edge-flow predictor&lt;/option&gt;
+          &lt;option value=&quot;integration&quot;&gt;edge-data integration&lt;/option&gt;
+          &lt;option value=&quot;coarse&quot;&gt;hierarchical coarse space&lt;/option&gt;
+        &lt;/select&gt;
+      &lt;/label&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;xp-training-grid&quot;&gt;
+      &lt;div&gt;&lt;span class=&quot;text-small text-muted&quot;&gt;input&lt;/span&gt;&lt;code id=&quot;xp-data-input&quot;&gt;&lt;/code&gt;&lt;/div&gt;
+      &lt;div&gt;&lt;span class=&quot;text-small text-muted&quot;&gt;target&lt;/span&gt;&lt;code id=&quot;xp-data-target&quot;&gt;&lt;/code&gt;&lt;/div&gt;
+      &lt;div&gt;&lt;span class=&quot;text-small text-muted&quot;&gt;safe solver role&lt;/span&gt;&lt;code id=&quot;xp-data-use&quot;&gt;&lt;/code&gt;&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div id=&quot;xp-data-note&quot; class=&quot;text-small text-muted&quot; style=&quot;margin-top:0.7rem&quot;&gt;&lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;div id=&quot;xp-selftest&quot; class=&quot;xp-selftest text-small&quot; role=&quot;status&quot;&gt;&lt;/div&gt;
+
+  &lt;script&gt;
+    (() =&gt; {
+      &quot;use strict&quot;;
+      const root = document.getElementById(&quot;incidence-pinv-explorer&quot;);
+      const NS = &quot;http://www.w3.org/2000/svg&quot;;
+      const $ = (selector) =&gt; root.querySelector(selector);
+      const controls = {
+        side: $(&quot;#xp-side&quot;), source: $(&quot;#xp-column&quot;), sink: $(&quot;#xp-sink&quot;),
+        edge: $(&quot;#xp-row&quot;), pair: $(&quot;#xp-pair&quot;), labels: $(&quot;#xp-labels&quot;),
+        voltageMode: $(&quot;#xp-voltage-mode&quot;), steps: $(&quot;#xp-steps&quot;),
+        dataMode: $(&quot;#xp-data-mode&quot;)
+      };
+      const views = {
+        matrix: $(&quot;#xp-matrix&quot;), flow: $(&quot;#xp-flow&quot;), voltage: $(&quot;#xp-voltage&quot;)
+      };
+      const state = {
+        side: 5, source: 0, sink: 24, edge: 20, pair: true, labels: true,
+        voltageMode: &quot;row&quot;, steps: 8, dataMode: &quot;correction&quot;,
+        matrixDragging: false, flowDrag: null, voltageDrag: null, hoverCell: null
+      };
+      let model = null;
+
+      function svgEl(name, attrs = {}, text = null) {
+        const node = document.createElementNS(NS, name);
+        for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+        if (text !== null) node.textContent = text;
+        return node;
+      }
+
+      function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
+      function zeros(rows, cols) {
+        return Array.from({length: rows}, () =&gt; new Float64Array(cols));
+      }
+      function dot(a, b) {
+        let s = 0;
+        for (let i = 0; i &lt; a.length; i++) s += a[i] * b[i];
+        return s;
+      }
+      function norm(a) { return Math.sqrt(dot(a, a)); }
+      function matVec(A, x) {
+        const y = new Float64Array(A.length);
+        for (let i = 0; i &lt; A.length; i++) y[i] = dot(A[i], x);
+        return y;
+      }
+      function invert(A) {
+        const n = A.length;
+        const aug = Array.from({length: n}, (_, i) =&gt; {
+          const row = new Float64Array(2 * n);
+          row.set(A[i]);
+          row[n + i] = 1;
+          return row;
+        });
+        for (let col = 0; col &lt; n; col++) {
+          let pivot = col;
+          for (let r = col + 1; r &lt; n; r++) {
+            if (Math.abs(aug[r][col]) &gt; Math.abs(aug[pivot][col])) pivot = r;
+          }
+          if (Math.abs(aug[pivot][col]) &lt; 1e-13) throw new Error(&quot;singular matrix&quot;);
+          [aug[col], aug[pivot]] = [aug[pivot], aug[col]];
+          const scale = aug[col][col];
+          for (let j = 0; j &lt; 2 * n; j++) aug[col][j] /= scale;
+          for (let r = 0; r &lt; n; r++) {
+            if (r === col) continue;
+            const factor = aug[r][col];
+            if (Math.abs(factor) &lt; 1e-18) continue;
+            for (let j = 0; j &lt; 2 * n; j++) aug[r][j] -= factor * aug[col][j];
+          }
+        }
+        return aug.map(row =&gt; Float64Array.from(row.slice(n)));
+      }
+
+      function buildGrid(side) {
+        const n = side * side;
+        const vertices = [];
+        for (let r = 0; r &lt; side; r++) {
+          for (let c = 0; c &lt; side; c++) vertices.push({i: r * side + c, r, c});
+        }
+        const edges = [];
+        for (let r = 0; r &lt; side; r++) {
+          for (let c = 0; c &lt; side - 1; c++) {
+            edges.push({i: edges.length, u: r * side + c, v: r * side + c + 1, kind: &quot;H&quot;});
+          }
+        }
+        for (let r = 0; r &lt; side - 1; r++) {
+          for (let c = 0; c &lt; side; c++) {
+            edges.push({i: edges.length, u: r * side + c, v: (r + 1) * side + c, kind: &quot;V&quot;});
+          }
+        }
+        const L = zeros(n, n);
+        for (const e of edges) {
+          L[e.u][e.u] += 1; L[e.v][e.v] += 1;
+          L[e.u][e.v] -= 1; L[e.v][e.u] -= 1;
+        }
+        const shifted = zeros(n, n);
+        for (let i = 0; i &lt; n; i++) {
+          for (let j = 0; j &lt; n; j++) shifted[i][j] = L[i][j] + 1 / n;
+        }
+        const shiftedInv = invert(shifted);
+        const Lp = zeros(n, n);
+        for (let i = 0; i &lt; n; i++) {
+          for (let j = 0; j &lt; n; j++) Lp[i][j] = shiftedInv[i][j] - 1 / n;
+        }
+        const X = zeros(edges.length, n);
+        for (const e of edges) {
+          for (let j = 0; j &lt; n; j++) X[e.i][j] = Lp[e.u][j] - Lp[e.v][j];
+        }
+        return {side, n, m: edges.length, vertices, edges, L, Lp, X};
+      }
+
+      function vertexName(i) {
+        const v = model.vertices[i];
+        return `v${i} (${v.r + 1},${v.c + 1})`;
+      }
+      function edgeName(i) {
+        const e = model.edges[i];
+        return `e${i}: v${e.u} -&gt; v${e.v}`;
+      }
+      function short(x) {
+        if (Math.abs(x) &lt; 5e-5) return &quot;0&quot;;
+        if (Math.abs(x) &gt;= 10) return x.toFixed(1);
+        return x.toFixed(3).replace(/0+$/, &quot;&quot;).replace(/\.$/, &quot;&quot;);
+      }
+      function signed(x) { return `${x &gt;= 0 ? &quot;+&quot; : &quot;&quot;}${short(x)}`; }
+
+      function repopulateControls() {
+        controls.source.replaceChildren();
+        controls.sink.replaceChildren();
+        for (const v of model.vertices) {
+          const a = document.createElement(&quot;option&quot;);
+          a.value = v.i; a.textContent = vertexName(v.i);
+          controls.source.append(a);
+          const b = a.cloneNode(true);
+          controls.sink.append(b);
+        }
+        controls.edge.replaceChildren();
+        for (const e of model.edges) {
+          const option = document.createElement(&quot;option&quot;);
+          option.value = e.i; option.textContent = edgeName(e.i);
+          controls.edge.append(option);
+        }
+        syncControls();
+      }
+      function syncControls() {
+        controls.source.value = state.source;
+        controls.sink.value = state.sink;
+        controls.edge.value = state.edge;
+        controls.pair.checked = state.pair;
+        controls.labels.checked = state.labels;
+        controls.voltageMode.value = state.voltageMode;
+        controls.steps.value = state.steps;
+        $(&quot;#xp-step-value&quot;).textContent = state.steps;
+      }
+
+      function build(side) {
+        model = buildGrid(side);
+        state.side = side;
+        state.source = 0;
+        state.sink = model.n - 1;
+        state.edge = Math.min(Math.floor(model.m / 2), model.m - 1);
+        repopulateControls();
+        renderAll();
+      }
+
+      function maxAbs(values) {
+        let m = 0;
+        for (const x of values) m = Math.max(m, Math.abs(x));
+        return m || 1;
+      }
+      function signedFill(node, value, scale, floor = 0.08) {
+        node.setAttribute(&quot;fill&quot;, value &gt;= 0 ? &quot;var(--viz-series-1)&quot; : &quot;var(--viz-series-2)&quot;);
+        node.setAttribute(&quot;fill-opacity&quot;, floor + (0.88 - floor) * Math.abs(value) / scale);
+      }
+
+      function selectedMatrixReadout(edge = state.edge, col = state.source) {
+        const value = model.X[edge][col];
+        $(&quot;#xp-matrix-readout&quot;).innerHTML =
+          `&lt;code&gt;X[e${edge},v${col}] = ${signed(value)}&lt;/code&gt; &amp;nbsp; ` +
+          `flow on ${edgeName(edge)} from balanced impulse at ${vertexName(col)}; ` +
+          `equivalently voltage at v${col} from the e${edge} endpoint dipole.`;
+      }
+
+      function renderMatrix() {
+        const svg = views.matrix;
+        svg.replaceChildren();
+        svg.setAttribute(&quot;viewBox&quot;, `0 0 ${model.n} ${model.m}`);
+        svg.setAttribute(&quot;preserveAspectRatio&quot;, &quot;none&quot;);
+        const flat = model.X.flatMap(row =&gt; Array.from(row));
+        const scale = maxAbs(flat);
+        const frag = document.createDocumentFragment();
+        for (let e = 0; e &lt; model.m; e++) {
+          for (let i = 0; i &lt; model.n; i++) {
+            const rect = svgEl(&quot;rect&quot;, {x: i + 0.02, y: e + 0.02, width: 0.96, height: 0.96});
+            signedFill(rect, model.X[e][i], scale, 0.05);
+            frag.append(rect);
+          }
+        }
+        frag.append(svgEl(&quot;rect&quot;, {
+          x: state.source + 0.05, y: 0.05, width: 0.9, height: model.m - 0.1,
+          fill: &quot;none&quot;, stroke: &quot;var(--foreground)&quot;, &quot;stroke-width&quot;: 0.16
+        }));
+        if (state.pair) {
+          frag.append(svgEl(&quot;rect&quot;, {
+            x: state.sink + 0.12, y: 0.12, width: 0.76, height: model.m - 0.24,
+            fill: &quot;none&quot;, stroke: &quot;var(--viz-series-2)&quot;, &quot;stroke-width&quot;: 0.13,
+            &quot;stroke-dasharray&quot;: &quot;0.35 0.25&quot;
+          }));
+        }
+        frag.append(svgEl(&quot;rect&quot;, {
+          x: 0.05, y: state.edge + 0.05, width: model.n - 0.1, height: 0.9,
+          fill: &quot;none&quot;, stroke: &quot;var(--foreground)&quot;, &quot;stroke-width&quot;: 0.16
+        }));
+        svg.append(frag);
+        $(&quot;#xp-matrix-title&quot;).textContent = `X = (B^T)^+ = B L^+   [${model.m} edges x ${model.n} vertices]`;
+        if (!state.hoverCell) selectedMatrixReadout();
+      }
+
+      function graphGeometry() {
+        const margin = 30;
+        const span = 300;
+        const step = span / (model.side - 1);
+        const nodeRadius = clamp(14 - (model.side - 3) * 1.4, 9, 14);
+        const pos = model.vertices.map(v =&gt; ({x: margin + v.c * step, y: margin + v.r * step}));
+        return {pos, nodeRadius};
+      }
+      function graphPoint(event, svg) {
+        const rect = svg.getBoundingClientRect();
+        return {
+          x: (event.clientX - rect.left) / rect.width * 360,
+          y: (event.clientY - rect.top) / rect.height * 360
+        };
+      }
+      function nearestVertex(point) {
+        const {pos} = graphGeometry();
+        let best = 0, bestD = Infinity;
+        for (let i = 0; i &lt; pos.length; i++) {
+          const d = (point.x - pos[i].x) ** 2 + (point.y - pos[i].y) ** 2;
+          if (d &lt; bestD) { bestD = d; best = i; }
+        }
+        return best;
+      }
+      function pointSegmentDistance(p, a, b) {
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const den = dx * dx + dy * dy;
+        const t = den ? clamp(((p.x - a.x) * dx + (p.y - a.y) * dy) / den, 0, 1) : 0;
+        return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+      }
+      function nearestEdge(point) {
+        const {pos} = graphGeometry();
+        let best = 0, bestD = Infinity;
+        for (const e of model.edges) {
+          const d = pointSegmentDistance(point, pos[e.u], pos[e.v]);
+          if (d &lt; bestD) { bestD = d; best = e.i; }
+        }
+        return best;
+      }
+
+      function addBaseGraph(svg, pos) {
+        for (const e of model.edges) {
+          svg.append(svgEl(&quot;line&quot;, {
+            x1: pos[e.u].x, y1: pos[e.u].y, x2: pos[e.v].x, y2: pos[e.v].y,
+            stroke: &quot;var(--border)&quot;, &quot;stroke-width&quot;: 1.4
+          }));
+        }
+      }
+      function addValueLabel(svg, x, y, text) {
+        const width = Math.max(18, text.length * 6.1 + 5);
+        svg.append(svgEl(&quot;rect&quot;, {
+          x: x - width / 2, y: y - 6.5, width, height: 13,
+          fill: &quot;var(--background)&quot;, &quot;fill-opacity&quot;: 0.9
+        }));
+        svg.append(svgEl(&quot;text&quot;, {
+          x, y: y + 3.2, &quot;text-anchor&quot;: &quot;middle&quot;, class: &quot;xp-small-svg-text&quot;
+        }, text));
+      }
+      function addTerminalNode(svg, p, i, role, nodeRadius) {
+        const circle = svgEl(&quot;circle&quot;, {
+          cx: p.x, cy: p.y, r: nodeRadius,
+          fill: role === &quot;source&quot; ? &quot;var(--viz-series-1)&quot; : role === &quot;sink&quot; ? &quot;var(--viz-series-2)&quot; : &quot;var(--background)&quot;,
+          &quot;fill-opacity&quot;: role ? 0.28 : 1,
+          stroke: role === &quot;source&quot; ? &quot;var(--viz-series-1)&quot; : role === &quot;sink&quot; ? &quot;var(--viz-series-2)&quot; : &quot;var(--border)&quot;,
+          &quot;stroke-width&quot;: role ? 2.4 : 1.5
+        });
+        svg.append(circle);
+        const label = role === &quot;source&quot; ? &quot;s&quot; : role === &quot;sink&quot; ? &quot;t&quot; : (state.labels ? String(i) : &quot;&quot;);
+        if (label) svg.append(svgEl(&quot;text&quot;, {
+          x: p.x, y: p.y + 3.6, &quot;text-anchor&quot;: &quot;middle&quot;, class: &quot;xp-node-svg-text&quot;
+        }, label));
+      }
+
+      function flowVector() {
+        const f = new Float64Array(model.m);
+        for (let e = 0; e &lt; model.m; e++) {
+          f[e] = model.X[e][state.source] - (state.pair ? model.X[e][state.sink] : 0);
+          if (Math.abs(f[e]) &lt; 1e-12) f[e] = 0;
+        }
+        return f;
+      }
+      function renderFlow() {
+        const svg = views.flow;
+        svg.replaceChildren();
+        const {pos, nodeRadius} = graphGeometry();
+        addBaseGraph(svg, pos);
+        const f = flowVector();
+        const scale = maxAbs(f);
+        for (const e of model.edges) {
+          const value = f[e.i];
+          if (!value) continue;
+          let a = pos[e.u], b = pos[e.v];
+          if (value &lt; 0) [a, b] = [b, a];
+          const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
+          const ux = dx / len, uy = dy / len;
+          const start = {x: a.x + nodeRadius * ux, y: a.y + nodeRadius * uy};
+          const tip = {x: b.x - nodeRadius * ux, y: b.y - nodeRadius * uy};
+          const ratio = Math.abs(value) / scale;
+          const width = 1.2 + 5 * ratio;
+          const color = &quot;var(--viz-series-1)&quot;;
+          svg.append(svgEl(&quot;line&quot;, {
+            x1: start.x, y1: start.y, x2: tip.x, y2: tip.y,
+            stroke: color, &quot;stroke-width&quot;: width, &quot;stroke-linecap&quot;: &quot;round&quot;,
+            &quot;stroke-opacity&quot;: 0.35 + 0.65 * ratio
+          }));
+          const al = 6 + width, aw = 3 + width * 0.65;
+          const bx = tip.x - al * ux, by = tip.y - al * uy;
+          svg.append(svgEl(&quot;polygon&quot;, {
+            points: `${tip.x},${tip.y} ${bx - aw * uy},${by + aw * ux} ${bx + aw * uy},${by - aw * ux}`,
+            fill: color, &quot;fill-opacity&quot;: 0.35 + 0.65 * ratio
+          }));
+          if (state.labels) {
+            const mid = {x: (pos[e.u].x + pos[e.v].x) / 2, y: (pos[e.u].y + pos[e.v].y) / 2};
+            const odx = (pos[e.v].x - pos[e.u].x) / len;
+            const ody = (pos[e.v].y - pos[e.u].y) / len;
+            addValueLabel(svg, mid.x - 8 * ody, mid.y + 8 * odx, short(Math.abs(value)));
+          }
+        }
+        for (let i = 0; i &lt; model.n; i++) {
+          const role = i === state.source ? &quot;source&quot; : (state.pair &amp;&amp; i === state.sink ? &quot;sink&quot; : null);
+          addTerminalNode(svg, pos[i], i, role, nodeRadius);
+        }
+        const caption = $(&quot;#xp-flow-desc&quot;);
+        if (state.pair) {
+          const voltage = exactPairVoltage();
+          const energy = dot(f, f);
+          const resistance = voltage[state.source] - voltage[state.sink];
+          caption.innerHTML = `&lt;code&gt;f = X(e&lt;sub&gt;${state.source}&lt;/sub&gt; - e&lt;sub&gt;${state.sink}&lt;/sub&gt;) = col&lt;sub&gt;${state.source}&lt;/sub&gt;(X) - col&lt;sub&gt;${state.sink}&lt;/sub&gt;(X)&lt;/code&gt;. ` +
+            `Divergence is exactly +1 at s and -1 at t; ` +
+            `&lt;code&gt;||f||&lt;sup&gt;2&lt;/sup&gt; = R&lt;sub&gt;eff&lt;/sub&gt; = ${short(energy)}&lt;/code&gt; ` +
+            `(voltage-drop check ${short(resistance)}). Drag either terminal.`;
+        } else {
+          caption.innerHTML = `&lt;code&gt;f = Xe&lt;sub&gt;${state.source}&lt;/sub&gt; = col&lt;sub&gt;${state.source}&lt;/sub&gt;(X)&lt;/code&gt;. ` +
+            `This single column has divergence e&lt;sub&gt;${state.source}&lt;/sub&gt; - (1/${model.n})1: one injection with uniform balancing withdrawal.`;
+        }
+      }
+
+      function sourceVector() {
+        const b = new Float64Array(model.n);
+        b[state.source] = 1;
+        b[state.sink] = -1;
+        return b;
+      }
+      function exactPairVoltage() {
+        const b = sourceVector();
+        return matVec(model.Lp, b);
+      }
+      function richardson() {
+        const b = sourceVector();
+        const x = new Float64Array(model.n);
+        const alpha = 0.12;
+        let r = Float64Array.from(b);
+        for (let k = 0; k &lt; state.steps; k++) {
+          for (let i = 0; i &lt; model.n; i++) x[i] += alpha * r[i];
+          const Lx = matVec(model.L, x);
+          for (let i = 0; i &lt; model.n; i++) r[i] = b[i] - Lx[i];
+        }
+        const exact = exactPairVoltage();
+        const err = new Float64Array(model.n);
+        for (let i = 0; i &lt; model.n; i++) err[i] = exact[i] - x[i];
+        const Lerr = matVec(model.L, err);
+        const Lexact = matVec(model.L, exact);
+        const energyRel = Math.sqrt(Math.max(0, dot(err, Lerr)) / Math.max(1e-30, dot(exact, Lexact)));
+        return {x, residualRel: norm(r) / norm(b), energyRel, alpha};
+      }
+      function voltageVector() {
+        if (state.voltageMode === &quot;row&quot;) return Float64Array.from(model.X[state.edge]);
+        if (state.voltageMode === &quot;green&quot;) {
+          return Float64Array.from(model.Lp.map(row =&gt; row[state.source]));
+        }
+        if (state.voltageMode === &quot;pair&quot;) return exactPairVoltage();
+        return richardson().x;
+      }
+      function renderVoltage() {
+        const svg = views.voltage;
+        svg.replaceChildren();
+        const {pos, nodeRadius} = graphGeometry();
+        addBaseGraph(svg, pos);
+        const values = voltageVector();
+        const scale = maxAbs(values);
+        if (state.voltageMode === &quot;row&quot;) {
+          const e = model.edges[state.edge];
+          svg.append(svgEl(&quot;line&quot;, {
+            x1: pos[e.u].x, y1: pos[e.u].y, x2: pos[e.v].x, y2: pos[e.v].y,
+            stroke: &quot;var(--foreground)&quot;, &quot;stroke-width&quot;: 4, &quot;stroke-linecap&quot;: &quot;round&quot;
+          }));
+        }
+        for (let i = 0; i &lt; model.n; i++) {
+          const circle = svgEl(&quot;circle&quot;, {
+            cx: pos[i].x, cy: pos[i].y, r: nodeRadius,
+            stroke: &quot;var(--border)&quot;, &quot;stroke-width&quot;: 1.5
+          });
+          signedFill(circle, values[i], scale, 0.12);
+          svg.append(circle);
+          if (state.labels) svg.append(svgEl(&quot;text&quot;, {
+            x: pos[i].x, y: pos[i].y + 3.2, &quot;text-anchor&quot;: &quot;middle&quot;, class: &quot;xp-small-svg-text&quot;
+          }, short(values[i])));
+        }
+        const caption = $(&quot;#xp-voltage-desc&quot;);
+        if (state.voltageMode === &quot;row&quot;) {
+          const e = model.edges[state.edge];
+          svg.append(svgEl(&quot;text&quot;, {x: pos[e.u].x - 12, y: pos[e.u].y - 12, class: &quot;xp-node-svg-text&quot;}, &quot;+&quot;));
+          svg.append(svgEl(&quot;text&quot;, {x: pos[e.v].x + 8, y: pos[e.v].y + 16, class: &quot;xp-node-svg-text&quot;}, &quot;−&quot;));
+          caption.innerHTML = `&lt;code&gt;row&lt;sub&gt;${state.edge}&lt;/sub&gt;(X)&lt;sup&gt;T&lt;/sup&gt; = L&lt;sup&gt;+&lt;/sup&gt;(e&lt;sub&gt;${e.u}&lt;/sub&gt;-e&lt;sub&gt;${e.v}&lt;/sub&gt;)&lt;/code&gt;. ` +
+            `This is the voltage field of the selected oriented edge dipole; drag across edges.`;
+        } else if (state.voltageMode === &quot;green&quot;) {
+          caption.innerHTML = `&lt;code&gt;v = L&lt;sup&gt;+&lt;/sup&gt;e&lt;sub&gt;${state.source}&lt;/sub&gt;&lt;/code&gt; solves ` +
+            `&lt;code&gt;Lv = e&lt;sub&gt;${state.source}&lt;/sub&gt; - (1/${model.n})1&lt;/code&gt;: a balanced Green column, not an isolated current impulse.`;
+        } else if (state.voltageMode === &quot;pair&quot;) {
+          caption.innerHTML = `&lt;code&gt;v = L&lt;sup&gt;+&lt;/sup&gt;(e&lt;sub&gt;${state.source}&lt;/sub&gt;-e&lt;sub&gt;${state.sink}&lt;/sub&gt;)&lt;/code&gt;. ` +
+            `The drop v&lt;sub&gt;s&lt;/sub&gt;-v&lt;sub&gt;t&lt;/sub&gt; equals effective resistance and the flow energy.`;
+        } else {
+          const info = richardson();
+          caption.innerHTML = `&lt;code&gt;x&lt;sub&gt;${state.steps}&lt;/sub&gt; = 0.12 &amp;Sigma;&lt;sub&gt;j&amp;lt;${state.steps}&lt;/sub&gt;(I-0.12L)&lt;sup&gt;j&lt;/sup&gt;b&lt;/code&gt;. ` +
+            `This truncated impulse response approximates the exact pair voltage.`;
+          $(&quot;#xp-ar-status&quot;).textContent = `relative residual ${short(info.residualRel)} · relative energy error ${short(info.energyRel)}`;
+        }
+        if (state.voltageMode !== &quot;richardson&quot;) {
+          const info = richardson();
+          $(&quot;#xp-ar-status&quot;).textContent = `at K=${state.steps}: relative residual ${short(info.residualRel)} · energy error ${short(info.energyRel)}`;
+        }
+      }
+
+      const trainingCopy = {
+        correction: {
+          input: &quot;r_k = b - L x_k&quot;,
+          target: &quot;delta x_k = x* - x_k = L+ r_k&quot;,
+          use: &quot;learn q_theta(r); apply as correction or preconditioner&quot;,
+          note: &quot;Recommended: record residual/correction pairs throughout baseline solves, especially late residuals. Train with energy loss ||B(q_theta(r)-delta x)||^2 and always stop on the true residual.&quot;
+        },
+        whole: {
+          input: &quot;representative balanced right-hand side b_s&quot;,
+          target: &quot;x*_s = L+ b_s&quot;,
+          use: &quot;warm start x_0 = q_theta(b)&quot;,
+          note: &quot;A warm start is low risk: project out the constant mode, recompute r_0=b-Lx_0, then let the exact solver remove prediction error.&quot;
+        },
+        flow: {
+          input: &quot;balanced nodal current b_s&quot;,
+          target: &quot;f*_s = X b_s = B L+ b_s&quot;,
+          use: &quot;predict edge flow; check B^T f = b&quot;,
+          note: &quot;Predicting a node correction and setting f=Bq_theta(b) guarantees a gradient flow. Direct edge predictions need divergence and cycle-consistency safeguards.&quot;
+        },
+        integration: {
+          input: &quot;possibly inconsistent edge-drop data y_s&quot;,
+          target: &quot;x*_s = B+ y_s = X^T y_s&quot;,
+          use: &quot;least-squares integration of edge observations&quot;,
+          note: &quot;This is a different learning problem from Ax=b: the normal equation is Lx=B^T y, and cycle-inconsistent edge content is projected away.&quot;
+        },
+        coarse: {
+          input: &quot;correction snapshots E=[delta x_1,...,delta x_N]&quot;,
+          target: &quot;energy-POD basis U with U^T L U = I&quot;,
+          use: &quot;U(U^T L U)^-1 U^T r + local smoother&quot;,
+          note: &quot;The statistical model learns only a compact difficult subspace; the reduced physical solve supplies coefficients. This is the solver-aligned route to a hierarchical predictor.&quot;
+        }
+      };
+      function renderTraining() {
+        const copy = trainingCopy[state.dataMode];
+        $(&quot;#xp-data-input&quot;).textContent = copy.input;
+        $(&quot;#xp-data-target&quot;).textContent = copy.target;
+        $(&quot;#xp-data-use&quot;).textContent = copy.use;
+        $(&quot;#xp-data-note&quot;).textContent = copy.note;
+      }
+
+      function selfTest() {
+        const n = model.n, m = model.m;
+        let errBtX = 0, errXtX = 0, errMean = 0, errQSym = 0, errQ2 = 0;
+        for (let i = 0; i &lt; n; i++) {
+          let rowSum = 0;
+          for (let j = 0; j &lt; n; j++) rowSum += model.Lp[i][j];
+          errMean = Math.max(errMean, Math.abs(rowSum));
+        }
+        for (let i = 0; i &lt; n; i++) {
+          for (let j = 0; j &lt; n; j++) {
+            let btX = 0, xtX = 0;
+            for (let e = 0; e &lt; m; e++) {
+              const edge = model.edges[e];
+              const bi = i === edge.u ? 1 : i === edge.v ? -1 : 0;
+              btX += bi * model.X[e][j];
+              xtX += model.X[e][i] * model.X[e][j];
+            }
+            const p = (i === j ? 1 : 0) - 1 / n;
+            errBtX = Math.max(errBtX, Math.abs(btX - p));
+            errXtX = Math.max(errXtX, Math.abs(xtX - model.Lp[i][j]));
+          }
+        }
+        const Q = zeros(m, m);
+        for (let e = 0; e &lt; m; e++) {
+          for (let k = 0; k &lt; m; k++) {
+            const edge = model.edges[k];
+            Q[e][k] = model.X[e][edge.u] - model.X[e][edge.v];
+          }
+        }
+        for (let e = 0; e &lt; m; e++) {
+          for (let k = 0; k &lt; m; k++) {
+            errQSym = Math.max(errQSym, Math.abs(Q[e][k] - Q[k][e]));
+            let q2 = 0;
+            for (let j = 0; j &lt; m; j++) q2 += Q[e][j] * Q[j][k];
+            errQ2 = Math.max(errQ2, Math.abs(q2 - Q[e][k]));
+          }
+        }
+        const worst = Math.max(errBtX, errXtX, errMean, errQSym, errQ2);
+        $(&quot;#xp-selftest&quot;).textContent =
+          `live self-check: B^T X = I - 11^T/n,  X^T X = L+,  ` +
+          `Q = XB^T is symmetric and Q^2 = Q  · max error ${worst.toExponential(1)}`;
+      }
+
+      function renderAll() {
+        syncControls();
+        renderMatrix();
+        renderFlow();
+        renderVoltage();
+        renderTraining();
+        selfTest();
+      }
+
+      function setSource(i) {
+        i = clamp(i, 0, model.n - 1);
+        if (state.pair &amp;&amp; i === state.sink) [state.source, state.sink] = [state.sink, state.source];
+        else state.source = i;
+      }
+      function setSink(i) {
+        i = clamp(i, 0, model.n - 1);
+        if (i === state.source) [state.source, state.sink] = [state.sink, state.source];
+        else state.sink = i;
+      }
+
+      controls.side.addEventListener(&quot;change&quot;, () =&gt; build(Number(controls.side.value)));
+      controls.source.addEventListener(&quot;change&quot;, () =&gt; { setSource(Number(controls.source.value)); renderAll(); });
+      controls.sink.addEventListener(&quot;change&quot;, () =&gt; { setSink(Number(controls.sink.value)); renderAll(); });
+      controls.edge.addEventListener(&quot;change&quot;, () =&gt; { state.edge = Number(controls.edge.value); renderAll(); });
+      controls.pair.addEventListener(&quot;change&quot;, () =&gt; { state.pair = controls.pair.checked; renderAll(); });
+      controls.labels.addEventListener(&quot;change&quot;, () =&gt; { state.labels = controls.labels.checked; renderAll(); });
+      controls.voltageMode.addEventListener(&quot;change&quot;, () =&gt; { state.voltageMode = controls.voltageMode.value; renderAll(); });
+      controls.steps.addEventListener(&quot;input&quot;, () =&gt; { state.steps = Number(controls.steps.value); renderAll(); });
+      controls.dataMode.addEventListener(&quot;change&quot;, () =&gt; { state.dataMode = controls.dataMode.value; renderTraining(); });
+
+      function matrixCell(event) {
+        const rect = views.matrix.getBoundingClientRect();
+        const col = clamp(Math.floor((event.clientX - rect.left) / rect.width * model.n), 0, model.n - 1);
+        const row = clamp(Math.floor((event.clientY - rect.top) / rect.height * model.m), 0, model.m - 1);
+        return {row, col};
+      }
+      function chooseMatrixCell(event) {
+        const {row, col} = matrixCell(event);
+        state.edge = row; setSource(col); state.hoverCell = null; renderAll();
+      }
+      views.matrix.addEventListener(&quot;pointerdown&quot;, event =&gt; {
+        state.matrixDragging = true;
+        views.matrix.setPointerCapture(event.pointerId);
+        chooseMatrixCell(event);
+      });
+      views.matrix.addEventListener(&quot;pointermove&quot;, event =&gt; {
+        const cell = matrixCell(event);
+        if (state.matrixDragging) chooseMatrixCell(event);
+        else {
+          state.hoverCell = cell;
+          selectedMatrixReadout(cell.row, cell.col);
+        }
+      });
+      views.matrix.addEventListener(&quot;pointerup&quot;, event =&gt; {
+        state.matrixDragging = false;
+        if (views.matrix.hasPointerCapture(event.pointerId)) views.matrix.releasePointerCapture(event.pointerId);
+      });
+      views.matrix.addEventListener(&quot;pointerleave&quot;, () =&gt; {
+        if (!state.matrixDragging) { state.hoverCell = null; selectedMatrixReadout(); }
+      });
+
+      views.flow.addEventListener(&quot;pointerdown&quot;, event =&gt; {
+        const point = graphPoint(event, views.flow);
+        const {pos} = graphGeometry();
+        const ds = Math.hypot(point.x - pos[state.source].x, point.y - pos[state.source].y);
+        const dt = Math.hypot(point.x - pos[state.sink].x, point.y - pos[state.sink].y);
+        state.flowDrag = state.pair &amp;&amp; dt &lt; ds ? &quot;sink&quot; : &quot;source&quot;;
+        views.flow.setPointerCapture(event.pointerId);
+        const i = nearestVertex(point);
+        state.flowDrag === &quot;sink&quot; ? setSink(i) : setSource(i);
+        renderAll();
+      });
+      views.flow.addEventListener(&quot;pointermove&quot;, event =&gt; {
+        if (!state.flowDrag) return;
+        const i = nearestVertex(graphPoint(event, views.flow));
+        state.flowDrag === &quot;sink&quot; ? setSink(i) : setSource(i);
+        renderAll();
+      });
+      views.flow.addEventListener(&quot;pointerup&quot;, event =&gt; {
+        state.flowDrag = null;
+        if (views.flow.hasPointerCapture(event.pointerId)) views.flow.releasePointerCapture(event.pointerId);
+      });
+
+      views.voltage.addEventListener(&quot;pointerdown&quot;, event =&gt; {
+        const point = graphPoint(event, views.voltage);
+        if (state.voltageMode === &quot;row&quot;) {
+          state.voltageDrag = &quot;edge&quot;;
+          state.edge = nearestEdge(point);
+        } else {
+          const {pos} = graphGeometry();
+          const ds = Math.hypot(point.x - pos[state.source].x, point.y - pos[state.source].y);
+          const dt = Math.hypot(point.x - pos[state.sink].x, point.y - pos[state.sink].y);
+          state.voltageDrag = dt &lt; ds ? &quot;sink&quot; : &quot;source&quot;;
+          state.voltageDrag === &quot;sink&quot; ? setSink(nearestVertex(point)) : setSource(nearestVertex(point));
+        }
+        views.voltage.setPointerCapture(event.pointerId);
+        renderAll();
+      });
+      views.voltage.addEventListener(&quot;pointermove&quot;, event =&gt; {
+        if (!state.voltageDrag) return;
+        const point = graphPoint(event, views.voltage);
+        if (state.voltageDrag === &quot;edge&quot;) state.edge = nearestEdge(point);
+        else if (state.voltageDrag === &quot;sink&quot;) setSink(nearestVertex(point));
+        else setSource(nearestVertex(point));
+        renderAll();
+      });
+      views.voltage.addEventListener(&quot;pointerup&quot;, event =&gt; {
+        state.voltageDrag = null;
+        if (views.voltage.hasPointerCapture(event.pointerId)) views.voltage.releasePointerCapture(event.pointerId);
+      });
+
+      build(state.side);
+    })();
+  &lt;/script&gt;
+&lt;/div&gt;
+
+&lt;script src=&quot;https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  if (window.FloatingUIDOM == null) {
+    return;
+  }
+  const { autoUpdate, computePosition, flip, offset, shift, size } =
+    window.FloatingUIDOM;
+  const tooltipPlacements = new Set([&quot;top&quot;, &quot;right&quot;, &quot;bottom&quot;, &quot;left&quot;]);
+  const tooltipId = `codex-visualization-tooltip-${
+    window.crypto?.randomUUID?.() ?? Date.now().toString(36)
+  }`;
+  const tooltipGap = 5;
+  const hoverDelay = 700;
+  const skipDelay = 300;
+  let activeTrigger = null;
+  let pendingTrigger = null;
+  let tooltip = null;
+  let openTimeout = null;
+  let autoUpdateCleanup = null;
+  let positionRequest = 0;
+  let skipDelayUntil = 0;
+
+  const getTrigger = (target) =&gt;
+    target?.nodeType === Node.ELEMENT_NODE
+      ? target.closest(&quot;[data-tooltip]&quot;)
+      : null;
+  const containsTarget = (trigger, target) =&gt;
+    target?.nodeType != null &amp;&amp; trigger.contains(target);
+  const getContent = (trigger) =&gt;
+    trigger.getAttribute(&quot;data-tooltip&quot;)?.trim() ?? &quot;&quot;;
+  const getPlacement = (trigger) =&gt; {
+    const placement = trigger.getAttribute(&quot;data-tooltip-placement&quot;);
+    return tooltipPlacements.has(placement) ? placement : &quot;top&quot;;
+  };
+  const getTooltip = () =&gt; {
+    if (tooltip == null) {
+      tooltip = document.createElement(&quot;div&quot;);
+      tooltip.id = tooltipId;
+      tooltip.className = &quot;tooltip&quot;;
+      tooltip.setAttribute(&quot;role&quot;, &quot;tooltip&quot;);
+    }
+    return tooltip;
+  };
+  const setDescribedBy = (trigger, described) =&gt; {
+    const ids = new Set(
+      (trigger.getAttribute(&quot;aria-describedby&quot;) ?? &quot;&quot;)
+        .split(/\s+/)
+        .filter(Boolean),
+    );
+    if (described) {
+      ids.add(tooltipId);
+    } else {
+      ids.delete(tooltipId);
+    }
+    if (ids.size === 0) {
+      trigger.removeAttribute(&quot;aria-describedby&quot;);
+    } else {
+      trigger.setAttribute(&quot;aria-describedby&quot;, [...ids].join(&quot; &quot;));
+    }
+  };
+  const clearOpenTimeout = () =&gt; {
+    if (openTimeout != null) {
+      window.clearTimeout(openTimeout);
+      openTimeout = null;
+    }
+    pendingTrigger = null;
+  };
+  const closeTooltip = (activateSkipDelay = true) =&gt; {
+    clearOpenTimeout();
+    positionRequest += 1;
+    autoUpdateCleanup?.();
+    autoUpdateCleanup = null;
+    if (activeTrigger == null) {
+      return;
+    }
+    setDescribedBy(activeTrigger, false);
+    activeTrigger = null;
+    tooltip?.remove();
+    if (activateSkipDelay) {
+      skipDelayUntil = Date.now() + skipDelay;
+    }
+  };
+  const updatePosition = (trigger, floating) =&gt; {
+    const request = ++positionRequest;
+    void computePosition(trigger, floating, {
+      middleware: [
+        offset(tooltipGap),
+        flip({ padding: tooltipGap }),
+        shift({ padding: tooltipGap }),
+        size({
+          padding: tooltipGap,
+          apply({ availableHeight, availableWidth, elements }) {
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-width&quot;,
+              `${Math.max(0, availableWidth)}px`,
+            );
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-height&quot;,
+              `${Math.max(0, availableHeight)}px`,
+            );
+          },
+        }),
+      ],
+      placement: getPlacement(trigger),
+      strategy: &quot;fixed&quot;,
+    })
+      .then(({ x, y }) =&gt; {
+        if (activeTrigger !== trigger || request !== positionRequest) {
+          return;
+        }
+        const scale = window.devicePixelRatio || 1;
+        floating.style.transform = `translate(${Math.round(x * scale) / scale}px, ${Math.round(y * scale) / scale}px)`;
+        floating.style.visibility = &quot;visible&quot;;
+      })
+      .catch(() =&gt; {
+        if (activeTrigger === trigger &amp;&amp; request === positionRequest) {
+          closeTooltip(false);
+        }
+      });
+  };
+  const openTooltip = (trigger) =&gt; {
+    const content = getContent(trigger);
+    if (!trigger.isConnected || content.length === 0) {
+      return;
+    }
+    clearOpenTimeout();
+    if (activeTrigger === trigger) {
+      return;
+    }
+    closeTooltip();
+    const floating = getTooltip();
+    floating.textContent = content;
+    floating.style.visibility = &quot;hidden&quot;;
+    floating.style.transform = &quot;translate(0, 0)&quot;;
+    document.body.appendChild(floating);
+    activeTrigger = trigger;
+    setDescribedBy(trigger, true);
+    autoUpdateCleanup = autoUpdate(trigger, floating, () =&gt; {
+      updatePosition(trigger, floating);
+    });
+  };
+  const requestOpen = (trigger, immediate = false) =&gt; {
+    if (
+      getContent(trigger).length === 0 ||
+      activeTrigger === trigger ||
+      pendingTrigger === trigger
+    ) {
+      return;
+    }
+    clearOpenTimeout();
+    pendingTrigger = trigger;
+    const delay =
+      immediate || activeTrigger != null || Date.now() &lt; skipDelayUntil
+        ? 0
+        : hoverDelay;
+    if (delay === 0) {
+      openTooltip(trigger);
+      return;
+    }
+    openTimeout = window.setTimeout(() =&gt; {
+      openTimeout = null;
+      pendingTrigger = null;
+      openTooltip(trigger);
+    }, delay);
+  };
+  const handlePointerOpen = (event) =&gt; {
+    if (event.pointerType === &quot;touch&quot;) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    requestOpen(trigger);
+  };
+  const handleLeave = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handleFocusIn = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (trigger?.matches(&quot;:focus-visible&quot;)) {
+      requestOpen(trigger, true);
+    }
+  };
+  const handleKeyDown = (event) =&gt; {
+    if (event.key === &quot;Escape&quot;) {
+      closeTooltip();
+    }
+  };
+  const handleContextMenu = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const destroy = () =&gt; {
+    closeTooltip(false);
+    document.removeEventListener(&quot;pointerover&quot;, handlePointerOpen);
+    document.removeEventListener(&quot;pointerout&quot;, handleLeave);
+    document.removeEventListener(&quot;focusin&quot;, handleFocusIn);
+    document.removeEventListener(&quot;focusout&quot;, handleLeave);
+    document.removeEventListener(&quot;keydown&quot;, handleKeyDown);
+    document.removeEventListener(&quot;contextmenu&quot;, handleContextMenu);
+    tooltip = null;
+  };
+
+  document.addEventListener(&quot;pointerover&quot;, handlePointerOpen);
+  document.addEventListener(&quot;pointerout&quot;, handleLeave);
+  document.addEventListener(&quot;focusin&quot;, handleFocusIn);
+  document.addEventListener(&quot;focusout&quot;, handleLeave);
+  document.addEventListener(&quot;keydown&quot;, handleKeyDown);
+  document.addEventListener(&quot;contextmenu&quot;, handleContextMenu);
+  window.addEventListener(&quot;pagehide&quot;, destroy, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-lucide&quot; async src=&quot;https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  const initialize = () =&gt; {
+    globalThis.lucide?.createIcons({ attrs: { width: 16, height: 16 } });
+  };
+  if (globalThis.lucide != null) {
+    initialize();
+    return;
+  }
+  document
+    .getElementById(&quot;codex-visualization-lucide&quot;)
+    ?.addEventListener(&quot;load&quot;, initialize, { once: true });
+})();
+&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+</body>
+</html>

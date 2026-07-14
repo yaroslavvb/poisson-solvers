@@ -14,8 +14,8 @@ local server:
     vendored once into local-site/vendor/mathjax-tex-svg.js.
   * figures/, results/, python/, mathematica/, cg-explorer/ are copied so
     every relative link in the reports resolves inside local-site/.
-  * interactive/adi-sweep.html is copied verbatim (it is self-contained and
-    its ../reports/*.html back-links resolve against the rendered reports).
+  * interactive/adi-sweep.html and incidence-pseudoinverse-explorer.html are
+    copied verbatim (both are self-contained).
   * interactive/hierarchical-solvers.html is patched to preload its 2.6 MB
     JSON via a generated results/hodlr_viz_data.js (window.HODLR_VIZ_DATA)
     instead of fetch(), which does not work from file://.
@@ -391,6 +391,15 @@ def transform_interactive() -> None:
     (SITE / "interactive").mkdir(parents=True, exist_ok=True)
     (SITE / "interactive" / "adi-sweep.html").write_text(src, encoding="utf-8")
 
+    # ---- incidence-pseudoinverse-explorer.html: generated as a self-contained
+    # visualization with no network or fetch dependency; works from file://.
+    src = (REPO / "interactive" / "incidence-pseudoinverse-explorer.html").read_text(
+        encoding="utf-8"
+    )
+    (SITE / "interactive" / "incidence-pseudoinverse-explorer.html").write_text(
+        src, encoding="utf-8"
+    )
+
     # ---- results/hodlr_viz_data.js: JSON payload as a plain script global.
     json_text = (REPO / "results" / "hodlr_viz_data.json").read_text(encoding="utf-8")
     json.loads(json_text)  # validate before embedding
@@ -528,7 +537,8 @@ def main() -> int:
         print(f"    - {p.relative_to(SITE)}")
     print(f"  asset files     : {n_copied} copied into "
           f"{', '.join(d + '/' for d in COPY_DIRS)}")
-    print("  interactive     : adi-sweep.html (verbatim), "
+    print("  interactive     : adi-sweep.html + incidence-pseudoinverse-explorer.html "
+          "(verbatim), "
           "hierarchical-solvers.html (fetch -> preloaded "
           "results/hodlr_viz_data.js), cg-explorer/ (de-linkified)")
     print(f"  vendored mathjax: {MATHJAX_FILE.relative_to(SITE)} "
